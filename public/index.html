@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: fonts.googleapis.com fonts.gstatic.com; img-src * data: blob:; frame-src https: blob:;">
+<meta name="referrer" content="no-referrer">
+<title>Weazel News — Majestic RP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --red:#E8192C;--red-dark:#B01020;--red-deeper:#7A0A15;
+  --black:#0A0A0A;--dark:#111;--dark2:#1A1A1A;--dark3:#222;
+  --white:#FFF;--off-white:#F0EFED;--gray:#888;
+  --gold:#C9A84C;
+  --font-d:'Bebas Neue',sans-serif;
+  --font-s:'Playfair Display',serif;
+  --font-b:'Inter',sans-serif;
+  --tr:0.3s ease;--r:8px;--rl:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--dark)}
+::-webkit-scrollbar-thumb{background:var(--red);border-radius:3px}
+
+@keyframes slideR{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+.reveal.visible{opacity:1;transform:none}
+.rd1{transition-delay:.1s}.rd2{transition-delay:.2s}.rd3{transition-delay:.3s}
+
+/* HEADER */
+#hdr{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,10,10,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--red-dark);padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
+.logo-b{background:var(--red);color:var(--white);font-family:var(--font-d);font-size:20px;letter-spacing:2px;padding:4px 10px;border-radius:3px;line-height:1}
+.logo-n{font-family:var(--font-d);font-size:16px;letter-spacing:3px;color:var(--white)}
+.logo-s{font-size:10px;color:var(--gray);letter-spacing:2px;text-transform:uppercase}
+nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
+.nl{background:none;border:none;color:rgba(255,255,255,0.75);font-family:var(--font-b);font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:var(--r);cursor:pointer;transition:var(--tr);position:relative}
+.nl:hover,.nl.active{color:var(--red)}
+.nl.active::after{content:'';position:absolute;bottom:-1px;left:12px;right:12px;height:2px;background:var(--red);border-radius:1px}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#btn-add-news{display:none;background:var(--red);color:var(--white);border:none;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:var(--r);cursor:pointer;transition:var(--tr);white-space:nowrap}
+#btn-add-news:hover{background:var(--red-dark)}
+
+/* TICKER */
+#ticker-bar{position:fixed;top:64px;left:0;right:0;z-index:999;background:var(--red);height:28px;display:flex;align-items:center}
+.ticker-label{background:var(--black);color:var(--red);font-family:var(--font-d);font-size:12px;letter-spacing:2px;padding:0 14px;height:100%;display:flex;align-items:center;flex-shrink:0;white-space:nowrap;z-index:1}
+.ticker-viewport{overflow:hidden;flex:1;height:100%;position:relative}
+.ticker-track{display:flex;white-space:nowrap;animation:ticker 40s linear infinite;position:absolute;left:0;top:0;bottom:0;align-items:center}
+.ticker-text{font-size:11px;font-weight:600;letter-spacing:0.5px;padding-right:120px;color:var(--white)}
+
+/* APP */
+#app{padding-top:92px;min-height:100vh}
+.page{display:none}
+.page.active{display:block}
+
+/* PER-PAGE BG */
+.page-bg-layer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;background-size:cover;background-position:center;transition:opacity .5s}
+.page-bg-layer::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,0.72) 0%,rgba(10,10,10,0.93) 100%)}
+
+/* HERO */
+.hero{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 2rem 2rem}
+.hero-eyebrow{font-size:11px;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:1.5rem;display:flex;align-items:center;gap:10px}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:36px;height:1px;background:var(--red);opacity:0.5}
+.hero-title{font-family:var(--font-d);font-size:clamp(70px,11vw,148px);line-height:.9;letter-spacing:4px;color:var(--white);text-shadow:0 0 60px rgba(232,25,44,.2)}
+.hero-title span{color:var(--red)}
+.hero-sub{font-size:13px;color:var(--gray);letter-spacing:3px;text-transform:uppercase;margin-top:1.25rem}
+.hero-btns{display:flex;gap:10px;margin-top:2rem;flex-wrap:wrap;justify-content:center}
+
+/* INLINE EDITABLE */
+.ied{position:relative;display:inline-block}
+.ied-overlay{position:absolute;inset:0;cursor:text;z-index:2;border-radius:4px;transition:.2s}
+.ied-overlay:hover{background:rgba(232,25,44,.08);outline:1px dashed rgba(232,25,44,.4)}
+.ied-overlay::after{content:'✎';position:absolute;top:2px;right:4px;font-size:10px;color:var(--red);opacity:0;transition:.15s;pointer-events:none}
+.ied-overlay:hover::after{opacity:1}
+
+/* BUTTONS */
+.btn{padding:10px 24px;border-radius:var(--r);font-family:var(--font-b);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:var(--tr);display:inline-flex;align-items:center;gap:7px}
+.btn-p{background:var(--red);color:var(--white)}
+.btn-p:hover{background:var(--red-dark);transform:translateY(-1px)}
+.btn-o{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,.25)}
+.btn-o:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.5)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-d{background:rgba(232,25,44,.12);color:var(--red);border:1px solid rgba(232,25,44,.28)}
+.btn-d:hover{background:rgba(232,25,44,.22)}
+.btn-discord{background:#5865F2;color:var(--white);padding:9px 18px;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;border:none;transition:var(--tr);display:inline-flex;align-items:center;gap:8px}
+.btn-discord:hover{background:#4752C4;transform:translateY(-1px)}
+
+/* SECTIONS */
+.sec{padding:2.5rem 1.5rem}
+.sec-inner{max-width:1120px;margin:0 auto}
+.sec-div{display:flex;align-items:baseline;gap:14px;margin-bottom:1.75rem;flex-wrap:wrap;width:100%}
+.sec-title{font-family:var(--font-d);font-size:clamp(28px,5vw,50px);letter-spacing:2px;color:var(--white);display:block;width:100%}
+.sec-title span{color:var(--red)}
+.sec-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(232,25,44,.4),transparent);align-self:center;min-width:30px}
+.sec-tag{font-size:10px;color:var(--red);letter-spacing:3px;text-transform:uppercase}
+
+/* INFO BLOCK */
+.info-block{display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center;padding:20px 26px;background:rgba(232,25,44,.07);border:1px solid rgba(232,25,44,.2);border-radius:var(--rl);margin:1.25rem 0}
+.ibdiv{width:1px;height:40px;background:rgba(255,255,255,.1)}
+.h-lbl{font-size:10px;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.h-val{display:flex;align-items:center;gap:8px;font-family:var(--font-d);font-size:26px;letter-spacing:2px;color:var(--white)}
+
+/* NEWS CARDS */
+.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.nc{background:rgba(22,22,22,.88);backdrop-filter:blur(6px);border:1px solid rgba(232,25,44,.12);border-radius:var(--rl);overflow:hidden;cursor:pointer;transition:var(--tr);display:flex;flex-direction:column}
+.nc:hover{border-color:rgba(232,25,44,.45);transform:translateY(-3px);box-shadow:0 16px 36px rgba(0,0,0,.4)}
+.nc-img{width:100%;height:170px;flex-shrink:0;overflow:hidden;position:relative;background:#151515}
+.nc-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.nc-img img+.nc-ph{display:none}
+.nc:hover .nc-img img{transform:scale(1.05)}
+.nc-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.nc-body{padding:16px;flex:1;display:flex;flex-direction:column}
+.nc-meta{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.nc-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--red);background:rgba(232,25,44,.1);padding:3px 7px;border-radius:3px;font-weight:700}
+.nc-date{font-size:11px;color:var(--gray)}
+.nc-title{font-family:var(--font-s);font-size:17px;font-weight:700;color:var(--white);line-height:1.3;margin-bottom:8px}
+.nc-exc{font-size:12px;color:var(--gray);line-height:1.6;flex:1}
+.nc-foot{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+/* Featured (latest) news card */
+.nc-featured{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;min-height:280px}
+.nc-featured .nc-img{height:100%;min-height:280px}
+.nc-featured .nc-body{padding:24px;justify-content:center}
+.nc-featured .nc-title{font-size:clamp(20px,3vw,28px);margin-bottom:14px}
+.nc-featured .nc-exc{font-size:14px;-webkit-line-clamp:4;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+@media(max-width:640px){
+  .nc-featured{grid-template-columns:1fr}
+  .nc-featured .nc-img{height:220px;min-height:220px}
+}
+
+/* FULL NEWS */
+.nf-wrap{max-width:840px;margin:0 auto;padding:2rem 1.5rem 3rem;position:relative;z-index:1}
+#page-news-full{position:relative}
+#page-news-full::before{content:'';position:fixed;inset:0;z-index:0;background:inherit;background-size:cover;background-position:center;pointer-events:none}
+#page-news-full::after{content:'';position:fixed;inset:0;z-index:0;background:rgba(10,10,10,0.72);pointer-events:none}
+.nf-content{font-size:15px;line-height:1.85;color:rgba(255,255,255,.83)}
+.nf-content h2,.nf-content h3{font-family:var(--font-s);color:var(--white);margin:1.5rem 0 .75rem}
+.nf-content p{margin-bottom:1rem}
+.nf-content img{max-width:100%;border-radius:var(--r);margin:1.25rem 0;display:block}
+.nf-content a{color:var(--red)}
+.nf-iframe{width:100%;border-radius:var(--r);overflow:hidden;margin:1.5rem 0;border:1px solid var(--dark3)}
+.nf-iframe iframe{width:100%;height:600px;min-height:500px;border:none;display:block}
+/* News body bg image */
+.nf-bg-img{width:100%;min-height:320px;background-size:cover;background-position:center;border-radius:var(--r);margin-bottom:1.5rem;position:relative}
+.nf-bg-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6));border-radius:var(--r)}
+/* News block editor */
+.nb-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:10px}
+.nb-type{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(232,25,44,.1);padding:3px 7px;border-radius:3px;white-space:nowrap;margin-top:2px}
+.nb-align-btns{display:flex;gap:3px;margin-top:4px}
+.nb-align-btn{width:26px;height:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:3px;color:var(--gray);font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+.nb-align-btn.active,.nb-align-btn:hover{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
+.nb-expand-btn{width:26px;height:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:3px;color:var(--gray);font-size:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;margin-left:auto}
+.nb-expand-btn:hover,.nb-expand-btn.active{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
+.nb-text-expanded{min-height:360px!important}
+
+/* SERVICES */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.svc-card{background:rgba(22,22,22,.82);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:22px;transition:var(--tr);position:relative;overflow:hidden}
+.svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:.3s}
+.svc-card:hover::before{transform:scaleX(1)}
+.svc-card:hover{border-color:rgba(232,25,44,.25);transform:translateY(-2px)}
+.svc-cat-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:14px}
+.svc-cat-ttl{font-family:var(--font-d);font-size:20px;letter-spacing:2px;color:var(--red)}
+.svc-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.svc-item:last-child{border:none}
+.svc-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.svc-name{font-size:14px;font-weight:600;color:var(--white)}
+.svc-price{font-family:var(--font-d);font-size:15px;letter-spacing:1px;color:var(--gold);white-space:nowrap}
+.svc-desc{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5}
+
+/* TEAM */
+.team-cat{margin-bottom:2.5rem}
+.team-cat-hdr{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap}
+.team-cat-name{font-family:var(--font-d);font-size:26px;letter-spacing:3px;color:var(--white)}
+.team-cat-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(232,25,44,.35),transparent);min-width:30px}
+.team-pyramid-top{display:flex;justify-content:center;margin-bottom:16px}
+.team-pyramid-top .team-card{width:190px}
+.team-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.team-grid .team-card{width:160px;flex-shrink:0}
+.team-grid .team-add-card{width:160px;flex-shrink:0}
+.team-card{background:rgba(22,22,22,.75);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:18px;text-align:center;transition:var(--tr)}
+.team-card:hover{border-color:rgba(232,25,44,.3);transform:translateY(-2px)}
+.team-av{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,var(--red-deeper),var(--red-dark));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--white);overflow:hidden;border:2px solid rgba(232,25,44,.25)}
+.team-av img{width:100%;height:100%;object-fit:cover}
+.team-name{font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px}
+.team-role{font-size:10px;color:var(--red);letter-spacing:1.5px;text-transform:uppercase}
+.team-add-card{cursor:pointer;border:1px dashed rgba(255,255,255,.12);border-radius:var(--rl);padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:130px;color:var(--gray);font-size:12px;transition:var(--tr)}
+.team-add-card:hover{border-color:rgba(232,25,44,.4);color:var(--red)}
+/* Team row layout */
+.team-row-grid{display:flex;flex-wrap:nowrap;gap:14px;justify-content:center;overflow-x:auto;padding-bottom:6px}
+.team-row-grid .team-card{width:155px;flex-shrink:0}
+.team-row-grid .team-add-card{width:130px;flex-shrink:0;min-height:auto;padding:14px}
+.layout-toggle-btn{background:none;border:1px solid rgba(255,255,255,.15);color:var(--gray);border-radius:var(--r);padding:4px 10px;font-size:10px;cursor:pointer;transition:var(--tr);letter-spacing:1px;text-transform:uppercase}
+.layout-toggle-btn.active{background:rgba(232,25,44,.15);border-color:var(--red);color:var(--red)}
+
+/* ABOUT */
+.about-content{font-size:15px;line-height:1.9;color:rgba(255,255,255,.82)}
+.about-content h2{font-family:var(--font-s);font-size:26px;color:var(--white);margin:1.75rem 0 .75rem}
+.about-content p{margin-bottom:1rem}
+.about-content strong{color:var(--white)}
+
+/* AUTH */
+.auth-wrap{min-height:calc(100vh - 92px);display:flex;align-items:center;justify-content:center;padding:2rem}
+.auth-card{background:rgba(17,17,17,.97);border:1px solid rgba(232,25,44,.3);border-radius:var(--rl);padding:36px;width:100%;max-width:400px;text-align:center}
+.auth-logo{font-family:var(--font-d);font-size:38px;letter-spacing:4px;color:var(--red);margin-bottom:6px}
+.auth-sub{font-size:10px;color:var(--gray);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px}
+.auth-tabs{display:flex;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.auth-tab{flex:1;padding:9px;background:none;border:none;color:var(--gray);font-size:13px;font-weight:500;cursor:pointer;transition:var(--tr)}
+.auth-tab.active{background:var(--red);color:var(--white)}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px;font-weight:600}
+.fi,.fta,.fsel{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:9px 13px;transition:var(--tr)}
+.fi:focus,.fta:focus,.fsel:focus{outline:none;border-color:var(--red);background:rgba(232,25,44,.04)}
+.fta{resize:vertical;min-height:90px;line-height:1.6}
+.fsel option{background:var(--dark2)}
+.ferr{font-size:11px;color:#ff6b6b;margin-top:4px;display:none}
+.fhint{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.4}
+
+/* ADMIN */
+.admin-layout{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 92px)}
+.admin-sb{background:rgba(14,14,14,.92);border-right:1px solid rgba(255,255,255,.05);padding:1.25rem 0;display:flex;flex-direction:column}
+.admin-sb-lbl{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);padding:0 14px;margin-bottom:6px;margin-top:8px}
+.ani{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.6);font-size:12px;font-weight:500;cursor:pointer;transition:var(--tr);border-left:2px solid transparent}
+.ani:hover{color:var(--white);background:rgba(255,255,255,.03)}
+.ani.active{color:var(--red);border-left-color:var(--red);background:rgba(232,25,44,.07)}
+.ani svg{width:15px;height:15px;flex-shrink:0;opacity:.8}
+.admin-content{padding:1.75rem}
+.asec{display:none}
+.asec.active{display:block}
+.asec-title{font-family:var(--font-d);font-size:26px;letter-spacing:2px;margin-bottom:1.25rem;color:var(--white)}
+
+/* TABLE */
+.dt{width:100%;border-collapse:collapse}
+.dt th{text-align:left;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.dt td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:rgba(255,255,255,.8);vertical-align:middle}
+.dt tr:hover td{background:rgba(255,255,255,.015)}
+.tw{overflow-x:auto}
+
+/* BADGES */
+.badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:3px}
+.b-admin{background:rgba(201,168,76,.15);color:var(--gold)}
+.b-editor{background:rgba(232,25,44,.15);color:var(--red)}
+.b-guest{background:rgba(255,255,255,.07);color:var(--gray)}
+
+/* MODALS */
+.mo{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:1rem}
+.mo.open{display:flex}
+.modal{background:var(--dark2);border:1px solid rgba(232,25,44,.25);border-radius:var(--rl);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-wide{max-width:680px}
+.mhdr{padding:18px 22px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.mttl{font-family:var(--font-d);font-size:22px;letter-spacing:2px;color:var(--white)}
+.mclose{background:none;border:none;color:var(--gray);font-size:18px;cursor:pointer;padding:4px;transition:var(--tr);line-height:1}
+.mclose:hover{color:var(--white)}
+.mbody{padding:18px 22px 22px}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* TOAST */
+.toast-c{position:fixed;top:98px;right:16px;z-index:3000;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--dark2);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:10px 14px;min-width:240px;display:flex;align-items:center;gap:9px;font-size:12px;animation:slideR .28s ease;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:opacity .3s}
+.ts{border-left:3px solid #2ed573}
+.te{border-left:3px solid var(--red)}
+.ti{border-left:3px solid #5865F2}
+
+/* EMPTY */
+.empty{text-align:center;padding:3rem 2rem;color:var(--gray)}
+.empty-ic{font-size:42px;margin-bottom:1rem;opacity:.3}
+.empty-tx{font-size:14px}
+
+/* ADMIN CARD */
+.acard{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:16px;margin-bottom:12px}
+.acard-hdr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.acard-title{font-weight:600;font-size:14px;color:var(--white)}
+.acard-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.bg-group{display:flex;gap:6px;flex-wrap:wrap}
+
+/* FOOTER */
+footer{background:rgba(8,8,8,.97);border-top:1px solid rgba(232,25,44,.18);padding:14px 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.f-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.f-badge{display:flex;align-items:center;gap:8px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.18);border-radius:var(--r);padding:7px 12px}
+.f-dot{width:6px;height:6px;background:var(--red);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+.f-hours{font-size:12px;color:var(--off-white);font-weight:600}
+.f-sub{font-size:9px;color:var(--gray);letter-spacing:1px;text-transform:uppercase}
+.f-copy{font-size:10px;color:var(--gray)}
+
+/* INLINE TEXT EDITOR */
+.ite-wrap{position:relative;display:inline-block;max-width:100%}
+.ite-wrap[data-ite='homeLatest'],.ite-wrap[data-ite='newsTitle'],.ite-wrap[data-ite='servicesTitle'],.ite-wrap[data-ite='teamTitle']{display:block;width:100%}
+.ite-wrap.block-wrap{display:block}
+.ite-btn{position:absolute;top:-8px;right:-8px;z-index:50;width:24px;height:24px;background:var(--red);border:none;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:.2s;flex-shrink:0}
+.ite-btn:hover{background:var(--red-dark);transform:scale(1.15)}
+.ite-btn svg{pointer-events:none}
+body.is-admin .ite-wrap:hover .ite-btn{display:inline-flex}
+body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radius:3px}
+@media(max-width:768px){
+  body.is-admin .ite-wrap .ite-btn{display:inline-flex!important}
+  body.is-admin .ite-wrap{outline:1px dashed rgba(232,25,44,.2);border-radius:3px}
+}
+/* INLINE EDITOR POPUP */
+#ite-popup{position:fixed;z-index:5000;background:var(--dark2);border:1px solid rgba(232,25,44,.35);border-radius:var(--rl);padding:14px;min-width:300px;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;touch-action:none}
+#ite-drag-hdr:active{cursor:grabbing}
+@media(max-width:600px){
+  #ite-popup{left:0!important;right:0!important;bottom:0!important;top:auto!important;max-width:100%!important;min-width:0!important;border-radius:var(--rl) var(--rl) 0 0;padding:16px}
+  #ite-drag-hdr{cursor:default}
+}
+#ite-popup.open{display:block}
+.ite-pop-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;font-weight:600}
+.ite-text-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:8px 12px;margin-bottom:10px;resize:vertical;min-height:60px;transition:.2s}
+.ite-text-input:focus{outline:none;border-color:var(--red)}
+.ite-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.ite-control-group{display:flex;flex-direction:column;gap:4px}
+.ite-control-label{font-size:9px;color:var(--gray);letter-spacing:1px;text-transform:uppercase}
+.ite-size-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:var(--white);font-size:12px;padding:5px 8px;width:100%}
+.ite-size-input:focus{outline:none;border-color:var(--red)}
+.ite-color-input{width:100%;height:30px;border:1px solid rgba(255,255,255,.1);border-radius:5px;cursor:pointer;background:rgba(255,255,255,.05);padding:2px}
+.ite-align-btns{display:flex;gap:3px}
+.ite-align-btn{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px;color:var(--gray);font-size:12px;padding:5px 0;cursor:pointer;transition:.15s;text-align:center}
+.ite-align-btn.active,.ite-align-btn:hover{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
+.ite-pop-footer{display:flex;gap:7px;justify-content:flex-end;margin-top:4px}
+
+/* BG UPLOAD ZONE */
+.bg-zone{border:2px dashed rgba(255,255,255,.1);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:var(--tr);position:relative}
+.bg-zone:hover,.bg-zone.drag{border-color:var(--red);background:rgba(232,25,44,.04)}
+.bg-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.bg-zone-txt{font-size:13px;color:var(--gray);pointer-events:none}
+.bg-zone-ic{font-size:28px;margin-bottom:8px;opacity:.4;pointer-events:none}
+
+/* IMAGE UPLOAD ZONE (news, members) */
+.img-upload-zone{border:2px dashed rgba(255,255,255,.1);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:var(--tr);position:relative;background:rgba(255,255,255,.02)}
+.img-upload-zone:hover,.img-upload-zone.drag{border-color:var(--red);background:rgba(232,25,44,.04)}
+.img-upload-inner{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
+.img-upload-txt{font-size:12px;color:var(--gray)}
+.img-upload-sub{font-size:10px;color:rgba(255,255,255,.25)}
+.img-upload-zone.has-img{border-style:solid;border-color:rgba(232,25,44,.3)}
+.nb-img-zone{padding:8px!important}
+
+@media(max-width:768px){
+  nav{display:none}
+  .admin-layout{grid-template-columns:1fr}
+  .admin-sb{display:none}
+  .news-grid,.svc-grid{grid-template-columns:1fr}
+  footer{flex-direction:column;align-items:flex-start}
+  .hero-title{font-size:clamp(60px,18vw,100px)}
+  #mob-menu-btn{display:flex!important}
+  .logo-n{font-size:13px!important;letter-spacing:2px!important}
+  .logo-s{display:none}
+  /* Скрываем лишние элементы в хедере на мобиле */
+  .hdr-right .badge{display:none}
+  #auth-ctrl .btn{display:none!important}
+  /* Показываем только имя и кнопку-гамбургер */
+  #auth-ctrl{font-size:11px}
+  /* На мобиле скрываем "+ Новость" — она есть в мобильном меню */
+  #btn-add-news{display:none!important}
+  /* Скрываем кнопки "Панель" и "Выйти" в хедере — они в мобильном меню */
+  .mob-hide-btn,.mob-hide-badge{display:none!important}
+  .mob-hide-name{display:none!important}
+  /* mob-nav управляется JS, изначально скрыт */
+}
+#mob-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;flex-direction:column;gap:5px;flex-shrink:0}
+#mob-menu-btn span{display:block;width:22px;height:2px;background:var(--white);border-radius:1px;transition:.3s}
+#mob-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+#mob-menu-btn.open span:nth-child(2){opacity:0}
+#mob-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+#mob-nav{display:none;position:fixed;top:92px;left:0;right:0;z-index:998;background:rgba(10,10,10,0.98);backdrop-filter:blur(16px);border-bottom:1px solid var(--red-dark);padding:12px 0}
+#mob-nav .mnl{display:block;width:100%;background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:12px 1.5rem;text-align:left;cursor:pointer;transition:.2s;border-left:2px solid transparent}
+#mob-nav .mnl:hover,#mob-nav .mnl.active{color:var(--red);border-left-color:var(--red);background:rgba(232,25,44,.06)}
+#mob-nav .mnl-admin{background:var(--red)!important;color:var(--white)!important;margin:10px 1.5rem;border-radius:var(--r);border-left:none!important;width:calc(100% - 3rem)!important;text-align:center!important;font-weight:700}
+#mob-nav .mnl-admin:hover{background:var(--red-dark)!important}
+#mob-nav .mob-divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
+</style>
+</head>
+<body>
+<!-- PER-PAGE BG LAYERS -->
+<div class="page-bg-layer" id="bg-home"></div>
+<div class="page-bg-layer" id="bg-news" style="opacity:0"></div>
+<div class="page-bg-layer" id="bg-services" style="opacity:0"></div>
+<div class="page-bg-layer" id="bg-team" style="opacity:0"></div>
+<div class="page-bg-layer" id="bg-about" style="opacity:0"></div>
+
+<div class="toast-c" id="toast-c"></div>
+
+<!-- HEADER -->
+<header id="hdr">
+  <div class="logo" onclick="showPage('home')">
+    <div class="logo-b">WN</div>
+    <div><div class="logo-n">WEAZEL NEWS</div><div class="logo-s">Majestic RP · Denver</div></div>
+  </div>
+  <nav id="main-nav">
+    <button class="nl active" onclick="showPage('home')" data-page="home">Главная</button>
+    <button class="nl" onclick="showPage('news')" data-page="news">Новости</button>
+    <button class="nl" onclick="showPage('services')" data-page="services">Услуги</button>
+    <button class="nl" onclick="showPage('team')" data-page="team">Состав</button>
+    <button class="nl" onclick="showPage('about')" data-page="about">О нас</button>
+  </nav>
+  <div class="hdr-right">
+    <button id="btn-add-news" onclick="openNewsModal()">+ Новость</button>
+    <div id="auth-ctrl"></div>
+    <button id="mob-menu-btn" onclick="toggleMobMenu()" aria-label="Меню">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+<!-- MOBILE NAV -->
+<div id="mob-nav">
+  <button class="mnl" onclick="showPage('home');closeMobMenu()" data-mob-page="home">Главная</button>
+  <button class="mnl" onclick="showPage('news');closeMobMenu()" data-mob-page="news">Новости</button>
+  <button class="mnl" onclick="showPage('services');closeMobMenu()" data-mob-page="services">Услуги</button>
+  <button class="mnl" onclick="showPage('team');closeMobMenu()" data-mob-page="team">Состав</button>
+  <button class="mnl" onclick="showPage('about');closeMobMenu()" data-mob-page="about">О нас</button>
+  <div class="mob-divider"></div>
+  <div id="mob-auth-area" style="padding:0 1.5rem 4px"></div>
+</div>
+
+<!-- TICKER -->
+<div id="ticker-bar">
+  <div class="ticker-label">ЭФИР</div>
+  <div class="ticker-viewport">
+    <div id="ticker-track" class="ticker-track"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-eyebrow reveal">Majestic RP · Denver · Weazel News</div>
+    <h1 class="hero-title reveal rd1" id="hero-title-text">WEAZEL<br><span>NEWS</span></h1>
+    <p class="hero-sub reveal rd2"><span class="ite-wrap" data-ite="heroSub"><button class="ite-btn" onclick="openITE('heroSub',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="hero-sub-text">Новости. Репортажи. Прямой эфир.</span></span></p>
+    <div class="hero-btns reveal rd3">
+      <button class="btn btn-p" onclick="showPage('about')" id="hero-btn1-text">О нас</button>
+      <button class="btn btn-o" onclick="showPage('news')" id="hero-btn2-text">Все новости</button>
+    </div>
+  </div>
+  <div class="sec" style="padding-top:0">
+    <div class="sec-inner">
+      <div class="info-block reveal">
+        <div>
+          <div class="h-lbl">Время работы редакции</div>
+          <div class="h-val">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="ite-wrap" data-ite="homeHours"><button class="ite-btn" onclick="openITE('homeHours',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="home-hours-text">13:00 — 00:00</span></span>
+          </div>
+        </div>
+        <div class="ibdiv"></div>
+        <div>
+          <div class="h-lbl" style="margin-bottom:6px">Присоединиться</div>
+          <button class="btn-discord" onclick="openLink('https://discord.gg/weazelnewsdenver')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.083.119 18.108.143 18.123a19.876 19.876 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 19.839 19.839 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg> Discord</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sec" style="padding-top:0">
+    <div class="sec-inner">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span class="ite-wrap" data-ite="homeLatest"><button class="ite-btn" onclick="openITE('homeLatest',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="home-latest-title">Последние новости</span></span></div>
+        <div class="sec-line"></div><div class="sec-tag">Latest</div>
+      </div>
+      <div class="news-grid" id="home-news-grid"></div>
+      <div style="text-align:center;margin-top:1.75rem" class="reveal">
+        <button class="btn btn-o" onclick="showPage('news')">Все новости →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS -->
+<div class="page" id="page-news">
+  <div class="sec">
+    <div class="sec-inner">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span class="ite-wrap" data-ite="newsTitle"><button class="ite-btn" onclick="openITE('newsTitle',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="news-page-title">Все новости</span></span></div>
+        <div class="sec-line"></div><div class="sec-tag">Archive</div>
+      </div>
+      <div class="news-grid" id="all-news-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NEWS FULL -->
+<div class="page" id="page-news-full">
+  <div class="nf-wrap">
+    <button class="btn btn-o btn-sm" onclick="showPage('news')" style="margin-bottom:1.5rem">← Назад к новостям</button>
+    <div id="nf-meta" style="display:flex;align-items:center;gap:8px;margin-bottom:10px"></div>
+    <h1 id="nf-title" style="font-family:var(--font-s);font-size:clamp(22px,4vw,38px);line-height:1.2;color:var(--white);margin-bottom:12px;display:block;width:100%"></h1>
+    <p id="nf-author" style="font-size:12px;color:var(--gray);margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(255,255,255,.07)"></p>
+    <div id="nf-content" class="nf-content"></div>
+    <div id="nf-edit-btns" style="margin-top:2rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:8px"></div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<div class="page" id="page-services">
+  <div class="sec">
+    <div class="sec-inner">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span class="ite-wrap" data-ite="servicesTitle"><button class="ite-btn" onclick="openITE('servicesTitle',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="services-page-title">Услуги</span></span></div>
+        <div class="sec-line"></div><div class="sec-tag">Services</div>
+      </div>
+      <div id="services-container"></div>
+      <div id="btn-add-svc" style="margin-top:1.5rem;display:none">
+        <button class="btn btn-o" onclick="openServiceModal()">+ Добавить категорию</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM -->
+<div class="page" id="page-team">
+  <div class="sec">
+    <div class="sec-inner">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span class="ite-wrap" data-ite="teamTitle"><button class="ite-btn" onclick="openITE('teamTitle',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="team-page-title">Состав</span></span></div>
+        <div class="sec-line"></div><div class="sec-tag">Team</div>
+      </div>
+      <div id="team-container"></div>
+      <div id="btn-add-mem" style="margin-top:1.5rem;display:none;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-o" onclick="openTeamCatModal()">+ Категория</button>
+        <button class="btn btn-p" onclick="openTeamMemberModal()">+ Участник</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div class="page" id="page-about">
+  <div class="sec">
+    <div class="sec-inner" style="max-width:820px">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span class="ite-wrap" data-ite="aboutTitleO" style="display:inline"><button class="ite-btn" onclick="openITE('aboutTitleO',event)" title="Редактировать букву О"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="about-title-o" style="color:var(--red)">О</span></span> <span class="ite-wrap" data-ite="aboutTitleRest"><button class="ite-btn" onclick="openITE('aboutTitleRest',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="about-page-title-rest">нас</span></span></div>
+        <div class="sec-line"></div><div class="sec-tag">About</div>
+      </div>
+      <div id="about-text" class="about-content ite-wrap block-wrap" data-ite="aboutBody"><button class="ite-btn" onclick="openITE('aboutBody',event)" title="Редактировать текст страницы"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <p>Добро пожаловать в <strong>Weazel News</strong> — ведущую новостную организацию Лос-Сантоса на сервере Majestic RP.</p>
+        <p>Мы — независимая редакция, работающая в режиме реального времени. Наши журналисты и операторы ежедневно выезжают на места событий, чтобы донести до вас самую актуальную информацию о происходящем в городе.</p>
+        <h2>Наша миссия</h2>
+        <p>Объективность, оперативность и профессионализм — три кита, на которых строится работа Weazel News. Мы освещаем события в сфере бизнеса, политики, криминала и городской жизни.</p>
+        <h2>Что мы предлагаем</h2>
+        <p>Редакция оказывает услуги по организации ивентов, проведению пресс-конференций, съёмке репортажей и рекламных роликов. Каждый проект разрабатывается индивидуально.</p>
+      </div>
+      <div class="info-block reveal" style="margin-top:2rem">
+        <div>
+          <div class="h-lbl">Время работы</div>
+          <div class="h-val">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="ite-wrap" data-ite="aboutHours"><button class="ite-btn" onclick="openITE('aboutHours',event)" title="Редактировать"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><span id="about-hours-text">13:00 — 00:00</span></span>
+          </div>
+        </div>
+        <div class="ibdiv"></div>
+        <div>
+          <div class="h-lbl" style="margin-bottom:6px">Вступить в редакцию</div>
+          <button class="btn-discord" onclick="openLink('https://discord.gg/weazelnewsdenver')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.083.119 18.108.143 18.123a19.876 19.876 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 19.839 19.839 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg> Discord — Weazel News</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="page" id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">WN</div>
+      <div class="auth-sub">Weazel News · Majestic RP</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Вход</button>
+        <button class="auth-tab" id="tab-reg" onclick="switchAuthTab('reg')">Регистрация</button>
+      </div>
+      <div id="auth-login-form">
+        <div class="fg">
+          <label class="fl">Электронная почта</label>
+          <input type="email" class="fi" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="fg">
+          <label class="fl">Пароль</label>
+          <input type="password" class="fi" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="ferr" id="login-error"></div>
+        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Войти</button>
+      </div>
+      <div id="auth-reg-form" style="display:none">
+        <div class="fg">
+          <label class="fl">Никнейм (публичный)</label>
+          <input type="text" class="fi" id="reg-name" placeholder="James_Smith">
+        </div>
+        <div class="fg">
+          <label class="fl">Электронная почта</label>
+          <input type="email" class="fi" id="reg-email" placeholder="your@email.com">
+        </div>
+        <div class="fg">
+          <label class="fl">Пароль (мин. 6 символов)</label>
+          <input type="password" class="fi" id="reg-password" placeholder="••••••••">
+        </div>
+        <div class="ferr" id="reg-error"></div>
+        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doRegister()">Зарегистрироваться</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div class="admin-layout">
+    <aside class="admin-sb">
+      <div class="admin-sb-lbl">Управление</div>
+      <div class="ani active" onclick="switchAdminTab('visitors',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Посетители</div>
+      <div class="ani" onclick="switchAdminTab('users',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Пользователи</div>
+      <div class="ani" onclick="switchAdminTab('news-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Новости</div>
+      <div class="ani" onclick="switchAdminTab('services-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Услуги</div>
+      <div class="ani" onclick="switchAdminTab('team-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> Состав</div>
+      <div class="ani" onclick="switchAdminTab('texts-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Все тексты</div>
+      <div class="ani" onclick="switchAdminTab('site-settings',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Настройки</div>
+      <div style="margin-top:auto;padding:1rem 14px 0;border-top:1px solid rgba(255,255,255,.05)">
+        <button class="btn btn-o btn-sm" style="width:100%;justify-content:center" onclick="showPage('home')">← На сайт</button>
+      </div>
+    </aside>
+    <main class="admin-content">
+
+      <div class="asec active" id="admin-visitors">
+        <div class="asec-title">Посетители</div>
+        <div class="tw"><table class="dt">
+          <thead><tr><th>Никнейм</th><th>Страница</th><th>Дата и время</th></tr></thead>
+          <tbody id="visitors-tbody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="asec" id="admin-users">
+        <div class="asec-title">Пользователи</div>
+        <div class="tw"><table class="dt">
+          <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
+          <tbody id="users-tbody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="asec" id="admin-news-mgmt">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+          <div class="asec-title" style="margin:0">Новости</div>
+          <button class="btn btn-p btn-sm" onclick="openNewsModal()">+ Добавить</button>
+        </div>
+        <div class="tw"><table class="dt">
+          <thead><tr><th>Заголовок</th><th>Категория</th><th>Выравн.</th><th>Автор</th><th>Дата</th><th>Действия</th></tr></thead>
+          <tbody id="news-mgmt-tbody"></tbody>
+        </table></div>
+      </div>
+
+      <div class="asec" id="admin-services-mgmt">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+          <div class="asec-title" style="margin:0">Услуги</div>
+          <button class="btn btn-p btn-sm" onclick="openServiceModal()">+ Категория</button>
+        </div>
+        <div id="services-mgmt-list"></div>
+      </div>
+
+      <div class="asec" id="admin-team-mgmt">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+          <div class="asec-title" style="margin:0">Состав</div>
+          <div class="bg-group">
+            <button class="btn btn-o btn-sm" onclick="openTeamCatModal()">+ Категория</button>
+            <button class="btn btn-p btn-sm" onclick="openTeamMemberModal()">+ Участник</button>
+          </div>
+        </div>
+        <div id="team-mgmt-list"></div>
+      </div>
+
+      <!-- ALL TEXTS EDITOR -->
+      <div class="asec" id="admin-texts-mgmt">
+        <div class="asec-title">Редактор всех текстов</div>
+        <div style="display:grid;gap:14px;max-width:640px">
+
+          <div class="acard">
+            <div class="acard-title" style="margin-bottom:12px">🏠 Главная страница</div>
+            <div class="fg"><label class="fl">Подзаголовок героя</label><input class="fi" id="txt-hero-sub" placeholder="Новости. Репортажи. Прямой эфир."></div>
+            <div class="fg"><label class="fl">Кнопка «О нас»</label><input class="fi" id="txt-hero-btn1" placeholder="О нас"></div>
+            <div class="fg"><label class="fl">Кнопка «Все новости»</label><input class="fi" id="txt-hero-btn2" placeholder="Все новости"></div>
+            <div class="fg"><label class="fl">Время работы (главная)</label><input class="fi" id="txt-home-hours" placeholder="13:00 — 00:00"></div>
+            <button class="btn btn-p btn-sm" onclick="saveTexts('home')">Сохранить</button>
+          </div>
+
+          <div class="acard">
+            <div class="acard-title" style="margin-bottom:12px">📄 Страница «О нас»</div>
+            <div class="fg"><label class="fl">Время работы (О нас)</label><input class="fi" id="txt-about-hours" placeholder="13:00 — 00:00"></div>
+            <div class="fg"><label class="fl">Основной текст страницы (HTML)</label>
+              <textarea class="fta" id="txt-about-body" style="min-height:200px;font-family:monospace;font-size:12px"></textarea>
+            </div>
+            <button class="btn btn-p btn-sm" onclick="saveTexts('about')">Сохранить</button>
+          </div>
+
+          <div class="acard">
+            <div class="acard-title" style="margin-bottom:12px">🔤 Названия разделов</div>
+            <div class="fg"><label class="fl">Заголовок «Последние новости» (главная)</label><input class="fi" id="txt-home-latest" placeholder="Последние новости"></div>
+            <div class="fg"><label class="fl">Заголовок страницы «Новости»</label><input class="fi" id="txt-news-title" placeholder="Все новости"></div>
+            <div class="fg"><label class="fl">Заголовок страницы «Услуги»</label><input class="fi" id="txt-services-title" placeholder="Услуги"></div>
+            <div class="fg"><label class="fl">Заголовок страницы «Состав»</label><input class="fi" id="txt-team-title" placeholder="Состав"></div>
+            <button class="btn btn-p btn-sm" onclick="saveTexts('titles')">Сохранить</button>
+          </div>
+
+          <div class="acard">
+            <div class="acard-title" style="margin-bottom:12px">📺 Бегущая строка</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input class="fi" id="ticker-input" placeholder="Добавить сообщение..." style="flex:1">
+              <button class="btn btn-p btn-sm" onclick="addTickerItem()">+</button>
+            </div>
+            <div id="ticker-list"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SITE SETTINGS -->
+      <div class="asec" id="admin-site-settings">
+        <div class="asec-title">Настройки сайта</div>
+        <div style="display:grid;gap:16px;max-width:600px">
+
+          <div class="acard">
+            <div class="acard-title">Фоны страниц</div>
+            <div class="acard-sub" style="margin-bottom:14px">Каждая вкладка — свой фон. Загрузите файл или введите URL.</div>
+            <div style="display:grid;gap:12px">
+              <div id="bg-home-block"><label class="fl">🏠 Главная</label></div>
+              <div id="bg-news-block"><label class="fl">📰 Новости</label></div>
+              <div id="bg-services-block"><label class="fl">📋 Услуги</label></div>
+              <div id="bg-team-block"><label class="fl">👥 Состав</label></div>
+              <div id="bg-about-block"><label class="fl">ℹ️ О нас</label></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-left">
+    <div class="f-badge">
+      <div class="f-dot"></div>
+      <div><div class="f-sub">Время работы</div><div class="f-hours" id="footer-hours-text">13:00 — 00:00</div></div>
+    </div>
+    <div class="f-copy">Weazel News · Majestic RP Denver</div>
+  </div>
+  <button class="btn-discord" style="padding:8px 14px;font-size:11px" onclick="openLink('https://discord.gg/weazelnewsdenver')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.083.119 18.108.143 18.123a19.876 19.876 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 19.839 19.839 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+    Discord
+  </button>
+</footer>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- NEWS MODAL -->
+<div class="mo" id="modal-news">
+  <div class="modal modal-wide">
+    <div class="mhdr">
+      <div class="mttl" id="modal-news-title">Добавить новость</div>
+      <button class="mclose" onclick="closeModal('modal-news')">✕</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="news-edit-id">
+      <div class="fg"><label class="fl">Заголовок *</label><input type="text" class="fi" id="news-title-input" placeholder="Заголовок новости"></div>
+      <div class="fg"><label class="fl">Категория</label><input type="text" class="fi" id="news-cat-input" placeholder="Репортаж, Срочно..."></div>
+      <div class="fg">
+        <label class="fl">🖼 Превью-карточки (фото на карточке новости)</label>
+        <div class="img-upload-zone" id="news-img-zone" onclick="document.getElementById('news-img-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'news-img')">
+          <input type="file" id="news-img-file" accept="image/*" style="display:none" onchange="handleImgFile(event,'news-img')">
+          <div class="img-upload-inner" id="news-img-preview">
+            <div style="font-size:28px;opacity:.3">🖼</div>
+            <div class="img-upload-txt">Перетащите или нажмите для выбора</div>
+            <div class="img-upload-sub">PNG, JPG, GIF, WEBP</div>
+          </div>
+        </div>
+        <input type="hidden" id="news-img-input">
+      </div>
+      <div class="fg">
+        <label class="fl">🌅 Фоновое фото новости (задний фон страницы статьи)</label>
+        <div class="img-upload-zone" id="news-bg-zone" onclick="document.getElementById('news-bg-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'news-bg')">
+          <input type="file" id="news-bg-file" accept="image/*" style="display:none" onchange="handleImgFile(event,'news-bg')">
+          <div class="img-upload-inner" id="news-bg-preview">
+            <div style="font-size:28px;opacity:.3">🌅</div>
+            <div class="img-upload-txt">Фон будет виден позади текста статьи</div>
+            <div class="img-upload-sub">PNG, JPG, GIF, WEBP</div>
+          </div>
+        </div>
+        <input type="hidden" id="news-bg-input">
+      </div>
+      <div class="fg"><label class="fl">Превью-текст (виден на карточке)</label><textarea class="fta" id="news-excerpt-input" style="min-height:60px" placeholder="Краткое описание для карточки..."></textarea></div>
+      <div class="fg">
+        <label class="fl">Содержимое новости</label>
+        <div class="fhint" style="margin-bottom:8px">Добавляйте блоки: текст, ссылку (fliphtml5/youtube/vimeo) или фото. Каждый блок можно центровать отдельно.</div>
+        <div id="news-blocks-editor" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-o btn-sm" onclick="addNewsBlock('text')">+ Текст</button>
+          <button type="button" class="btn btn-o btn-sm" onclick="addNewsBlock('img')">+ Фото</button>
+          <button type="button" class="btn btn-o btn-sm" onclick="addNewsBlock('link')">+ Гиперссылка</button>
+          <button type="button" class="btn btn-o btn-sm" onclick="addNewsBlock('embed')">+ Видео/FlipHTML5</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Выравнивание заголовка новости</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button type="button" class="news-align-btn btn btn-o btn-sm" data-nalign="left" onclick="setNewsAlign('left')">◀ Слева</button>
+          <button type="button" class="news-align-btn btn btn-o btn-sm" data-nalign="center" onclick="setNewsAlign('center')">▶◀ Центр</button>
+          <button type="button" class="news-align-btn btn btn-o btn-sm" data-nalign="right" onclick="setNewsAlign('right')">▶ Справа</button>
+        </div>
+        <input type="hidden" id="news-align-input" value="left">
+      </div>
+      <div class="fg">
+        <label class="fl">🎨 Цвета текста</label>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+          <div>
+            <div style="font-size:10px;color:var(--gray);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase">Цвет заголовка</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="color" id="news-title-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,.15);cursor:pointer;background:transparent;padding:2px">
+              <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('news-title-color').value='#ffffff'">Сброс</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--gray);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase">Цвет текста статьи</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="color" id="news-text-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,.15);cursor:pointer;background:transparent;padding:2px">
+              <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('news-text-color').value='#ffffff'">Сброс</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Скрытые поля для совместимости -->
+      <input type="hidden" id="news-content-input">
+      <input type="hidden" id="news-body-img-input">
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-news')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveNews()">Опубликовать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE MODAL -->
+<div class="mo" id="modal-service">
+  <div class="modal">
+    <div class="mhdr">
+      <div class="mttl" id="modal-svc-title">Категория услуг</div>
+      <button class="mclose" onclick="closeModal('modal-service')">✕</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="svc-cat-id">
+      <div class="fg"><label class="fl">Название категории *</label><input type="text" class="fi" id="svc-cat-name" placeholder="Event Management"></div>
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span class="fl" style="margin:0">Услуги</span>
+          <button class="btn btn-o btn-sm" onclick="addSvcRow()">+ Добавить</button>
+        </div>
+        <div id="svc-items-editor"></div>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-service')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveSvcCat()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM CAT MODAL -->
+<div class="mo" id="modal-team-cat">
+  <div class="modal">
+    <div class="mhdr">
+      <div class="mttl" id="modal-tcat-title">Категория состава</div>
+      <button class="mclose" onclick="closeModal('modal-team-cat')">✕</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="team-cat-id">
+      <div class="fg"><label class="fl">Название *</label><input type="text" class="fi" id="team-cat-name" placeholder="Руководство"></div>
+      <div class="fg">
+        <label class="fl">Расположение участников</label>
+        <select class="fsel" id="team-cat-layout">
+          <option value="pyramid">Пирамида (первый по центру, остальные ниже)</option>
+          <option value="row">В ряд (все в одну строку по центру)</option>
+        </select>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-team-cat')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveTeamCat()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM MEMBER MODAL -->
+<div class="mo" id="modal-team-member">
+  <div class="modal">
+    <div class="mhdr">
+      <div class="mttl" id="modal-member-title">Добавить участника</div>
+      <button class="mclose" onclick="closeModal('modal-team-member')">✕</button>
+    </div>
+    <div class="mbody">
+      <input type="hidden" id="member-edit-id">
+      <div class="fg"><label class="fl">Категория *</label><select class="fsel" id="member-cat-select"></select></div>
+      <div class="fg"><label class="fl">Имя / Никнейм *</label><input type="text" class="fi" id="member-name" placeholder="James Smith"></div>
+      <div class="fg"><label class="fl">Должность</label><input type="text" class="fi" id="member-role" placeholder="Главный редактор"></div>
+      <div class="fg">
+        <label class="fl">Фото участника</label>
+        <div class="img-upload-zone" id="member-photo-zone" onclick="document.getElementById('member-photo-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'member-photo')">
+          <input type="file" id="member-photo-file" accept="image/*" style="display:none" onchange="handleImgFile(event,'member-photo')">
+          <div class="img-upload-inner" id="member-photo-preview">
+            <div style="font-size:24px;opacity:.3">👤</div>
+            <div class="img-upload-txt">Нажмите или перетащите фото</div>
+          </div>
+        </div>
+        <input type="hidden" id="member-photo">
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-team-member')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveMember()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROLE MODAL -->
+<div class="mo" id="modal-role">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Управление ролью</div><button class="mclose" onclick="closeModal('modal-role')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="role-uid">
+      <p id="role-username" style="font-size:14px;color:var(--white);margin-bottom:14px;font-weight:600"></p>
+      <div class="fg"><label class="fl">Назначить роль</label>
+        <select class="fsel" id="role-select">
+          <option value="guest">Гость</option>
+          <option value="editor">Редактор</option>
+          <option value="admin">Администратор</option>
+        </select>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-role')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveRole()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// API CLIENT
+// ══════════════════════════════════════════════
+const API = {
+  async get(path) {
+    const r = await fetch('/api' + path, {credentials:'include'});
+    if (!r.ok) throw await r.json();
+    return r.json();
+  },
+  async post(path, body) {
+    const r = await fetch('/api' + path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+    if (!r.ok) { const e = await r.json(); throw e; }
+    return r.json();
+  },
+  async put(path, body) {
+    const r = await fetch('/api' + path, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+    if (!r.ok) { const e = await r.json(); throw e; }
+    return r.json();
+  },
+  async del(path) {
+    const r = await fetch('/api' + path, {method:'DELETE',credentials:'include'});
+    if (!r.ok) throw await r.json();
+    return r.json();
+  },
+  async upload(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+    const r = await fetch('/api/upload', {method:'POST',body:fd,credentials:'include'});
+    if (!r.ok) throw await r.json();
+    return r.json(); // { url: '/uploads/...' }
+  }
+};
+
+// ══════════════════════════════════════════════
+// LOCAL SETTINGS (non-sensitive, stay in localStorage)
+// ══════════════════════════════════════════════
+const LS = {
+  get(k,d=null){try{const v=localStorage.getItem('wn_'+k);return v!==null?JSON.parse(v):d}catch{return d}},
+  set(k,v){try{localStorage.setItem('wn_'+k,JSON.stringify(v))}catch{}}
+};
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let CU = null;
+let NEWS = [];
+let SERVICES = [];
+let TEAM = {cats:[], members:[]};
+let SETTINGS = {};
+
+const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin');
+const isAdmin = () => CU && CU.role==='admin';
+const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':'Гость';
+
+// ══════════════════════════════════════════════
+// SECURITY UTILS
+// ══════════════════════════════════════════════
+function xe(s){
+  if(s==null)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fd(d){if(!d)return'';try{return new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}catch{return d}}
+function fdt(d){if(!d)return'';try{return new Date(d).toLocaleString('ru-RU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch{return d}}
+function openLink(url){window.open(url,'_blank','noopener,noreferrer')}
+function safeImg(u){if(!u)return'';const s=String(u).trim();if(s.startsWith('http')||s.startsWith('data:image')||s.startsWith('/uploads/'))return s;return'';}
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-password').value;
+  const err=document.getElementById('login-error');
+  const btn=document.querySelector('#auth-login-form .btn-p');
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Заполните все поля';err.style.display='block';return}
+  if(btn){btn.textContent='Вход...';btn.disabled=true;}
+  try{
+    const {user} = await API.post('/auth/login',{email,password:pass});
+    CU=user;
+    if(btn){btn.textContent='Войти';btn.disabled=false;}
+    if(canEdit())document.body.classList.add('is-admin');
+    renderHeader();showPage('home');
+    toast(`Добро пожаловать, ${xe(user.name)}!`,'s');
+  }catch(e){
+    if(btn){btn.textContent='Войти';btn.disabled=false;}
+    err.textContent=e.error||'Ошибка входа';err.style.display='block';
+  }
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-password').value;
+  const err=document.getElementById('reg-error');
+  const btn=document.querySelector('#auth-reg-form .btn-p');
+  err.style.display='none';
+  if(!name||!email||!pass){err.textContent='Заполните все поля';err.style.display='block';return}
+  if(pass.length<6){err.textContent='Пароль минимум 6 символов';err.style.display='block';return}
+  if(btn){btn.textContent='Создание...';btn.disabled=true;}
+  try{
+    const {user} = await API.post('/auth/register',{name,email,password:pass});
+    CU=user;
+    if(btn){btn.textContent='Зарегистрироваться';btn.disabled=false;}
+    renderHeader();showPage('home');
+    toast(`Добро пожаловать, ${xe(user.name)}!`,'s');
+  }catch(e){
+    if(btn){btn.textContent='Зарегистрироваться';btn.disabled=false;}
+    err.textContent=e.error||'Ошибка регистрации';err.style.display='block';
+  }
+}
+
+async function logout(){
+  await API.post('/auth/logout',{});
+  CU=null;document.body.classList.remove('is-admin');
+  renderHeader();showPage('home');toast('Вы вышли','i');
+}
+
+function switchAuthTab(t){
+  document.getElementById('auth-login-form').style.display=t==='login'?'block':'none';
+  document.getElementById('auth-reg-form').style.display=t==='reg'?'block':'none';
+  document.getElementById('tab-login').classList.toggle('active',t==='login');
+  document.getElementById('tab-reg').classList.toggle('active',t==='reg');
+}
+
+// ══════════════════════════════════════════════
+// HEADER
+// ══════════════════════════════════════════════
+function renderHeader(){
+  const ac=document.getElementById('auth-ctrl');
+  const mob=document.getElementById('mob-auth-area');
+  document.getElementById('btn-add-news').style.display=canEdit()?'block':'none';
+  const bam=document.getElementById('btn-add-mem');
+  const bas=document.getElementById('btn-add-svc');
+  if(bam)bam.style.display=canEdit()?'flex':'none';
+  if(bas)bas.style.display=canEdit()?'block':'none';
+  if(CU){
+    ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
+      <span style="font-size:11px;color:var(--gray)" class="mob-hide-name">${xe(CU.name)}</span>
+      <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
+      ${canEdit()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
+      <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
+    </div>`;
+    if(mob)mob.innerHTML=`
+      <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
+      ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
+      ${canEdit()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
+      <div class="mob-divider"></div>
+      <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(255,255,255,.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
+  } else {
+    ac.innerHTML=`<button class="btn btn-o btn-sm" onclick="showPage('auth')">Войти</button>`;
+    if(mob)mob.innerHTML=`<button class="mnl" onclick="showPage('auth');closeMobMenu()">Войти</button>`;
+  }
+  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===curPage));
+}
+
+function toggleMobMenu(){
+  const nav=document.getElementById('mob-nav');
+  const btn=document.getElementById('mob-menu-btn');
+  const open=nav.style.display==='block';
+  nav.style.display=open?'none':'block';
+  btn.classList.toggle('open',!open);
+}
+function closeMobMenu(){
+  document.getElementById('mob-nav').style.display='none';
+  document.getElementById('mob-menu-btn').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════
+// PAGE NAV
+// ══════════════════════════════════════════════
+let curPage='home';
+async function showPage(page){
+  if(page==='admin'&&!canEdit()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
+  const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
+  const nl=document.querySelector(`[data-page="${page}"]`);if(nl)nl.classList.add('active');
+  curPage=page;
+  window.scrollTo({top:0,behavior:'instant'});
+  switchBG(page);
+  logVisit(page);
+  if(page==='home')await renderHomeNews();
+  if(page==='news')await renderAllNews();
+  if(page==='services')await renderServices();
+  if(page==='team')await renderTeam();
+  if(page==='about')loadAbout();
+  if(page==='admin')await renderAdmin();
+  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===page));
+  setTimeout(initReveal,80);
+}
+
+function logVisit(page){
+  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация'};
+  API.post('/visitors',{page:labels[page]||page}).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════
+// BACKGROUNDS (stored in localStorage — non-sensitive)
+// ══════════════════════════════════════════════
+const BG_PAGES=['home','news','services','team','about'];
+
+function switchBG(page){
+  const bgs=LS.get('bgs',{});
+  BG_PAGES.forEach(p=>{
+    const el=document.getElementById('bg-'+p);if(!el)return;
+    const url=bgs[p]||'';
+    el.style.backgroundImage=url?`url('${url}')`:'' ;
+    el.style.opacity=(p===page&&url)?'1':'0';
+  });
+}
+
+function buildBGBlocks(){
+  BG_PAGES.forEach(p=>{
+    const block=document.getElementById('bg-'+p+'-block');if(!block)return;
+    const bgs=LS.get('bgs',{});const current=bgs[p]||'';
+    const names={home:'🏠 Главная',news:'📰 Новости',services:'📋 Услуги',team:'👥 Состав',about:'ℹ️ О нас'};
+    block.innerHTML=`<label class="fl">${names[p]}</label>
+      <div class="bg-zone" id="bgzone-${p}" onclick="document.getElementById('bgfile-${p}').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleBGDrop(event,'${p}')">
+        <input type="file" id="bgfile-${p}" accept="image/*" style="display:none" onchange="handleBGFile(event,'${p}')">
+        <div class="bg-zone-ic">🖼️</div>
+        <div class="bg-zone-txt">${current?'✓ Фон установлен — кликните для замены':'Перетащите файл или кликните для выбора'}</div>
+        ${current?`<div style="font-size:10px;color:var(--red);margin-top:4px">Загружен</div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <input type="text" class="fi" id="bgurl-${p}" placeholder="Или вставьте URL" value="${xe(current.startsWith('data:')?'':current)}" style="flex:1;font-size:12px">
+        <button class="btn btn-p btn-sm" onclick="applyBGUrl('${p}')">URL</button>
+        ${current?`<button class="btn btn-d btn-sm" onclick="clearBG('${p}')">✕</button>`:''}
+      </div>`;
+  });
+}
+
+async function handleBGFile(event,page){
+  const file=event.target.files[0];if(!file)return;
+  const url=await uploadFile(file);
+  if(url){const bgs=LS.get('bgs',{});bgs[page]=url;LS.set('bgs',bgs);switchBG(curPage);buildBGBlocks();toast('Фон установлен!','s');}
+}
+async function handleBGDrop(event,page){
+  event.preventDefault();document.getElementById('bgzone-'+page).classList.remove('drag');
+  const file=event.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;
+  const url=await uploadFile(file);
+  if(url){const bgs=LS.get('bgs',{});bgs[page]=url;LS.set('bgs',bgs);switchBG(curPage);buildBGBlocks();toast('Фон установлен!','s');}
+}
+function applyBGUrl(page){
+  const url=document.getElementById('bgurl-'+page).value.trim();
+  const bgs=LS.get('bgs',{});bgs[page]=url;LS.set('bgs',bgs);
+  switchBG(curPage);buildBGBlocks();toast(url?'Фон обновлён':'Фон убран','s');
+}
+function clearBG(page){
+  const bgs=LS.get('bgs',{});bgs[page]='';LS.set('bgs',bgs);
+  switchBG(curPage);buildBGBlocks();toast('Фон убран','i');
+}
+
+// ══════════════════════════════════════════════
+// FILE UPLOAD (to server)
+// ══════════════════════════════════════════════
+async function uploadFile(file){
+  if(!file||!file.type.startsWith('image/'))return null;
+  try{
+    const r=await API.upload(file);return r.url;
+  }catch(e){toast(e.error||'Ошибка загрузки','e');return null;}
+}
+
+async function handleImgFile(event,key){
+  const file=event.target.files[0];if(!file)return;
+  const url=await uploadFile(file);
+  if(url)setUploadedImg(key,url);
+}
+async function handleImgDrop(event,key){
+  event.preventDefault();event.currentTarget.classList.remove('drag');
+  const file=event.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;
+  const url=await uploadFile(file);
+  if(url)setUploadedImg(key,url);
+}
+async function handleNBImgFile(event,idx){
+  const file=event.target.files[0];if(!file)return;
+  const url=await uploadFile(file);
+  if(url){newsBlocks[idx].value=url;renderNewsBlocks();}
+}
+
+function setUploadedImg(key,url){
+  const hi=document.getElementById(key+'-input')||document.getElementById(key);
+  if(hi)hi.value=url;
+  const zone=document.getElementById(key+'-zone');
+  const preview=document.getElementById(key+'-preview');
+  if(zone)zone.classList.add('has-img');
+  if(preview)preview.innerHTML=`<div style="position:relative;width:100%">
+    <img src="${xe(url)}" style="max-width:100%;max-height:90px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
+    <button type="button" onclick="clearUploadedImg('${key}');event.stopPropagation()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);border:none;color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
+  </div><div class="img-upload-sub">✓ Загружено · нажмите чтобы заменить</div>`;
+}
+
+function clearUploadedImg(key){
+  const hi=document.getElementById(key+'-input')||document.getElementById(key);if(hi)hi.value='';
+  const zone=document.getElementById(key+'-zone');const preview=document.getElementById(key+'-preview');const fi=document.getElementById(key+'-file');
+  if(zone)zone.classList.remove('has-img');if(fi)fi.value='';
+  const icons={'news-img':'🖼','news-bg':'🌅','member-photo':'👤'};
+  const txts={'news-img':'Перетащите или нажмите','news-bg':'Фон статьи','member-photo':'Фото участника'};
+  if(preview)preview.innerHTML=`<div style="font-size:28px;opacity:.3">${icons[key]||'📷'}</div><div class="img-upload-txt">${txts[key]||'Нажмите для выбора'}</div><div class="img-upload-sub">PNG, JPG, GIF, WEBP</div>`;
+}
+
+function preloadUploadZone(key,url){
+  if(!url)return;
+  const hi=document.getElementById(key+'-input')||document.getElementById(key);if(hi)hi.value=url;
+  const zone=document.getElementById(key+'-zone');const preview=document.getElementById(key+'-preview');
+  if(zone)zone.classList.add('has-img');
+  if(preview)preview.innerHTML=`<div style="position:relative;width:100%">
+    <img src="${xe(url)}" style="max-width:100%;max-height:90px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
+    <button type="button" onclick="clearUploadedImg('${key}');event.stopPropagation()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);border:none;color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
+  </div><div class="img-upload-sub">Нажмите чтобы заменить</div>`;
+}
+
+// ══════════════════════════════════════════════
+// NEWS
+// ══════════════════════════════════════════════
+function ncHTML(n,featured=false){
+  const imgUrl=safeImg(n.img);
+  const ph=`<div class="nc-ph" id="ncph_${n.id}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  const img=imgUrl?`<img src="${imgUrl}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';document.getElementById('ncph_${n.id}').style.display='flex'">${ph}`:ph;
+  const editBtns=canEdit()?`<div style="display:flex;gap:5px">
+    <button class="btn btn-o btn-sm" onclick="editNews('${n.id}');event.stopPropagation()">✎</button>
+    <button class="btn btn-d btn-sm" onclick="delNews('${n.id}');event.stopPropagation()">✕</button>
+  </div>`:'';
+  const cls=featured?'nc nc-featured reveal':'nc reveal';
+  const al=n.align||'left';
+  return`<div class="${cls}" onclick="openNews('${n.id}')">
+    <div class="nc-img">${img}</div>
+    <div class="nc-body">
+      <div class="nc-meta">${n.category?`<span class="nc-cat">${xe(n.category)}</span>`:''}<span class="nc-date">${fd(n.created_at)}</span></div>
+      <div class="nc-title" style="text-align:${al};${n.title_color&&n.title_color!=='#ffffff'?`color:${xe(n.title_color)}`:''}">${xe(n.title)}</div>
+      ${n.excerpt?`<div class="nc-exc" style="text-align:${al}">${xe(n.excerpt)}</div>`:''}
+      <div class="nc-foot"><button class="btn btn-p btn-sm" onclick="openNews('${n.id}');event.stopPropagation()">Читать →</button>${editBtns}</div>
+    </div>
+  </div>`;
+}
+
+async function renderHomeNews(){
+  const el=document.getElementById('home-news-grid');if(!el)return;
+  try{
+    NEWS=await API.get('/news');
+    const recent=NEWS.slice(0,4);
+    el.innerHTML=recent.length?recent.map((n,i)=>ncHTML(n,i===0)).join('')
+      :`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Новостей пока нет.</div></div>`;
+  }catch{el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+  buildTicker();
+}
+
+async function renderAllNews(){
+  const el=document.getElementById('all-news-grid');if(!el)return;
+  try{
+    NEWS=await API.get('/news');
+    el.innerHTML=NEWS.length?NEWS.map((n,i)=>ncHTML(n,i===0)).join('')
+      :`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📰</div><div class="empty-tx">Новостей пока нет.</div></div>`;
+  }catch{el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📰</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+}
+
+function isEmbed(u){return u.includes('fliphtml5.com')||u.includes('youtube.com')||u.includes('youtu.be')||u.includes('vimeo.com')}
+
+// ── Безопасная обработка ссылок в тексте новости ──
+// Поддерживает 3 формата: <a href="url">текст</a>, [текст](url), голый URL
+// На выходе — только безопасные <a> теги, весь остальной HTML экранирован
+
+// Шаг 1: вытащить настоящие <a href="...">текст</a> теги из исходного текста,
+// заменить их на временные плейсхолдеры (чтобы xe() их не сломал)
+function extractRawLinks(text){
+  const tags=[];
+  const working=text.replace(/<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(m,url,label)=>{
+    if(!/^https?:\/\//i.test(url))return''; // небезопасная схема — вырезаем целиком
+    const idx=tags.length;
+    tags.push({url,label:label.replace(/<[^>]*>/g,'').trim()});
+    return`\u0000LNK${idx}\u0000`;
+  });
+  return{working,tags};
+}
+
+// Шаг 4: вернуть плейсхолдеры обратно как настоящие безопасные <a> теги
+function restoreRawLinks(html,tags){
+  let out=html;
+  tags.forEach((t,idx)=>{
+    const safeLabel=xe(t.label)||xe(t.url);
+    const a=`<a href="${xe(t.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--red);text-decoration:underline">${safeLabel}</a>`;
+    out=out.split(`\u0000LNK${idx}\u0000`).join(a);
+  });
+  return out;
+}
+
+// Шаг 2-3: экранировать всё остальное + конвертировать markdown-ссылки и голые URL
+function escapeAndLinkify(text){
+  let s=xe(text);
+  s=s.replace(/\[([^\]\n]{1,200})\]\((https?:\/\/[^)\s]{1,500})\)/g,(m,label,url)=>{
+    if(!/^https?:\/\//i.test(url))return m;
+    return`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--red);text-decoration:underline">${label}</a>`;
+  });
+  s=s.replace(/(^|[^"'>])(https?:\/\/[^\s<"']{4,500})/g,(m,pre,url)=>{
+    const clean=url.replace(/[.,;!?)]+$/,'');
+    return`${pre}<a href="${clean}" target="_blank" rel="noopener noreferrer" style="color:var(--red);text-decoration:underline">${clean}</a>`;
+  });
+  return s;
+}
+
+// Полная обработка текста: <a> теги + markdown + голые URL — всё безопасно
+function renderText(text){
+  if(!text)return'';
+  const{working,tags}=extractRawLinks(text);
+  return restoreRawLinks(escapeAndLinkify(working),tags);
+}
+
+function openNews(id){
+  const n=NEWS.find(x=>x.id===id);if(!n)return;
+  document.getElementById('nf-title').textContent=n.title;
+  document.getElementById('nf-title').style.color=n.title_color&&n.title_color!=='#ffffff'?n.title_color:'';
+  document.getElementById('nf-author').textContent=`Автор: ${n.author_name||'Редакция'} · ${fdt(n.created_at)}`;
+  document.getElementById('nf-meta').innerHTML=`${n.category?`<span class="nc-cat">${xe(n.category)}</span>`:''}<span class="nc-date">${fd(n.created_at)}</span>`;
+  const nfPage=document.getElementById('page-news-full');
+  if(nfPage){nfPage.style.backgroundImage=n.bg_img?`url('${n.bg_img}')`:'';}
+  const ce=document.getElementById('nf-content');
+  const align=n.align||'left';
+  let html='';
+  let blocks=[];
+  if(n.blocks){try{blocks=JSON.parse(n.blocks);}catch{}}
+  if(!blocks.length&&n.content){blocks=[{id:'l0',type:'text',value:n.content,align}];}
+  blocks.forEach(b=>{
+    const ba=b.align||'left';
+    if(b.type==='text'){
+      const raw=(b.value||'').trim();if(!raw)return;
+      // Сначала извлекаем настоящие <a href="...">текст</a> теги —
+      // ссылка внутри них НИКОГДА не становится embed-фреймом,
+      // даже если это fliphtml5/youtube — пользователь явно хотел просто ссылку
+      const{working,tags}=extractRawLinks(raw);
+      const urlReg=/https?:\/\/[^\s\n<>"]+/g;
+      const urls=[...(working.matchAll(urlReg))].map(m=>m[0].replace(/[.,;!?)]+$/,'').trim());
+      const embedURL=urls.find(u=>isEmbed(u));
+      const tColor=n.text_color?`;color:${xe(n.text_color)}`:'';
+      if(embedURL){
+        const rest=working.replace(embedURL,'').trim();
+        if(rest)html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1.25rem${tColor}">${restoreRawLinks(escapeAndLinkify(rest),tags)}</div>`;
+        let src=embedURL;
+        if(src.includes('youtube.com/watch')){try{const vid=new URL(src).searchParams.get('v');if(vid)src=`https://www.youtube.com/embed/${vid}`;}catch{}}
+        else if(src.includes('youtu.be/')){const vid=src.split('youtu.be/')[1]?.split('?')[0];if(vid)src=`https://www.youtube.com/embed/${vid}`;}
+        else if(src.includes('vimeo.com/')){const vid=src.split('vimeo.com/')[1]?.split('?')[0];if(vid)src=`https://player.vimeo.com/video/${vid}`;}
+        html+=`<div class="nf-iframe"><iframe src="${xe(src)}" allowfullscreen allow="autoplay; fullscreen; clipboard-write" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
+      } else html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1rem;line-height:1.8${tColor}">${restoreRawLinks(escapeAndLinkify(working),tags)}</div>`;
+    } else if(b.type==='img'){
+      const src=safeImg(b.value);
+      if(src)html+=`<div style="margin-bottom:1.5rem;text-align:${ba}"><img src="${xe(src)}" style="max-width:100%;border-radius:8px;display:inline-block" onerror="this.parentNode.remove()"></div>`;
+    } else if(b.type==='link'){
+      const parts=(b.value||'').split('|||');
+      const ltext=(parts[0]||'').trim();
+      const lurl=(parts[1]||'').trim();
+      if(!lurl)return;
+      if(!/^https?:\/\//i.test(lurl))return;
+      const label=ltext||lurl;
+      html+=`<div style="text-align:${ba};margin-bottom:1rem">
+        <a href="${xe(lurl)}" target="_blank" rel="noopener noreferrer" style="color:var(--red);font-size:15px;font-weight:600;text-decoration:underline;display:inline-flex;align-items:center;gap:6px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          ${xe(label)}
+        </a>
+      </div>`;
+    } else if(b.type==='embed'){
+      let src=(b.value||'').trim().replace(/[.,;!?)]+$/,'');
+      if(!src)return;
+      if(src.includes('youtube.com/watch')){try{const vid=new URL(src).searchParams.get('v');if(vid)src=`https://www.youtube.com/embed/${vid}`;}catch{}}
+      else if(src.includes('youtu.be/')){const vid=src.split('youtu.be/')[1]?.split('?')[0];if(vid)src=`https://www.youtube.com/embed/${vid}`;}
+      else if(src.includes('vimeo.com/')){const vid=src.split('vimeo.com/')[1]?.split('?')[0];if(vid)src=`https://player.vimeo.com/video/${vid}`;}
+      html+=`<div class="nf-iframe"><iframe src="${xe(src)}" allowfullscreen allow="autoplay; fullscreen; clipboard-write" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
+    }
+  });
+  ce.innerHTML=html;
+  document.getElementById('nf-title').style.textAlign=align;
+  document.getElementById('nf-author').style.textAlign=align;
+  const eb=document.getElementById('nf-edit-btns');
+  eb.innerHTML=canEdit()?`<button class="btn btn-o btn-sm" onclick="editNews('${n.id}')">✎ Редактировать</button>
+    <button class="btn btn-d btn-sm" onclick="if(confirm('Удалить?')){delNews('${n.id}');showPage('news')}">Удалить</button>`:'';
+  showPage('news-full');
+}
+
+function setNewsAlign(align){
+  document.getElementById('news-align-input').value=align;
+  document.querySelectorAll('.news-align-btn').forEach(b=>{
+    const a=b.dataset.nalign===align;
+    b.style.background=a?'var(--red)':'';b.style.borderColor=a?'var(--red)':'rgba(255,255,255,.25)';b.style.color=a?'#fff':'';
+  });
+}
+
+let newsBlocks=[];
+function addNewsBlock(type,data=null){
+  const id='nb'+(Date.now()+Math.random()).toString(36).slice(2);
+  newsBlocks.push({id,type,value:data?.value||'',align:data?.align||'left'});renderNewsBlocks();
+}
+function removeNewsBlock(id){newsBlocks=newsBlocks.filter(b=>b.id!==id);renderNewsBlocks();}
+function setBlockAlign(id,align){const b=newsBlocks.find(b=>b.id===id);if(b){b.align=align;renderNewsBlocks();}}
+function toggleBlockExpand(idx){
+  const ta=document.getElementById('nbtext-'+idx);if(!ta)return;
+  const btn=ta.closest('.nb-row').querySelector('.nb-expand-btn');
+  const expanded=ta.classList.toggle('nb-text-expanded');
+  if(btn)btn.classList.toggle('active',expanded);
+}
+function renderNewsBlocks(){
+  const el=document.getElementById('news-blocks-editor');if(!el)return;
+  if(!newsBlocks.length){el.innerHTML=`<div style="text-align:center;color:var(--gray);font-size:12px;padding:16px;border:1px dashed rgba(255,255,255,.08);border-radius:var(--r)">Нажмите кнопки ниже чтобы добавить блоки</div>`;return;}
+  el.innerHTML=newsBlocks.map((b,idx)=>{
+    const typeLabel={text:'📝 Текст',img:'🖼 Фото',link:'🔗 Гиперссылка',embed:'▶ Видео/FlipHTML5'}[b.type]||'📝';
+    const alignBtns=['left','center','right'].map(a=>`<button type="button" class="nb-align-btn${b.align===a?' active':''}" onclick="setBlockAlign('${b.id}','${a}')" title="${{left:'Слева',center:'Центр',right:'Справа'}[a]}">${{left:'◀',center:'▶◀',right:'▶'}[a]}</button>`).join('');
+    let input;
+    if(b.type==='text'){
+      input=`<textarea class="fta" id="nbtext-${idx}" style="min-height:70px;font-size:13px;margin-bottom:4px" onchange="newsBlocks[${idx}].value=this.value" oninput="newsBlocks[${idx}].value=this.value" placeholder="Введите текст...&#10;&#10;Совет: ссылку можно вставить как &lt;a href=&quot;url&quot;&gt;текст&lt;/a&gt; или [текст](url)">${xe(b.value)}</textarea>`;
+    } else if(b.type==='img'){
+      const hasImg=b.value&&(b.value.startsWith('http')||b.value.startsWith('/uploads/'));
+      input=`<div style="margin-bottom:4px">
+        ${hasImg?`<div style="position:relative;margin-bottom:6px"><img src="${xe(b.value)}" style="max-width:100%;max-height:100px;border-radius:6px;object-fit:cover"><button type="button" onclick="newsBlocks[${idx}].value='';renderNewsBlocks()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);border:none;color:white;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:14px;line-height:1">✕</button></div>`:''}
+        <div class="img-upload-zone nb-img-zone" onclick="document.getElementById('nb-img-${idx}').click()" style="padding:12px">
+          <input type="file" id="nb-img-${idx}" accept="image/*" style="display:none" onchange="handleNBImgFile(event,${idx})">
+          <div style="font-size:11px;color:var(--gray);text-align:center">${hasImg?'Нажмите чтобы заменить':'📷 Нажмите или перетащите фото'}</div>
+        </div>
+      </div>`;
+    } else {
+    } else if(b.type==='link'){
+      // Гиперссылка: два поля — текст ссылки и URL
+      const parts=(b.value||'').split('|||');
+      const ltext=parts[0]||'';const lurl=parts[1]||'';
+      input=`<div style="display:grid;gap:5px;margin-bottom:4px">
+        <input type="text" class="fi" style="font-size:13px" placeholder="Текст ссылки (например: Трудоустройство)" value="${xe(ltext)}" onchange="setLinkBlock(${idx},'text',this.value)" oninput="setLinkBlock(${idx},'text',this.value)">
+        <input type="text" class="fi" style="font-size:13px" placeholder="URL (https://forms.gle/...)" value="${xe(lurl)}" onchange="setLinkBlock(${idx},'url',this.value)" oninput="setLinkBlock(${idx},'url',this.value)">
+      </div>`;
+    } else {
+      input=`<input type="text" class="fi" style="font-size:13px;margin-bottom:4px" value="${xe(b.value)}" onchange="newsBlocks[${idx}].value=this.value" oninput="newsBlocks[${idx}].value=this.value" placeholder="https://online.fliphtml5.com/...">`;
+    }
+    const expandBtn=b.type==='text'?`<button type="button" class="nb-expand-btn" onclick="toggleBlockExpand(${idx})" title="Развернуть поле побольше">⤢</button>`:'';
+    return`<div class="nb-row" data-bid="${b.id}">
+      <div class="nb-type">${typeLabel}</div>
+      <div>${input}<div class="nb-align-btns">${alignBtns}${expandBtn}</div></div>
+      <button type="button" class="btn btn-d btn-sm" style="padding:4px 8px" onclick="removeNewsBlock('${b.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+function setLinkBlock(idx,field,val){
+  if(!newsBlocks[idx])return;
+  const parts=(newsBlocks[idx].value||'').split('|||');
+  if(field==='text')parts[0]=val;
+  else parts[1]=val;
+  newsBlocks[idx].value=parts.join('|||');
+}
+
+function getNewsBlocksJSON(){
+  const rows=document.querySelectorAll('#news-blocks-editor .nb-row');
+  rows.forEach(row=>{const bid=row.dataset.bid;const b=newsBlocks.find(b=>b.id===bid);if(!b)return;const inp=row.querySelector('textarea,input[type="text"]');if(inp)b.value=inp.value;});
+  return JSON.stringify(newsBlocks);
+}
+function loadNewsBlocksFromJSON(json){
+  newsBlocks=[];if(!json)return;
+  try{const arr=JSON.parse(json);if(Array.isArray(arr))newsBlocks=arr;}catch{if(json.trim())newsBlocks=[{id:'nb0',type:'text',value:json,align:'left'}];}
+}
+
+function openNewsModal(id=null){
+  ['news-edit-id','news-title-input','news-cat-input','news-excerpt-input','news-img-input','news-bg-input'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  clearUploadedImg('news-img');clearUploadedImg('news-bg');
+  document.getElementById('news-title-color').value='#ffffff';
+  document.getElementById('news-text-color').value='#ffffff';
+  setNewsAlign('left');newsBlocks=[];renderNewsBlocks();
+  document.getElementById('modal-news-title').textContent='Добавить новость';
+  if(id){
+    const n=NEWS.find(n=>n.id===id);
+    if(n){
+      document.getElementById('news-edit-id').value=n.id;
+      document.getElementById('news-title-input').value=n.title||'';
+      document.getElementById('news-cat-input').value=n.category||'';
+      document.getElementById('news-excerpt-input').value=n.excerpt||'';
+      setNewsAlign(n.align||'left');
+      document.getElementById('news-title-color').value=n.title_color||'#ffffff';
+      document.getElementById('news-text-color').value=n.text_color||'#ffffff';
+      if(n.img)preloadUploadZone('news-img',n.img);
+      if(n.bg_img)preloadUploadZone('news-bg',n.bg_img);
+      if(n.blocks)loadNewsBlocksFromJSON(n.blocks);
+      else if(n.content){newsBlocks=[{id:'nb0',type:'text',value:n.content,align:n.align||'left'}];}
+      renderNewsBlocks();
+      document.getElementById('modal-news-title').textContent='Редактировать новость';
+    }
+  }
+  openModal('modal-news');
+}
+function editNews(id){openNewsModal(id);}
+
+async function saveNews(){
+  const title=document.getElementById('news-title-input').value.trim();
+  if(!title){toast('Укажите заголовок','e');return}
+  const eid=document.getElementById('news-edit-id').value;
+  const img=(document.getElementById('news-img-input')||{}).value||'';
+  const bg_img=(document.getElementById('news-bg-input')||{}).value||'';
+  const align=document.getElementById('news-align-input').value||'left';
+  const blocks=getNewsBlocksJSON();
+  const title_color=document.getElementById('news-title-color').value;
+  const text_color=document.getElementById('news-text-color').value;
+  const body={title,category:document.getElementById('news-cat-input').value.trim(),excerpt:document.getElementById('news-excerpt-input').value.trim(),blocks,img,bg_img,align,title_color,text_color};
+  try{
+    if(eid){await API.put('/news/'+eid,body);toast('Новость обновлена','s');}
+    else{await API.post('/news',body);toast('Новость опубликована!','s');}
+    closeModal('modal-news');
+    NEWS=await API.get('/news');
+    renderHomeNews();renderAllNews();renderNewsMgmt();buildTicker();
+  }catch(e){toast(e.error||'Ошибка сохранения','e');}
+}
+
+async function delNews(id){
+  if(!confirm('Удалить новость?'))return;
+  await API.del('/news/'+id);
+  NEWS=NEWS.filter(n=>n.id!==id);
+  renderHomeNews();renderAllNews();renderNewsMgmt();buildTicker();
+  toast('Новость удалена','i');
+}
+
+// ══════════════════════════════════════════════
+// SERVICES
+// ══════════════════════════════════════════════
+async function renderServices(){
+  const el=document.getElementById('services-container');if(!el)return;
+  try{
+    SERVICES=await API.get('/services');
+    if(!SERVICES.length){el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-tx">Услуги ещё не добавлены.</div></div>`;return;}
+    el.innerHTML=`<div class="svc-grid">${SERVICES.map(cat=>`
+      <div class="svc-card reveal">
+        <div class="svc-cat-hdr">
+          <div class="svc-cat-ttl">${xe(cat.name)}</div>
+          ${canEdit()?`<div class="bg-group"><button class="btn btn-o btn-sm" onclick="openServiceModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delSvcCat('${cat.id}')">✕</button></div>`:''}
+        </div>
+        ${(cat.items||[]).map(it=>`<div class="svc-item">
+          <div class="svc-row"><span class="svc-name">${xe(it.name)}</span>${it.price?`<span class="svc-price">${xe(it.price)}</span>`:''}</div>
+          ${it.desc?`<div class="svc-desc">${xe(it.desc)}</div>`:''}
+        </div>`).join('')}
+      </div>`).join('')}</div>`;
+  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+}
+
+function openServiceModal(id=null){
+  document.getElementById('svc-cat-id').value='';document.getElementById('svc-cat-name').value='';document.getElementById('svc-items-editor').innerHTML='';
+  document.getElementById('modal-svc-title').textContent=id?'Редактировать':'Добавить категорию';
+  if(id){const c=SERVICES.find(c=>c.id===id);if(c){document.getElementById('svc-cat-id').value=c.id;document.getElementById('svc-cat-name').value=c.name||'';(c.items||[]).forEach(it=>addSvcRow(it));}}
+  openModal('modal-service');
+}
+function addSvcRow(item=null){
+  const ed=document.getElementById('svc-items-editor');const d=document.createElement('div');d.style.cssText='display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:8px';
+  d.innerHTML=`<div style="display:grid;gap:5px"><input class="fi" placeholder="Название" data-r="name" value="${xe(item?.name||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Цена" data-r="price" value="${xe(item?.price||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Описание" data-r="desc" value="${xe(item?.desc||'')}" style="padding:7px 10px;font-size:12px"></div><button class="btn btn-d btn-sm" style="align-self:start" onclick="this.closest('div[style]').remove()">✕</button>`;
+  ed.appendChild(d);
+}
+async function saveSvcCat(){
+  const name=document.getElementById('svc-cat-name').value.trim();if(!name){toast('Укажите название','e');return}
+  const eid=document.getElementById('svc-cat-id').value;
+  const rows=document.getElementById('svc-items-editor').querySelectorAll('div[style]');
+  const items=[];rows.forEach(row=>{const n=row.querySelector('[data-r="name"]')?.value.trim();if(n)items.push({id:'si'+Date.now()+Math.random().toString(36).slice(2),name:n,price:row.querySelector('[data-r="price"]')?.value.trim()||'',desc:row.querySelector('[data-r="desc"]')?.value.trim()||''});});
+  try{
+    if(eid)await API.put('/services/'+eid,{name,items});else await API.post('/services',{name,items});
+    closeModal('modal-service');SERVICES=await API.get('/services');renderServices();renderServicesMgmt();toast('Сохранено','s');
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function delSvcCat(id){
+  if(!confirm('Удалить категорию?'))return;
+  await API.del('/services/'+id);SERVICES=SERVICES.filter(c=>c.id!==id);renderServices();renderServicesMgmt();toast('Удалено','i');
+}
+
+// ══════════════════════════════════════════════
+// TEAM
+// ══════════════════════════════════════════════
+async function renderTeam(){
+  const el=document.getElementById('team-container');if(!el)return;
+  try{
+    TEAM=await API.get('/team');
+    const {cats,members}=TEAM;
+    if(!cats.length){el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Состав ещё не добавлен.</div></div>`;return;}
+    el.innerHTML=cats.map(cat=>{
+      const cm=members.filter(m=>m.cat_id===cat.id);if(!cm.length&&!canEdit())return'';
+      const layout=cat.layout||'pyramid';
+      const addBtn=canEdit()?`<div class="team-add-card" onclick="openTeamMemberModal(null,'${cat.id}')"><div style="font-size:22px;opacity:.4">+</div><div>Добавить</div></div>`:'';
+      let membersHTML='';
+      if(layout==='row'){
+        membersHTML=`<div class="team-row-grid">${cm.map(m=>memberCard(m)).join('')}${addBtn}</div>`;
+      } else {
+        const top=cm[0];const rest=cm.slice(1);
+        membersHTML=`${top?`<div class="team-pyramid-top">${memberCard(top)}</div>`:''}${(rest.length||canEdit())?`<div class="team-grid">${rest.map(m=>memberCard(m)).join('')}${addBtn}</div>`:''}`;
+      }
+      return`<div class="team-cat reveal">
+        <div class="team-cat-hdr"><div class="team-cat-name">${xe(cat.name)}</div><div class="team-cat-line"></div>
+          ${canEdit()?`<div class="bg-group"><span style="font-size:10px;color:var(--gray);margin-right:4px">${layout==='row'?'↔ ряд':'△ пирамида'}</span><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>`:''}
+        </div>${membersHTML}
+      </div>`;
+    }).join('');
+  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+}
+
+function memberCard(m){
+  const ini=(m.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return`<div class="team-card"><div class="team-av">${m.photo?`<img src="${xe(m.photo)}" alt="">`:`${ini}`}</div>
+    <div class="team-name">${xe(m.name)}</div>${m.role?`<div class="team-role">${xe(m.role)}</div>`:''}
+    ${canEdit()?`<div class="bg-group" style="justify-content:center;margin-top:8px"><button class="btn btn-o btn-sm" onclick="editMember('${m.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delMember('${m.id}')">✕</button></div>`:''}
+  </div>`;
+}
+
+function openTeamCatModal(id=null){
+  document.getElementById('team-cat-id').value='';document.getElementById('team-cat-name').value='';
+  const lay=document.getElementById('team-cat-layout');if(lay)lay.value='pyramid';
+  document.getElementById('modal-tcat-title').textContent=id?'Редактировать':'Добавить категорию';
+  if(id){const c=TEAM.cats.find(c=>c.id===id);if(c){document.getElementById('team-cat-id').value=c.id;document.getElementById('team-cat-name').value=c.name||'';if(lay)lay.value=c.layout||'pyramid';}}
+  openModal('modal-team-cat');
+}
+async function saveTeamCat(){
+  const name=document.getElementById('team-cat-name').value.trim();if(!name){toast('Укажите название','e');return}
+  const eid=document.getElementById('team-cat-id').value;
+  const layout=document.getElementById('team-cat-layout')?.value||'pyramid';
+  try{
+    if(eid)await API.put('/team/cats/'+eid,{name,layout});else await API.post('/team/cats',{name,layout});
+    closeModal('modal-team-cat');TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Сохранено','s');
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function delTeamCat(id){
+  if(!confirm('Удалить категорию и участников?'))return;
+  await API.del('/team/cats/'+id);TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Удалено','i');
+}
+
+function openTeamMemberModal(id=null,defCat=null){
+  const cats=TEAM.cats||[];const sel=document.getElementById('member-cat-select');
+  sel.innerHTML=cats.map(c=>`<option value="${c.id}">${xe(c.name)}</option>`).join('');
+  ['member-edit-id','member-name','member-role','member-photo'].forEach(i=>document.getElementById(i).value='');
+  clearUploadedImg('member-photo');document.getElementById('modal-member-title').textContent='Добавить участника';
+  if(defCat)sel.value=defCat;
+  if(id){const m=(TEAM.members||[]).find(m=>m.id===id);if(m){document.getElementById('member-edit-id').value=m.id;document.getElementById('member-name').value=m.name||'';document.getElementById('member-role').value=m.role||'';document.getElementById('member-photo').value=m.photo||'';sel.value=m.cat_id||'';if(m.photo)preloadUploadZone('member-photo',m.photo);document.getElementById('modal-member-title').textContent='Редактировать участника';}}
+  openModal('modal-team-member');
+}
+function editMember(id){openTeamMemberModal(id);}
+async function saveMember(){
+  const name=document.getElementById('member-name').value.trim();if(!name){toast('Укажите имя','e');return}
+  const eid=document.getElementById('member-edit-id').value;
+  const body={cat_id:document.getElementById('member-cat-select').value,name,role:document.getElementById('member-role').value.trim(),photo:document.getElementById('member-photo').value.trim()};
+  try{
+    if(eid)await API.put('/team/members/'+eid,body);else await API.post('/team/members',body);
+    closeModal('modal-team-member');TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Сохранено','s');
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function delMember(id){
+  if(!confirm('Удалить участника?'))return;
+  await API.del('/team/members/'+id);TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Удалено','i');
+}
+
+// ══════════════════════════════════════════════
+// ABOUT & TEXTS
+// ══════════════════════════════════════════════
+function loadAbout(){
+  const saved=SETTINGS.aboutBody||LS.get('aboutBody');
+  if(saved)document.getElementById('about-text').innerHTML=saved;
+  applyTexts();applyITEStyles();
+}
+
+function applyTexts(){
+  const tx=SETTINGS.texts||LS.get('texts',{});
+  const set=(id,val)=>{const e=document.getElementById(id);if(e&&val)e.textContent=val};
+  set('hero-sub-text',tx.heroSub);set('home-hours-text',tx.homeHours);set('about-hours-text',tx.aboutHours);
+  const fh=document.getElementById('footer-hours-text');if(fh)fh.textContent=tx.homeHours||'13:00 — 00:00';
+  const b1=document.getElementById('hero-btn1-text');if(b1&&tx.heroBtn1)b1.textContent=tx.heroBtn1;
+  const b2=document.getElementById('hero-btn2-text');if(b2&&tx.heroBtn2)b2.textContent=tx.heroBtn2;
+  if(tx.aboutBody){const ab=document.getElementById('about-text');if(ab)ab.innerHTML=tx.aboutBody;}
+  if(tx.homeLatest){const hl=document.getElementById('home-latest-title');if(hl)hl.textContent=tx.homeLatest;}
+  if(tx.newsTitle){const nt=document.getElementById('news-page-title');if(nt)nt.textContent=tx.newsTitle;}
+  if(tx.aboutTitleRest){const at=document.getElementById('about-page-title-rest');if(at)at.textContent=tx.aboutTitleRest;}
+  setTimeout(applyITEStyles,0);
+}
+
+async function saveTexts(group){
+  const tx=SETTINGS.texts||{};
+  if(group==='home'){tx.heroSub=document.getElementById('txt-hero-sub').value;tx.heroBtn1=document.getElementById('txt-hero-btn1').value;tx.heroBtn2=document.getElementById('txt-hero-btn2').value;tx.homeHours=document.getElementById('txt-home-hours').value;}
+  if(group==='about'){tx.aboutHours=document.getElementById('txt-about-hours').value;tx.aboutBody=document.getElementById('txt-about-body').value;}
+  if(group==='titles'){tx.homeLatest=document.getElementById('txt-home-latest').value;tx.newsTitle=document.getElementById('txt-news-title').value;tx.servicesTitle=document.getElementById('txt-services-title').value;tx.teamTitle=document.getElementById('txt-team-title').value;}
+  SETTINGS.texts=tx;
+  try{await API.put('/settings',{texts:tx});applyTexts();toast('Тексты сохранены','s');}
+  catch(e){LS.set('texts',tx);applyTexts();toast('Сохранено локально','i');}
+  applyITEStyles();
+}
+
+// ══════════════════════════════════════════════
+// ITE (inline text editor)
+// ══════════════════════════════════════════════
+let ITE={key:null,el:null,align:''};
+let ITE_DRAG={active:false,ox:0,oy:0};
+
+const ITE_MAP={
+  heroSub:{el:()=>document.getElementById('hero-sub-text'),html:false},
+  homeLatest:{el:()=>document.getElementById('home-latest-title'),html:false,getVal:(el)=>el.textContent},
+  newsTitle:{el:()=>document.getElementById('news-page-title'),html:false,getVal:(el)=>el.textContent},
+  servicesTitle:{el:()=>document.getElementById('services-page-title'),html:false},
+  teamTitle:{el:()=>document.getElementById('team-page-title'),html:false},
+  aboutTitleRest:{el:()=>document.getElementById('about-page-title-rest'),html:false},
+  aboutTitleO:{el:()=>document.getElementById('about-title-o'),html:false},
+  aboutBody:{el:()=>document.getElementById('about-text'),html:false,big:true,isBlock:true},
+  aboutHours:{el:()=>document.getElementById('about-hours-text'),html:false},
+  homeHours:{el:()=>document.getElementById('home-hours-text'),html:false},
+};
+
+function initITEDrag(){
+  const popup=document.getElementById('ite-popup');const hdr=document.getElementById('ite-drag-hdr');if(!hdr)return;
+  hdr.addEventListener('mousedown',e=>{if(e.target.tagName==='BUTTON')return;ITE_DRAG.active=true;ITE_DRAG.ox=e.clientX-popup.getBoundingClientRect().left;ITE_DRAG.oy=e.clientY-popup.getBoundingClientRect().top;popup.style.transition='none';e.preventDefault();});
+  document.addEventListener('mousemove',e=>{if(!ITE_DRAG.active)return;let x=e.clientX-ITE_DRAG.ox,y=e.clientY-ITE_DRAG.oy;x=Math.max(0,Math.min(window.innerWidth-popup.offsetWidth,x));y=Math.max(0,Math.min(window.innerHeight-popup.offsetHeight,y));popup.style.left=x+'px';popup.style.top=y+'px';});
+  document.addEventListener('mouseup',()=>{ITE_DRAG.active=false;});
+}
+
+function openITE(key,event){
+  if(!isAdmin()&&!canEdit())return;event.stopPropagation();event.preventDefault();
+  const map=ITE_MAP[key];if(!map)return;const el=map.el();if(!el)return;
+  ITE.key=key;ITE.el=el;
+  const tx=SETTINGS.texts||{};const style=(tx['_style_'+key])||{};ITE.align=style.align||'';
+  const inp=document.getElementById('ite-text-input');
+  const getV=map.getVal?map.getVal(el):el.textContent;
+  inp.value=getV.trim();inp.style.minHeight=map.big?'200px':'70px';
+  document.getElementById('ite-size').value=style.size||'';document.getElementById('ite-color').value=style.color||'#ffffff';
+  document.querySelectorAll('.ite-align-btn').forEach(b=>b.classList.toggle('active',b.dataset.align===ITE.align));
+  const popup=document.getElementById('ite-popup');popup.style.transition='';popup.classList.add('open');
+  const vw=window.innerWidth,vh=window.innerHeight;let x=event.clientX+14,y=event.clientY+14;
+  setTimeout(()=>{if(x+popup.offsetWidth>vw-10)x=vw-popup.offsetWidth-10;if(y+popup.offsetHeight>vh-10)y=vh-popup.offsetHeight-10;if(x<10)x=10;if(y<10)y=10;popup.style.left=x+'px';popup.style.top=y+'px';},0);
+  setTimeout(()=>inp.focus(),60);
+}
+
+function applyITEAlign(el,align){
+  el.style.textAlign=align;
+  let node=el.parentElement;
+  while(node&&node!==document.body){
+    const cs=window.getComputedStyle(node).display;
+    if(cs==='block'||cs==='flex'||cs==='grid'){node.style.textAlign=align;if(node.parentElement&&node.parentElement!==document.body)node.parentElement.style.textAlign=align;break;}
+    node=node.parentElement;
+  }
+}
+
+function setITEAlign(align){
+  ITE.align=align;
+  document.querySelectorAll('.ite-align-btn').forEach(b=>b.classList.toggle('active',b.dataset.align===align));
+  if(ITE.el)applyITEAlign(ITE.el,align);
+}
+
+async function saveITE(){
+  if(!ITE.key||!ITE.el)return;
+  const map=ITE_MAP[ITE.key];
+  const val=document.getElementById('ite-text-input').value.trim();
+  const size=document.getElementById('ite-size').value;
+  const color=document.getElementById('ite-color').value;
+  const align=ITE.align;
+  if(map.isBlock){const p=val.split(/\n\n+/).map(p=>p.trim()).filter(Boolean);ITE.el.innerHTML=p.length>1?p.map(p=>`<p>${xe(p)}</p>`).join(''):`<p>${xe(val)}</p>`;}
+  else ITE.el.textContent=val;
+  if(size)ITE.el.style.fontSize=size+'px';else ITE.el.style.fontSize='';
+  if(color&&color!=='#ffffff')ITE.el.style.color=color;else ITE.el.style.color='';
+  if(align)applyITEAlign(ITE.el,align);
+  if(map.isBlock){ITE.el.style.display='block';ITE.el.style.width='100%';}
+  const tx=SETTINGS.texts||{};
+  tx['_style_'+ITE.key]={size,color,align};
+  if(ITE.key==='heroSub')tx.heroSub=val;
+  else if(ITE.key==='homeLatest')tx.homeLatest=val;
+  else if(ITE.key==='newsTitle')tx.newsTitle=val;
+  else if(ITE.key==='servicesTitle')tx.servicesTitle=val;
+  else if(ITE.key==='teamTitle')tx.teamTitle=val;
+  else if(ITE.key==='aboutTitleRest')tx.aboutTitleRest=val;
+  else if(ITE.key==='aboutBody'){tx.aboutBody=ITE.el.innerHTML;}
+  else if(ITE.key==='aboutHours')tx.aboutHours=val;
+  else if(ITE.key==='homeHours'){tx.homeHours=val;const fh=document.getElementById('footer-hours-text');if(fh)fh.textContent=val||'13:00 — 00:00';}
+  SETTINGS.texts=tx;
+  try{await API.put('/settings',{texts:tx});}catch{LS.set('texts',tx);}
+  closeITE();toast('Сохранено','s');
+}
+
+function closeITE(){document.getElementById('ite-popup').classList.remove('open');ITE.key=null;ITE.el=null;}
+
+function applyITEStyles(){
+  const tx=SETTINGS.texts||{};
+  Object.keys(ITE_MAP).forEach(key=>{
+    const style=tx['_style_'+key];if(!style)return;
+    const map=ITE_MAP[key];const el=map.el();if(!el)return;
+    if(style.size)el.style.fontSize=style.size+'px';
+    if(style.color&&style.color!=='#ffffff')el.style.color=style.color;
+    if(style.align)applyITEAlign(el,style.align);
+    if(map.isBlock){el.style.display='block';el.style.width='100%';}
+  });
+}
+
+// ══════════════════════════════════════════════
+// TICKER
+// ══════════════════════════════════════════════
+function buildTicker(){
+  const ti=(SETTINGS.ticker||LS.get('ticker',['Weazel News — в прямом эфире','Discord: discord.gg/weazelnewsdenver'])).filter(Boolean);
+  const newsT=NEWS.slice(0,5).map(n=>n.title).filter(Boolean);
+  const all=[...ti,...newsT];
+  const track=document.getElementById('ticker-track');if(!track)return;
+  if(!all.length){track.innerHTML=`<span class="ticker-text">Weazel News — Majestic RP Denver</span>`;return;}
+  const t=all.join('   ·   ');
+  const span=`<span class="ticker-text">${xe(t)}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`;
+  track.innerHTML=span+span;
+  track.style.animation='none';void track.offsetWidth;
+  setTimeout(()=>{track.style.animation='ticker 40s linear infinite';},20);
+}
+
+function addTickerItem(){
+  const inp=document.getElementById('ticker-input');const val=inp.value.trim();if(!val)return;
+  const items=(SETTINGS.ticker||LS.get('ticker',[]));items.push(val);
+  SETTINGS.ticker=items;
+  API.put('/settings',{ticker:items}).catch(()=>LS.set('ticker',items));
+  inp.value='';renderTickerList();buildTicker();toast('Добавлено','s');
+}
+function delTickerItem(i){
+  const items=(SETTINGS.ticker||LS.get('ticker',[]));items.splice(i,1);
+  SETTINGS.ticker=items;
+  API.put('/settings',{ticker:items}).catch(()=>LS.set('ticker',items));
+  renderTickerList();buildTicker();
+}
+function renderTickerList(){
+  const el=document.getElementById('ticker-list');if(!el)return;
+  const items=SETTINGS.ticker||LS.get('ticker',[]);
+  el.innerHTML=items.map((it,i)=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+    <span style="flex:1;font-size:12px;color:var(--off-white);background:rgba(255,255,255,.04);padding:5px 9px;border-radius:6px">${xe(it)}</span>
+    <button class="btn btn-d btn-sm" style="padding:4px 8px;font-size:10px" onclick="delTickerItem(${i})">✕</button>
+  </div>`).join('')||`<div style="color:var(--gray);font-size:11px;padding-top:4px">Пусто</div>`;
+}
+
+// ══════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════
+async function renderAdmin(){
+  renderVisitors();renderUsers();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
+}
+
+function switchAdminTab(tab,el){
+  document.querySelectorAll('.asec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ani').forEach(i=>i.classList.remove('active'));
+  document.getElementById('admin-'+tab).classList.add('active');
+  if(el)el.classList.add('active');
+}
+
+async function renderVisitors(){
+  const el=document.getElementById('visitors-tbody');if(!el)return;
+  try{
+    const vl=await API.get('/visitors');
+    if(!vl.length){el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray);padding:1.5rem">Посетителей пока нет</td></tr>`;return;}
+    el.innerHTML=vl.map(v=>`<tr><td>${xe(v.user_name)}</td><td>${xe(v.page)}</td><td>${fdt(v.visited_at)}</td></tr>`).join('');
+  }catch{el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
+}
+
+async function renderUsers(){
+  const el=document.getElementById('users-tbody');if(!el)return;
+  try{
+    const users=await API.get('/users');
+    el.innerHTML=users.map(u=>`<tr>
+      <td>${xe(u.name)}</td>
+      <td><span style="font-family:monospace;font-size:11px;color:var(--gray)">${xe(u.email)}</span></td>
+      <td><span class="badge b-${u.role}">${rlbl(u.role)}</span></td>
+      <td>${fd(u.created_at)}</td>
+      <td>${isAdmin()&&u.id!==CU?.id?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'—'}</td>
+    </tr>`).join('');
+  }catch{el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
+}
+
+async function renderNewsMgmt(){
+  const el=document.getElementById('news-mgmt-tbody');if(!el)return;
+  const alignIcon={left:'◀',center:'▶◀',right:'▶'};
+  if(!NEWS.length){el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:1.5rem">Новостей нет</td></tr>`;return;}
+  el.innerHTML=NEWS.map(n=>`<tr>
+    <td style="max-width:220px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(n.title)}</div></td>
+    <td>${n.category?`<span class="nc-cat">${xe(n.category)}</span>`:'—'}</td>
+    <td>${alignIcon[n.align||'left']||'◀'}</td>
+    <td>${xe(n.author_name||'—')}</td>
+    <td>${fd(n.created_at)}</td>
+    <td><div class="bg-group"><button class="btn btn-o btn-sm" onclick="editNews('${n.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delNews('${n.id}')">✕</button></div></td>
+  </tr>`).join('');
+}
+
+async function renderServicesMgmt(){
+  const el=document.getElementById('services-mgmt-list');if(!el)return;
+  if(!SERVICES.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Категорий нет</div>`;return;}
+  el.innerHTML=SERVICES.map(c=>`<div class="acard"><div class="acard-hdr">
+    <div><div class="acard-title">${xe(c.name)}</div><div class="acard-sub">${(c.items||[]).length} услуг</div></div>
+    <div class="bg-group"><button class="btn btn-o btn-sm" onclick="openServiceModal('${c.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delSvcCat('${c.id}')">✕</button></div>
+  </div><div style="font-size:11px;color:var(--gray)">${(c.items||[]).map(i=>xe(i.name)).join(' · ')||'Пусто'}</div></div>`).join('');
+}
+
+async function renderTeamMgmt(){
+  const el=document.getElementById('team-mgmt-list');if(!el)return;
+  const {cats,members}=TEAM;
+  if(!cats.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Категорий нет</div>`;return;}
+  el.innerHTML=cats.map(cat=>{
+    const cm=members.filter(m=>m.cat_id===cat.id);
+    return`<div class="acard"><div class="acard-hdr">
+      <div><div class="acard-title">${xe(cat.name)}</div><div class="acard-sub">${cm.length} участников</div></div>
+      <div class="bg-group"><button class="btn btn-p btn-sm" onclick="openTeamMemberModal(null,'${cat.id}')">+ Участник</button><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>
+    </div>
+    ${cm.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${cm.map(m=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:5px 10px">
+      <span style="font-size:12px;color:var(--white)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
+      <button class="btn btn-o btn-sm" style="padding:2px 6px;font-size:10px" onclick="editMember('${m.id}')">✎</button>
+      <button class="btn btn-d btn-sm" style="padding:2px 6px;font-size:10px" onclick="delMember('${m.id}')">✕</button>
+    </div>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openRoleModal(uid,currentRole){
+  document.getElementById('role-uid').value=uid;
+  const users_rendered=document.querySelectorAll('#users-tbody tr');
+  let name='Пользователь';
+  users_rendered.forEach(tr=>{const btn=tr.querySelector(`[onclick*="${uid}"]`);if(btn)name=tr.cells[0]?.textContent||name;});
+  document.getElementById('role-username').textContent=name;
+  document.getElementById('role-select').value=currentRole||'guest';
+  openModal('modal-role');
+}
+
+async function saveRole(){
+  const uid=document.getElementById('role-uid').value;const role=document.getElementById('role-select').value;
+  try{await API.put('/users/'+uid+'/role',{role});closeModal('modal-role');renderUsers();toast('Роль обновлена','s');}
+  catch(e){toast(e.error||'Ошибка','e');}
+}
+
+function loadTextFields(){
+  const tx=SETTINGS.texts||{};
+  const setVal=(id,val,fb)=>{const e=document.getElementById(id);if(e)e.value=val||fb||''};
+  setVal('txt-hero-sub',tx.heroSub,'Новости. Репортажи. Прямой эфир.');
+  setVal('txt-hero-btn1',tx.heroBtn1,'О нас');setVal('txt-hero-btn2',tx.heroBtn2,'Все новости');
+  setVal('txt-home-hours',tx.homeHours,'13:00 — 00:00');setVal('txt-about-hours',tx.aboutHours,'13:00 — 00:00');
+  setVal('txt-about-body',tx.aboutBody||'');setVal('txt-home-latest',tx.homeLatest,'Последние');
+  setVal('txt-news-title',tx.newsTitle,'Все');setVal('txt-services-title',tx.servicesTitle,'');setVal('txt-team-title',tx.teamTitle,'');
+}
+
+// ══════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.addEventListener('click',e=>{if(e.target.classList.contains('mo'))e.target.classList.remove('open')});
+document.addEventListener('click',e=>{
+  const popup=document.getElementById('ite-popup');
+  if(popup&&popup.classList.contains('open')&&!popup.contains(e.target)&&!e.target.classList.contains('ite-btn'))closeITE();
+});
+
+// ══════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════
+function toast(msg,type='i'){
+  const c=document.getElementById('toast-c');const t=document.createElement('div');
+  t.className=`toast t${type}`;const ic={s:'✓',e:'✕',i:'ℹ'};
+  t.innerHTML=`<span style="font-weight:700">${ic[type]||'ℹ'}</span><span>${xe(msg)}</span>`;
+  c.appendChild(t);setTimeout(()=>t.style.opacity='0',2700);setTimeout(()=>t.remove(),3000);
+}
+
+// ══════════════════════════════════════════════
+// SCROLL REVEAL
+// ══════════════════════════════════════════════
+function initReveal(){
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});
+  },{threshold:0.08,rootMargin:'0px 0px -20px 0px'});
+  document.querySelectorAll('.reveal:not(.visible)').forEach(el=>obs.observe(el));
+}
+
+// ══════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async ()=>{
+  initITEDrag();
+
+  // Check session
+  try{
+    const {user}=await API.get('/auth/me');
+    CU=user;
+    if(CU&&canEdit())document.body.classList.add('is-admin');
+  }catch{}
+
+  // Load settings
+  try{SETTINGS=await API.get('/settings');}catch{SETTINGS={};}
+
+  renderHeader();
+  switchBG('home');
+  applyTexts();
+  applyITEStyles();
+  await renderHomeNews();
+  logVisit('home');
+  setTimeout(initReveal,150);
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.querySelectorAll('.mo.open').forEach(m=>m.classList.remove('open'));
+    closeITE();
+  }
+});
+
+// ══════════════════════════════════════════════
+// БАЗОВЫЕ ОТПУГИВАТЕЛИ (не настоящая защита!)
+// Любой технически подкованный человек легко обойдёт это
+// через меню браузера или view-source:. Реальная защита —
+// то что пароли/роли проверяются на сервере, а не в этом коде.
+// ══════════════════════════════════════════════
+
+// Блокировка правого клика — кроме полей ввода (иначе нельзя вставить текст)
+document.addEventListener('contextmenu',e=>{
+  const tag=e.target.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||e.target.isContentEditable)return;
+  e.preventDefault();
+});
+
+// Блокировка горячих клавиш разработчика
+document.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(k==='F12') return e.preventDefault();
+  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(k)) return e.preventDefault();
+  if(e.ctrlKey&&['U','u'].includes(k)) return e.preventDefault();
+});
+
+// Предупреждение в консоли (защита от self-XSS — когда людей обманом
+// заставляют вставить вредоносный код в консоль браузера)
+console.log('%cСтоп!','color:#E8192C;font-size:48px;font-weight:bold;font-family:sans-serif');
+console.log('%cЭто функция браузера для разработчиков. Если кто-то попросил вас вставить сюда код — это мошенничество, которое может дать доступ к вашему аккаунту.','color:#fff;font-size:14px;font-family:sans-serif');
+</script>
+<!-- INLINE TEXT EDITOR POPUP -->
+<div id="ite-popup">
+  <div id="ite-drag-hdr" style="display:flex;align-items:center;justify-content:space-between;cursor:grab;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:10px;user-select:none">
+    <span class="ite-pop-title" style="margin:0">✎ Редактировать</span>
+    <span style="font-size:16px;opacity:.3;letter-spacing:2px">⠿⠿</span>
+  </div>
+  <textarea class="ite-text-input" id="ite-text-input" rows="3" placeholder="Введите текст..."></textarea>
+  <div class="ite-controls">
+    <div class="ite-control-group">
+      <span class="ite-control-label">Размер (px)</span>
+      <input type="number" class="ite-size-input" id="ite-size" min="8" max="200" placeholder="авто">
+    </div>
+    <div class="ite-control-group">
+      <span class="ite-control-label">Цвет текста</span>
+      <input type="color" class="ite-color-input" id="ite-color" value="#ffffff">
+    </div>
+    <div class="ite-control-group">
+      <span class="ite-control-label">Выравнивание</span>
+      <div class="ite-align-btns" id="ite-align-btns">
+        <button class="ite-align-btn" data-align="left" onclick="setITEAlign('left')" title="По левому краю">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="12" height="2"/><rect x="3" y="10" width="18" height="2"/><rect x="3" y="15" width="14" height="2"/><rect x="3" y="20" width="10" height="2"/></svg>
+        </button>
+        <button class="ite-align-btn" data-align="center" onclick="setITEAlign('center')" title="По центру">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="12" height="2"/><rect x="3" y="10" width="18" height="2"/><rect x="5" y="15" width="14" height="2"/><rect x="7" y="20" width="10" height="2"/></svg>
+        </button>
+        <button class="ite-align-btn" data-align="right" onclick="setITEAlign('right')" title="По правому краю">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="9" y="5" width="12" height="2"/><rect x="3" y="10" width="18" height="2"/><rect x="7" y="15" width="14" height="2"/><rect x="11" y="20" width="10" height="2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="ite-pop-footer">
+    <button class="btn btn-o btn-sm" onclick="closeITE()">Отмена</button>
+    <button class="btn btn-p btn-sm" onclick="saveITE()">💾 Сохранить</button>
+  </div>
+</div>
+</body>
+</html>
