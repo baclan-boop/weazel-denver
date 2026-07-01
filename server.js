@@ -112,8 +112,15 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"], scriptSrc: ["'self'","'unsafe-inline'"],
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'","'unsafe-inline'"],
+      // ВАЖНО: script-src-attr — отдельная директива от script-src.
+      // Helmet по умолчанию ставит её в 'none', что блокирует ВСЕ
+      // onclick="..." и подобные атрибуты, даже если script-src разрешает
+      // unsafe-inline. Наш сайт построен на onclick-атрибутах — разрешаем явно.
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'","'unsafe-inline'","https://fonts.googleapis.com"],
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'","https://fonts.gstatic.com"],
       imgSrc: ["'self'","data:","blob:","https:","http:"],
       frameSrc: ["'self'","https://online.fliphtml5.com","https://www.youtube.com","https://player.vimeo.com"],

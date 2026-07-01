@@ -2025,33 +2025,6 @@ document.addEventListener('keydown',e=>{
     closeITE();
   }
 });
-
-// ══════════════════════════════════════════════
-// БАЗОВЫЕ ОТПУГИВАТЕЛИ (не настоящая защита!)
-// Любой технически подкованный человек легко обойдёт это
-// через меню браузера или view-source:. Реальная защита —
-// то что пароли/роли проверяются на сервере, а не в этом коде.
-// ══════════════════════════════════════════════
-
-// Блокировка правого клика — кроме полей ввода (иначе нельзя вставить текст)
-document.addEventListener('contextmenu',e=>{
-  const tag=e.target.tagName;
-  if(tag==='INPUT'||tag==='TEXTAREA'||e.target.isContentEditable)return;
-  e.preventDefault();
-});
-
-// Блокировка горячих клавиш разработчика
-document.addEventListener('keydown',e=>{
-  const k=e.key;
-  if(k==='F12') return e.preventDefault();
-  if(e.ctrlKey&&e.shiftKey&&['I','J','C','i','j','c'].includes(k)) return e.preventDefault();
-  if(e.ctrlKey&&['U','u'].includes(k)) return e.preventDefault();
-});
-
-// Предупреждение в консоли (защита от self-XSS — когда людей обманом
-// заставляют вставить вредоносный код в консоль браузера)
-console.log('%cСтоп!','color:#E8192C;font-size:48px;font-weight:bold;font-family:sans-serif');
-console.log('%cЭто функция браузера для разработчиков. Если кто-то попросил вас вставить сюда код — это мошенничество, которое может дать доступ к вашему аккаунту.','color:#fff;font-size:14px;font-family:sans-serif');
 </script>
 <!-- INLINE TEXT EDITOR POPUP -->
 <div id="ite-popup">
