@@ -1461,7 +1461,6 @@ function renderNewsBlocks(){
           <div style="font-size:11px;color:var(--gray);text-align:center">${hasImg?'Нажмите чтобы заменить':'📷 Нажмите или перетащите фото'}</div>
         </div>
       </div>`;
-    } else {
     } else if(b.type==='link'){
       // Гиперссылка: два поля — текст ссылки и URL
       const parts=(b.value||'').split('|||');
