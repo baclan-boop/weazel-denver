@@ -216,7 +216,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 /* FORMS */
 .fg{margin-bottom:14px}
 .fl{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px;font-weight:600}
-.fi,.fta,.fsel{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:9px 13px;transition:var(--tr)}
+.fi,.fta,.fsel{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:9px 13px;transition:var(--tr);color-scheme:dark}
 .fi:focus,.fta:focus,.fsel:focus{outline:none;border-color:var(--red);background:rgba(232,25,44,.04)}
 .fta{resize:vertical;min-height:90px;line-height:1.6}
 .fsel option{background:var(--dark2)}
@@ -766,7 +766,14 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
     <div class="mbody">
       <input type="hidden" id="news-edit-id">
       <div class="fg"><label class="fl">Заголовок *</label><input type="text" class="fi" id="news-title-input" placeholder="Заголовок новости"></div>
-      <div class="fg"><label class="fl">Категория</label><input type="text" class="fi" id="news-cat-input" placeholder="Репортаж, Срочно..."></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fg"><label class="fl">Категория</label><input type="text" class="fi" id="news-cat-input" placeholder="Репортаж, Срочно..."></div>
+        <div class="fg">
+          <label class="fl">Дата публикации</label>
+          <input type="datetime-local" class="fi" id="news-date-input">
+          <div class="fhint">Оставьте пустым — поставится текущее время</div>
+        </div>
+      </div>
       <div class="fg">
         <label class="fl">🖼 Превью-карточки (фото на карточке новости)</label>
         <div class="img-upload-zone" id="news-img-zone" onclick="document.getElementById('news-img-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'news-img')">
@@ -1508,8 +1515,24 @@ function loadNewsBlocksFromJSON(json){
   try{const arr=JSON.parse(json);if(Array.isArray(arr))newsBlocks=arr;}catch{if(json.trim())newsBlocks=[{id:'nb0',type:'text',value:json,align:'left'}];}
 }
 
+// Конвертация даты для поля <input type="datetime-local">
+// Сервер хранит UTC, поле показывает и принимает локальное время браузера
+function toDatetimeLocal(isoString){
+  if(!isoString)return'';
+  const d=new Date(isoString);
+  if(isNaN(d))return'';
+  const pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fromDatetimeLocal(value){
+  if(!value)return null;
+  const d=new Date(value);
+  if(isNaN(d))return null;
+  return d.toISOString();
+}
+
 function openNewsModal(id=null){
-  ['news-edit-id','news-title-input','news-cat-input','news-excerpt-input','news-img-input','news-bg-input'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  ['news-edit-id','news-title-input','news-cat-input','news-excerpt-input','news-img-input','news-bg-input','news-date-input'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
   clearUploadedImg('news-img');clearUploadedImg('news-bg');
   document.getElementById('news-title-color').value='#ffffff';
   document.getElementById('news-text-color').value='#ffffff';
@@ -1522,6 +1545,7 @@ function openNewsModal(id=null){
       document.getElementById('news-title-input').value=n.title||'';
       document.getElementById('news-cat-input').value=n.category||'';
       document.getElementById('news-excerpt-input').value=n.excerpt||'';
+      document.getElementById('news-date-input').value=toDatetimeLocal(n.created_at);
       setNewsAlign(n.align||'left');
       document.getElementById('news-title-color').value=n.title_color||'#ffffff';
       document.getElementById('news-text-color').value=n.text_color||'#ffffff';
@@ -1547,7 +1571,8 @@ async function saveNews(){
   const blocks=getNewsBlocksJSON();
   const title_color=document.getElementById('news-title-color').value;
   const text_color=document.getElementById('news-text-color').value;
-  const body={title,category:document.getElementById('news-cat-input').value.trim(),excerpt:document.getElementById('news-excerpt-input').value.trim(),blocks,img,bg_img,align,title_color,text_color};
+  const created_at=fromDatetimeLocal(document.getElementById('news-date-input').value);
+  const body={title,category:document.getElementById('news-cat-input').value.trim(),excerpt:document.getElementById('news-excerpt-input').value.trim(),blocks,img,bg_img,align,title_color,text_color,created_at};
   try{
     if(eid){await API.put('/news/'+eid,body);toast('Новость обновлена','s');}
     else{await API.post('/news',body);toast('Новость опубликована!','s');}
