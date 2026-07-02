@@ -1363,11 +1363,34 @@ function escapeAndLinkify(text){
   return s;
 }
 
-// Полная обработка текста: <a> теги + markdown + голые URL — всё безопасно
+// ── Цвет отдельных фрагментов текста: ⟦#RRGGBB⟧фрагмент⟦/⟧ ──
+// Вставляется через UI (выделить текст в textarea → выбрать цвет),
+// хранится прямо в тексте блока. Цвет строго валидируется (только #hex),
+// содержимое всегда экранируется — инъекция HTML/CSS невозможна.
+function extractColorSpans(text){
+  const spans=[];
+  const working=text.replace(/⟦(#[0-9a-fA-F]{6})⟧([\s\S]*?)⟦\/⟧/g,(m,color,inner)=>{
+    const idx=spans.length;
+    spans.push({color,inner});
+    return`\u0000CLR${idx}\u0000`;
+  });
+  return{working,spans};
+}
+function restoreColorSpans(html,spans){
+  let out=html;
+  spans.forEach((s,idx)=>{
+    const span=`<span style="color:${s.color}">${xe(s.inner)}</span>`;
+    out=out.split(`\u0000CLR${idx}\u0000`).join(span);
+  });
+  return out;
+}
+
+// Полная обработка текста: <a> теги + цветные фрагменты + markdown + голые URL — всё безопасно
 function renderText(text){
   if(!text)return'';
-  const{working,tags}=extractRawLinks(text);
-  return restoreRawLinks(escapeAndLinkify(working),tags);
+  const{working:w1,tags}=extractRawLinks(text);
+  const{working:w2,spans}=extractColorSpans(w1);
+  return restoreRawLinks(restoreColorSpans(escapeAndLinkify(w2),spans),tags);
 }
 
 function openNews(id){
@@ -1392,19 +1415,20 @@ function openNews(id){
       // ссылка внутри них НИКОГДА не становится embed-фреймом,
       // даже если это fliphtml5/youtube — пользователь явно хотел просто ссылку
       const{working,tags}=extractRawLinks(raw);
+      const{working:working2,spans}=extractColorSpans(working);
       const urlReg=/https?:\/\/[^\s\n<>"]+/g;
-      const urls=[...(working.matchAll(urlReg))].map(m=>m[0].replace(/[.,;!?)]+$/,'').trim());
+      const urls=[...(working2.matchAll(urlReg))].map(m=>m[0].replace(/[.,;!?)]+$/,'').trim());
       const embedURL=urls.find(u=>isEmbed(u));
       const tColor=n.text_color?`;color:${xe(n.text_color)}`:'';
       if(embedURL){
-        const rest=working.replace(embedURL,'').trim();
-        if(rest)html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1.25rem${tColor}">${restoreRawLinks(escapeAndLinkify(rest),tags)}</div>`;
+        const rest=working2.replace(embedURL,'').trim();
+        if(rest)html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1.25rem${tColor}">${restoreRawLinks(restoreColorSpans(escapeAndLinkify(rest),spans),tags)}</div>`;
         let src=embedURL;
         if(src.includes('youtube.com/watch')){try{const vid=new URL(src).searchParams.get('v');if(vid)src=`https://www.youtube.com/embed/${vid}`;}catch{}}
         else if(src.includes('youtu.be/')){const vid=src.split('youtu.be/')[1]?.split('?')[0];if(vid)src=`https://www.youtube.com/embed/${vid}`;}
         else if(src.includes('vimeo.com/')){const vid=src.split('vimeo.com/')[1]?.split('?')[0];if(vid)src=`https://player.vimeo.com/video/${vid}`;}
         html+=`<div class="nf-iframe"><iframe src="${xe(src)}" allowfullscreen allow="autoplay; fullscreen; clipboard-write" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
-      } else html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1rem;line-height:1.8${tColor}">${restoreRawLinks(escapeAndLinkify(working),tags)}</div>`;
+      } else html+=`<div style="text-align:${ba};white-space:pre-wrap;margin-bottom:1rem;line-height:1.8${tColor}">${restoreRawLinks(restoreColorSpans(escapeAndLinkify(working2),spans),tags)}</div>`;
     } else if(b.type==='img'){
       const src=safeImg(b.value);
       if(src)html+=`<div style="margin-bottom:1.5rem;text-align:${ba}"><img src="${xe(src)}" style="max-width:100%;border-radius:8px;display:inline-block" onerror="this.parentNode.remove()"></div>`;
@@ -1456,9 +1480,41 @@ function removeNewsBlock(id){newsBlocks=newsBlocks.filter(b=>b.id!==id);renderNe
 function setBlockAlign(id,align){const b=newsBlocks.find(b=>b.id===id);if(b){b.align=align;renderNewsBlocks();}}
 function toggleBlockExpand(idx){
   const ta=document.getElementById('nbtext-'+idx);if(!ta)return;
-  const btn=ta.closest('.nb-row').querySelector('.nb-expand-btn');
+  const btn=ta.closest('.nb-row').querySelector(`[data-expand-idx="${idx}"]`);
   const expanded=ta.classList.toggle('nb-text-expanded');
   if(btn)btn.classList.toggle('active',expanded);
+}
+
+// ── Покраска выделенного фрагмента текста в блоке ──
+function pickBlockColor(idx){
+  const ta=document.getElementById('nbtext-'+idx);if(!ta)return;
+  const start=ta.selectionStart,end=ta.selectionEnd;
+  if(start===end){toast('Сначала выделите текст мышкой','e');return;}
+  ta.dataset.selStart=start;ta.dataset.selEnd=end;
+  const colorInput=document.getElementById('nb-color-'+idx);
+  if(colorInput)colorInput.click();
+}
+function applyBlockColor(idx,color){
+  const ta=document.getElementById('nbtext-'+idx);if(!ta)return;
+  const start=parseInt(ta.dataset.selStart,10),end=parseInt(ta.dataset.selEnd,10);
+  if(isNaN(start)||isNaN(end)||start===end)return;
+  const val=ta.value;
+  const selected=val.slice(start,end);
+  const wrapped=`⟦${color}⟧${selected}⟦/⟧`;
+  const newVal=val.slice(0,start)+wrapped+val.slice(end);
+  ta.value=newVal;
+  newsBlocks[idx].value=newVal;
+  const newPos=start+wrapped.length;
+  ta.focus();ta.setSelectionRange(newPos,newPos);
+  toast('Фрагмент окрашен','s');
+}
+function clearBlockColorAtCursor(idx){
+  const ta=document.getElementById('nbtext-'+idx);if(!ta)return;
+  const cleaned=ta.value.replace(/⟦#[0-9a-fA-F]{6}⟧([\s\S]*?)⟦\/⟧/g,'$1');
+  if(cleaned===ta.value){toast('В этом блоке нет цветных фрагментов','i');return;}
+  ta.value=cleaned;
+  newsBlocks[idx].value=cleaned;
+  toast('Цвета убраны','i');
 }
 function renderNewsBlocks(){
   const el=document.getElementById('news-blocks-editor');if(!el)return;
@@ -1489,10 +1545,15 @@ function renderNewsBlocks(){
     } else {
       input=`<input type="text" class="fi" style="font-size:13px;margin-bottom:4px" value="${xe(b.value)}" onchange="newsBlocks[${idx}].value=this.value" oninput="newsBlocks[${idx}].value=this.value" placeholder="https://online.fliphtml5.com/...">`;
     }
-    const expandBtn=b.type==='text'?`<button type="button" class="nb-expand-btn" onclick="toggleBlockExpand(${idx})" title="Развернуть поле побольше">⤢</button>`:'';
+    const extraBtns=b.type==='text'?`
+      <input type="color" id="nb-color-${idx}" style="display:none" onchange="applyBlockColor(${idx},this.value)">
+      <button type="button" class="nb-expand-btn" onclick="pickBlockColor(${idx})" title="Выделите текст мышкой, затем нажмите — покрасит только выделенный фрагмент">🎨</button>
+      <button type="button" class="nb-expand-btn" onclick="clearBlockColorAtCursor(${idx})" title="Убрать все цветные выделения в этом блоке">🚫</button>
+      <button type="button" class="nb-expand-btn" data-expand-idx="${idx}" onclick="toggleBlockExpand(${idx})" title="Развернуть поле побольше">⤢</button>
+    `:'';
     return`<div class="nb-row" data-bid="${b.id}">
       <div class="nb-type">${typeLabel}</div>
-      <div>${input}<div class="nb-align-btns">${alignBtns}${expandBtn}</div></div>
+      <div>${input}<div class="nb-align-btns">${alignBtns}${extraBtns}</div></div>
       <button type="button" class="btn btn-d btn-sm" style="padding:4px 8px" onclick="removeNewsBlock('${b.id}')">✕</button>
     </div>`;
   }).join('');
