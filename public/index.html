@@ -998,33 +998,45 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
 // ══════════════════════════════════════════════
 // API CLIENT
 // ══════════════════════════════════════════════
+// Безопасно парсит ответ как JSON. Если сервер (или прокси между ним)
+// вернул не-JSON (например HTML страницу ошибки) — не падает с невнятным
+// SyntaxError, а формирует понятное сообщение с кодом статуса.
+async function safeJson(r){
+  const text=await r.text();
+  try{ return JSON.parse(text); }
+  catch{
+    const snippet=text.replace(/\s+/g,' ').trim().slice(0,200);
+    return { error: `Сервер вернул некорректный ответ (код ${r.status}). ${snippet?'Начало ответа: '+snippet:''}` };
+  }
+}
+
 const API = {
   async get(path) {
     const r = await fetch('/api' + path, {credentials:'include'});
-    if (!r.ok) throw await r.json();
-    return r.json();
+    if (!r.ok) throw await safeJson(r);
+    return safeJson(r);
   },
   async post(path, body) {
     const r = await fetch('/api' + path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
-    if (!r.ok) { const e = await r.json(); throw e; }
-    return r.json();
+    if (!r.ok) throw await safeJson(r);
+    return safeJson(r);
   },
   async put(path, body) {
     const r = await fetch('/api' + path, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
-    if (!r.ok) { const e = await r.json(); throw e; }
-    return r.json();
+    if (!r.ok) throw await safeJson(r);
+    return safeJson(r);
   },
   async del(path) {
     const r = await fetch('/api' + path, {method:'DELETE',credentials:'include'});
-    if (!r.ok) throw await r.json();
-    return r.json();
+    if (!r.ok) throw await safeJson(r);
+    return safeJson(r);
   },
   async upload(file) {
     const fd = new FormData();
     fd.append('image', file);
     const r = await fetch('/api/upload', {method:'POST',body:fd,credentials:'include'});
-    if (!r.ok) throw await r.json();
-    return r.json(); // { url: '/uploads/...' }
+    if (!r.ok) throw await safeJson(r);
+    return safeJson(r); // { url: '/uploads/...' }
   }
 };
 

@@ -194,13 +194,28 @@ app.post('/api/ads/search', requireAdvertising, async (req, res) => {
 
     const url = `${scriptUrl}?color=${encodeURIComponent(color)}&days=${days}&adsPerDay=${adsPerDay}`;
     const resp = await fetch(url, { redirect: 'follow' });
+    const rawText = await resp.text();
 
-    if (!resp.ok) {
-      return res.status(502).json({ error: `Google Apps Script вернул ошибку (код ${resp.status}). Проверь что скрипт развёрнут с доступом "Anyone".` });
+    // Apps Script при неверных настройках доступа ("Who has access")
+    // может вернуть HTML-страницу входа Google вместо JSON. Ловим это явно,
+    // а не даём упасть в невнятный SyntaxError.
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      const looksLikeGoogleLogin = /accounts\.google\.com|ServiceLogin|<html/i.test(rawText);
+      const hint = looksLikeGoogleLogin
+        ? 'Похоже, Google вернул страницу входа вместо данных. Проверь в настройках развёртывания Apps Script: "Who has access" / "У кого есть доступ" должно быть "Anyone" / "Все", а не "Only myself".'
+        : 'Ответ Apps Script не является JSON.';
+      console.error('Ads search: non-JSON response from Apps Script. Status:', resp.status, 'Snippet:', rawText.slice(0, 300));
+      return res.status(502).json({ error: `Google Apps Script вернул некорректный ответ (код ${resp.status}). ${hint}` });
     }
 
-    const data = await resp.json();
+    if (!resp.ok) {
+      return res.status(502).json({ error: data.error || `Google Apps Script вернул ошибку (код ${resp.status}).` });
+    }
     if (data.error) return res.status(502).json({ error: data.error });
+
     res.json(data);
   } catch (e) {
     console.error('Ads search error:', e.message);
