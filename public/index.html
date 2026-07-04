@@ -247,6 +247,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:3px}
 .b-admin{background:rgba(201,168,76,.15);color:var(--gold)}
 .b-editor{background:rgba(232,25,44,.15);color:var(--red)}
+.b-advertising{background:rgba(88,101,242,.15);color:#5865F2}
 .b-guest{background:rgba(255,255,255,.07);color:var(--gray)}
 
 /* MODALS */
@@ -737,6 +738,46 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
   </div>
 </div>
 
+<!-- ─── ОБЪЯВЛЕНИЯ (Advertising Department) ─── -->
+<div class="page" id="page-ads">
+  <div class="sec">
+    <div class="sec-inner" style="max-width:720px">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span>Объявления</span></div>
+        <div class="sec-line"></div><div class="sec-tag">Ads Booking</div>
+      </div>
+
+      <div class="acard" style="padding:24px">
+        <div class="fg">
+          <label class="fl">Тип объявлений</label>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button type="button" id="ads-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="setAdsColor('green')">🟢 Зелёные (Weazel News)</button>
+            <button type="button" id="ads-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="setAdsColor('red')">🔴 Красные (ADV)</button>
+          </div>
+          <input type="hidden" id="ads-color-input" value="green">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+          <div class="fg">
+            <label class="fl">Срок (дней)</label>
+            <input type="number" class="fi" id="ads-days-input" min="2" max="7" value="2">
+            <div class="fhint">От 2 до 7 дней</div>
+          </div>
+          <div class="fg">
+            <label class="fl">Объявлений в день</label>
+            <input type="number" class="fi" id="ads-per-day-input" min="2" max="10" value="2">
+            <div class="fhint">От 2 до 10 в день</div>
+          </div>
+        </div>
+
+        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:8px" onclick="searchAdSlots()" id="ads-search-btn">🔍 Найти свободные слоты</button>
+      </div>
+
+      <div id="ads-results" style="margin-top:20px"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 <!-- FOOTER -->
@@ -941,6 +982,7 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
         <select class="fsel" id="role-select">
           <option value="guest">Гость</option>
           <option value="editor">Редактор</option>
+          <option value="advertising">Advertising Department</option>
           <option value="admin">Администратор</option>
         </select>
       </div>
@@ -1004,8 +1046,9 @@ let TEAM = {cats:[], members:[]};
 let SETTINGS = {};
 
 const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin');
+const canAds = () => CU && (CU.role==='advertising'||CU.role==='admin');
 const isAdmin = () => CU && CU.role==='admin';
-const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':'Гость';
+const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':r==='advertising'?'Advertising Dept.':'Гость';
 
 // ══════════════════════════════════════════════
 // SECURITY UTILS
@@ -1093,12 +1136,14 @@ function renderHeader(){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
       <span style="font-size:11px;color:var(--gray)" class="mob-hide-name">${xe(CU.name)}</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
+      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('ads')">Объявления</button>`:''}
       ${canEdit()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
+      ${canAds()?`<button class="mnl" onclick="showPage('ads');closeMobMenu()">📢 Объявления</button>`:''}
       ${canEdit()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(255,255,255,.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
@@ -1127,6 +1172,7 @@ function closeMobMenu(){
 let curPage='home';
 async function showPage(page){
   if(page==='admin'&&!canEdit()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='ads'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
   const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
@@ -1146,8 +1192,86 @@ async function showPage(page){
 }
 
 function logVisit(page){
-  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация'};
+  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',ads:'Объявления'};
   API.post('/visitors',{page:labels[page]||page}).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════
+// ОБЪЯВЛЕНИЯ — поиск свободных слотов в Google Таблице
+// ══════════════════════════════════════════════
+function setAdsColor(color){
+  document.getElementById('ads-color-input').value=color;
+  const gBtn=document.getElementById('ads-color-green');
+  const rBtn=document.getElementById('ads-color-red');
+  if(color==='green'){
+    gBtn.className='btn btn-p'; gBtn.style.background='#2ed573';
+    rBtn.className='btn btn-o'; rBtn.style.background='';
+  } else {
+    rBtn.className='btn btn-p'; rBtn.style.background='var(--red)';
+    gBtn.className='btn btn-o'; gBtn.style.background='';
+  }
+}
+
+async function searchAdSlots(){
+  const color=document.getElementById('ads-color-input').value;
+  let days=parseInt(document.getElementById('ads-days-input').value,10);
+  let adsPerDay=parseInt(document.getElementById('ads-per-day-input').value,10);
+  days=Math.max(2,Math.min(7,isNaN(days)?2:days));
+  adsPerDay=Math.max(2,Math.min(10,isNaN(adsPerDay)?2:adsPerDay));
+  document.getElementById('ads-days-input').value=days;
+  document.getElementById('ads-per-day-input').value=adsPerDay;
+
+  const btn=document.getElementById('ads-search-btn');
+  const resEl=document.getElementById('ads-results');
+  btn.disabled=true;btn.textContent='Ищу свободные слоты...';
+  resEl.innerHTML='';
+
+  try{
+    const r=await API.post('/ads/search',{color,days,adsPerDay});
+    renderAdsResults(r);
+  }catch(e){
+    resEl.innerHTML=`<div class="acard" style="border-color:rgba(232,25,44,.4)">
+      <div style="color:var(--red);font-size:13px">⚠ ${xe(e.error||'Ошибка при поиске слотов')}</div>
+    </div>`;
+  }finally{
+    btn.disabled=false;btn.textContent='🔍 Найти свободные слоты';
+  }
+}
+
+function renderAdsResults(r){
+  const resEl=document.getElementById('ads-results');
+  const colorLabel=r.color==='red'?'🔴 Красные (ADV)':'🟢 Зелёные (Weazel News)';
+
+  let missingHtml='';
+  if(r.missingDates&&r.missingDates.length){
+    missingHtml=`<div style="font-size:12px;color:var(--gray);margin-top:10px">
+      Листы ещё не созданы на: ${r.missingDates.map(d=>xe(d)).join(', ')}
+    </div>`;
+  }
+
+  if(!r.foundSlots||!r.foundSlots.length){
+    resEl.innerHTML=`<div class="acard">
+      <div style="font-size:14px;color:var(--white);margin-bottom:6px">${colorLabel} · ${r.days} дн. · ${r.adsPerDay} объявл/день</div>
+      <div style="color:var(--gray);font-size:13px">Свободных слотов, подходящих на все ${r.days} дня подряд, не найдено.</div>
+      ${missingHtml}
+    </div>`;
+    return;
+  }
+
+  const rows=r.foundSlots.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+    <span style="font-family:var(--font-d);font-size:20px;letter-spacing:1px;color:var(--white)">${xe(s.time)}</span>
+    <span style="font-size:12px;color:var(--gray)">${s.dates.map(d=>xe(d)).join(', ')}</span>
+  </div>`).join('');
+
+  resEl.innerHTML=`<div class="acard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:14px;color:var(--white)">${colorLabel} · ${r.days} дн. · запрошено ${r.adsPerDay} объявл/день</div>
+      ${r.fulfilled?`<span class="badge" style="background:rgba(46,213,115,.15);color:#2ed573">Найдено ${r.foundSlots.length} из ${r.adsPerDay}</span>`
+        :`<span class="badge" style="background:rgba(232,25,44,.15);color:var(--red)">Недобор: ${r.foundSlots.length} из ${r.adsPerDay}</span>`}
+    </div>
+    ${rows}
+    ${missingHtml}
+  </div>`;
 }
 
 // ══════════════════════════════════════════════

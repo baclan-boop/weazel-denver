@@ -93,6 +93,10 @@ async function initDB() {
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT ''`);
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
 
+  // Миграция: добавить роль 'advertising' (Advertising Department) в допустимые значения
+  await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising'))`);
+
   const adminEmail = process.env.ADMIN_EMAIL || 'computer52552@gmail.com';
   const adminPass  = process.env.ADMIN_PASSWORD || '098456964';
   const adminName  = process.env.ADMIN_NAME || 'degrees';
@@ -159,6 +163,7 @@ async function requireAuth(req,res,next){
 }
 async function requireEditor(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
 async function requireAdmin(req,res,next){  await requireAuth(req,res,()=>{ if(req.user.role!=='admin')return res.status(403).json({error:'Только для администратора'});next();}); }
+async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
 const upload = multer({
   storage: multer.diskStorage({ destination: UPLOADS_DIR, filename: (req,f,cb)=>cb(null,uuid()+path.extname(f.originalname).toLowerCase().replace(/[^.a-z0-9]/g,'')||'.jpg') }),
@@ -166,6 +171,42 @@ const upload = multer({
   fileFilter: (req,f,cb) => { if(!f.mimetype.startsWith('image/'))return cb(new Error('Только изображения')); cb(null,true); }
 });
 app.use('/uploads', express.static(UPLOADS_DIR));
+
+// ─── GOOGLE APPS SCRIPT: поиск свободных слотов для объявлений ──────────────
+// Вся логика поиска слотов живёт в скрипте ВНУТРИ самой Google Таблицы
+// (Расширения → Apps Script), развёрнутом как веб-приложение.
+// Наш сервер — просто прокси: получает запрос от сайта, пересылает
+// в Apps Script, возвращает ответ. Настраивается ОДНОЙ переменной:
+//   GOOGLE_APPS_SCRIPT_URL — ссылка вида https://script.google.com/macros/s/.../exec
+// Полный код скрипта и инструкция — см. google-apps-script.gs и README.md
+
+app.post('/api/ads/search', requireAdvertising, async (req, res) => {
+  try {
+    const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+    if (!scriptUrl) {
+      return res.status(503).json({ error: 'Google Таблица не подключена. Обратитесь к администратору сайта — нужно указать переменную GOOGLE_APPS_SCRIPT_URL.' });
+    }
+
+    let { color, days, adsPerDay } = req.body;
+    color = color === 'red' ? 'red' : 'green';
+    days = Math.max(2, Math.min(7, parseInt(days, 10) || 2));
+    adsPerDay = Math.max(2, Math.min(10, parseInt(adsPerDay, 10) || 2));
+
+    const url = `${scriptUrl}?color=${encodeURIComponent(color)}&days=${days}&adsPerDay=${adsPerDay}`;
+    const resp = await fetch(url, { redirect: 'follow' });
+
+    if (!resp.ok) {
+      return res.status(502).json({ error: `Google Apps Script вернул ошибку (код ${resp.status}). Проверь что скрипт развёрнут с доступом "Anyone".` });
+    }
+
+    const data = await resp.json();
+    if (data.error) return res.status(502).json({ error: data.error });
+    res.json(data);
+  } catch (e) {
+    console.error('Ads search error:', e.message);
+    res.status(500).json({ error: 'Не удалось связаться с Google Apps Script: ' + e.message });
+  }
+});
 
 // AUTH
 app.post('/api/auth/login', loginLimiter, async (req,res) => {
@@ -223,7 +264,7 @@ app.get('/api/auth/me', async (req,res)=>{ if(!req.session?.userId)return res.js
 
 // USERS
 app.get('/api/users',requireAdmin,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
-app.put('/api/users/:id/role',requireAdmin,async(req,res)=>{ const{role}=req.body;if(!['guest','editor','admin'].includes(role))return res.status(400).json({error:'Неверная роль'});if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);res.json({ok:true});});
+app.put('/api/users/:id/role',requireAdmin,async(req,res)=>{ const{role}=req.body;if(!['guest','editor','admin','advertising'].includes(role))return res.status(400).json({error:'Неверная роль'});if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);res.json({ok:true});});
 
 // UPLOAD
 app.post('/api/upload',requireEditor,upload.single('image'),(req,res)=>{ if(!req.file)return res.status(400).json({error:'Файл не загружен'});res.json({url:`/uploads/${req.file.filename}`});});
