@@ -1239,7 +1239,7 @@ async function searchAdSlots(){
   resEl.innerHTML='';
 
   try{
-    const r=await API.post('/ads/search',{color,days,adsPerDay});
+    const r=await API.post('/booking/slots',{color,days,adsPerDay});
     renderAdsResults(r);
   }catch(e){
     resEl.innerHTML=`<div class="acard" style="border-color:rgba(232,25,44,.4)">
@@ -1260,6 +1260,15 @@ function renderAdsResults(r){
       Листы ещё не созданы на: ${r.missingDates.map(d=>xe(d)).join(', ')}
     </div>`;
   }
+
+  // Collect ALL unique times across all found slots (not just first N)
+  const allTimes = [];
+  if(r.foundSlots && r.foundSlots.length){
+    r.foundSlots.forEach(s => {
+      if(s.time && !allTimes.includes(s.time)) allTimes.push(s.time);
+    });
+  }
+  const timesText = allTimes.join(', ');
 
   if(!r.foundSlots||!r.foundSlots.length){
     resEl.innerHTML=`<div class="acard">
@@ -1282,6 +1291,12 @@ function renderAdsResults(r){
         :`<span class="badge" style="background:rgba(232,25,44,.15);color:var(--red)">Недобор: ${r.foundSlots.length} из ${r.adsPerDay}</span>`}
     </div>
     ${rows}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-o btn-sm" onclick="navigator.clipboard.writeText('${xe(timesText)}').then(()=>toast('Времена скопированы','s')).catch(()=>toast('Ошибка копирования','e'))">
+        📋 Копировать все времена
+      </button>
+      <span style="font-size:11px;color:var(--gray);align-self:center">${allTimes.length} уникальных времен</span>
+    </div>
     ${missingHtml}
   </div>`;
 }

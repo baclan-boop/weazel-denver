@@ -92,6 +92,9 @@ async function initDB() {
   // Миграция: добавить новые колонки если БД уже существует
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT ''`);
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
+  // Migration: add sort_order columns for team reordering
+  await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
+  await query(`ALTER TABLE team_cats ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
 
   // Миграция: добавить роль 'advertising' (Advertising Department) в допустимые значения
   await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
@@ -180,46 +183,36 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 //   GOOGLE_APPS_SCRIPT_URL — ссылка вида https://script.google.com/macros/s/.../exec
 // Полный код скрипта и инструкция — см. google-apps-script.gs и README.md
 
-app.post('/api/ads/search', requireAdvertising, async (req, res) => {
+// Новый роут для обхода AdBlock и вывода всех окон
+app.post('/api/booking/slots', requireAdvertising, async (req, res) => {
   try {
     const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
     if (!scriptUrl) {
-      return res.status(503).json({ error: 'Google Таблица не подключена. Обратитесь к администратору сайта — нужно указать переменную GOOGLE_APPS_SCRIPT_URL.' });
+      return res.status(503).json({ error: 'Google Таблица не подключена.' });
     }
 
-    let { color, days, adsPerDay } = req.body;
+    let { color, days } = req.body;
     color = color === 'red' ? 'red' : 'green';
     days = Math.max(2, Math.min(7, parseInt(days, 10) || 2));
-    adsPerDay = Math.max(2, Math.min(10, parseInt(adsPerDay, 10) || 2));
+    
+    // Передаем большое число, чтобы забрать абсолютно все свободные слоты
+    const adsPerDay = 150; 
 
     const url = `${scriptUrl}?color=${encodeURIComponent(color)}&days=${days}&adsPerDay=${adsPerDay}`;
     const resp = await fetch(url, { redirect: 'follow' });
     const rawText = await resp.text();
 
-    // Apps Script при неверных настройках доступа ("Who has access")
-    // может вернуть HTML-страницу входа Google вместо JSON. Ловим это явно,
-    // а не даём упасть в невнятный SyntaxError.
     let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      const looksLikeGoogleLogin = /accounts\.google\.com|ServiceLogin|<html/i.test(rawText);
-      const hint = looksLikeGoogleLogin
-        ? 'Похоже, Google вернул страницу входа вместо данных. Проверь в настройках развёртывания Apps Script: "Who has access" / "У кого есть доступ" должно быть "Anyone" / "Все", а не "Only myself".'
-        : 'Ответ Apps Script не является JSON.';
-      console.error('Ads search: non-JSON response from Apps Script. Status:', resp.status, 'Snippet:', rawText.slice(0, 300));
-      return res.status(502).json({ error: `Google Apps Script вернул некорректный ответ (код ${resp.status}). ${hint}` });
+    try { data = JSON.parse(rawText); } catch {
+      return res.status(502).json({ error: 'Google Apps Script вернул некорректный ответ.' });
     }
 
-    if (!resp.ok) {
-      return res.status(502).json({ error: data.error || `Google Apps Script вернул ошибку (код ${resp.status}).` });
-    }
-    if (data.error) return res.status(502).json({ error: data.error });
+    if (!resp.ok || data.error) return res.status(502).json({ error: data.error || 'Ошибка скрипта' });
 
     res.json(data);
   } catch (e) {
-    console.error('Ads search error:', e.message);
-    res.status(500).json({ error: 'Не удалось связаться с Google Apps Script: ' + e.message });
+    console.error('Slots error:', e.message);
+    res.status(500).json({ error: 'Не удалось связаться с таблицей: ' + e.message });
   }
 });
 
@@ -286,8 +279,8 @@ app.post('/api/upload',requireEditor,upload.single('image'),(req,res)=>{ if(!req
 
 // NEWS
 app.get('/api/news',async(req,res)=>{ try{const r=await query('SELECT * FROM news ORDER BY created_at DESC');res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
-app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,req.user.name,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
-app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,created_at=COALESCE($10,created_at),updated_at=NOW() WHERE id=$11',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',dateVal,req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,author_name?author_name.trim():req.user.name,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,created_at=COALESCE($10,created_at),updated_at=NOW() WHERE id=$11',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',dateVal,req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 app.delete('/api/news/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM news WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // SERVICES
@@ -303,7 +296,39 @@ app.put('/api/team/cats/:id',requireEditor,async(req,res)=>{ const{name,layout}=
 app.delete('/api/team/cats/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_cats WHERE id=$1',[req.params.id]);res.json({ok:true});});
 app.post('/api/team/members',requireEditor,async(req,res)=>{ const{cat_id,name,role,photo}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите имя'});const id=uuid();await query('INSERT INTO team_members (id,cat_id,name,role,photo) VALUES ($1,$2,$3,$4,$5)',[id,cat_id,name.trim(),role||'',photo||'']);res.json({id,cat_id,name,role,photo});});
 app.put('/api/team/members/:id',requireEditor,async(req,res)=>{ const{cat_id,name,role,photo}=req.body;await query('UPDATE team_members SET cat_id=$1,name=$2,role=$3,photo=$4 WHERE id=$5',[cat_id,name,role||'',photo||'',req.params.id]);res.json({ok:true});});
-app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});});
+app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});
+
+// REORDER team members within a category
+app.post('/api/team/members/reorder', requireEditor, async (req, res) => {
+  try {
+    const { orders } = req.body;
+    if (!Array.isArray(orders)) return res.status(400).json({ error: 'Неверный формат' });
+    for (const o of orders) {
+      await query('UPDATE team_members SET sort_order=$1 WHERE id=$2', [o.sort_order, o.id]);
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// MOVE team member to another category
+app.put('/api/team/members/:id/move', requireEditor, async (req, res) => {
+  try {
+    const { cat_id } = req.body;
+    if (!cat_id) return res.status(400).json({ error: 'Укажите категорию' });
+    await query('UPDATE team_members SET cat_id=$1 WHERE id=$2', [cat_id, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// REORDER team categories
+app.post('/api/team/cats/reorder', requireEditor, async (req, res) => {
+  try {
+    const { orders } = req.body;
+    if (!Array.isArray(orders)) return res.status(400).json({ error: 'Неверный формат' });
+    for (const o of orders) {
+      await query('UPDATE team_cats SET sort_order=$1 WHERE id=$2', [o.sort_order, o.id]);
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});});
 
 // SETTINGS
 app.get('/api/settings',async(req,res)=>{ const r=await query('SELECT key,value FROM site_settings');const s={};r.rows.forEach(row=>{try{s[row.key]=JSON.parse(row.value);}catch{s[row.key]=row.value;}});res.json(s);});
