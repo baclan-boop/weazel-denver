@@ -183,20 +183,31 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .team-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
 .team-grid .team-card{width:160px;flex-shrink:0}
 .team-grid .team-add-card{width:160px;flex-shrink:0}
-.team-card{background:rgba(22,22,22,.75);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:18px;text-align:center;transition:var(--tr)}
+.team-card{background:rgba(22,22,22,.75);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:18px;text-align:center;transition:var(--tr);position:relative}
 .team-card:hover{border-color:rgba(232,25,44,.3);transform:translateY(-2px)}
-.team-av{width:64px;height:64px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,var(--red-deeper),var(--red-dark));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--white);overflow:hidden;border:2px solid rgba(232,25,44,.25)}
+.team-av{width:84px;height:84px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,var(--red-deeper),var(--red-dark));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:var(--white);overflow:hidden;border:2px solid rgba(232,25,44,.25)}
 .team-av img{width:100%;height:100%;object-fit:cover}
 .team-name{font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px}
 .team-role{font-size:10px;color:var(--red);letter-spacing:1.5px;text-transform:uppercase}
 .team-add-card{cursor:pointer;border:1px dashed rgba(255,255,255,.12);border-radius:var(--rl);padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:130px;color:var(--gray);font-size:12px;transition:var(--tr)}
 .team-add-card:hover{border-color:rgba(232,25,44,.4);color:var(--red)}
-/* Team row layout */
+/* Team row layout (со скроллом) */
 .team-row-grid{display:flex;flex-wrap:nowrap;gap:14px;justify-content:center;justify-content:safe center;overflow-x:auto;padding-bottom:6px}
 .team-row-grid .team-card{width:155px;flex-shrink:0}
 .team-row-grid .team-add-card{width:130px;flex-shrink:0;min-height:auto;padding:14px}
+/* Team fixed-grid layout: без пирамиды и без скролла, фиксированное число в ряд */
+.team-fixed-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+@media(max-width:900px){.team-fixed-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:600px){.team-fixed-grid{grid-template-columns:repeat(2,1fr)}}
 .layout-toggle-btn{background:none;border:1px solid rgba(255,255,255,.15);color:var(--gray);border-radius:var(--r);padding:4px 10px;font-size:10px;cursor:pointer;transition:var(--tr);letter-spacing:1px;text-transform:uppercase}
 .layout-toggle-btn.active{background:rgba(232,25,44,.15);border-color:var(--red);color:var(--red)}
+/* Кнопки перемещения (вверх/вниз) — видны только в режиме редактирования */
+.move-btns{display:flex;flex-direction:column;gap:2px;position:absolute;top:6px;right:6px}
+.move-btn{width:22px;height:18px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:3px;color:var(--gray);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:var(--tr)}
+.move-btn:hover{background:rgba(232,25,44,.3);border-color:var(--red);color:var(--white)}
+.move-btn:disabled{opacity:.25;cursor:default;pointer-events:none}
+.cat-move-btns{display:flex;gap:3px}
+
 
 /* ABOUT */
 .about-content{font-size:15px;line-height:1.9;color:rgba(255,255,255,.82)}
@@ -852,6 +863,11 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
         </div>
       </div>
       <div class="fg">
+        <label class="fl">Автор</label>
+        <input type="text" class="fi" id="news-author-input" placeholder="Имя автора">
+        <div class="fhint">По умолчанию — твой никнейм. Можно вписать любое имя.</div>
+      </div>
+      <div class="fg">
         <label class="fl">Выравнивание заголовка новости</label>
         <div style="display:flex;gap:8px;margin-top:6px">
           <button type="button" class="news-align-btn btn btn-o btn-sm" data-nalign="left" onclick="setNewsAlign('left')">◀ Слева</button>
@@ -929,7 +945,8 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
         <label class="fl">Расположение участников</label>
         <select class="fsel" id="team-cat-layout">
           <option value="pyramid">Пирамида (первый по центру, остальные ниже)</option>
-          <option value="row">В ряд (все в одну строку по центру)</option>
+          <option value="row">В ряд (все в одну строку, со скроллом)</option>
+          <option value="grid">Сетка (без скролла, 6 в ряд, остальные ниже)</option>
         </select>
       </div>
       <div class="mfoot">
@@ -953,11 +970,21 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
       <div class="fg"><label class="fl">Имя / Никнейм *</label><input type="text" class="fi" id="member-name" placeholder="James Smith"></div>
       <div class="fg"><label class="fl">Должность</label><input type="text" class="fi" id="member-role" placeholder="Главный редактор"></div>
       <div class="fg">
+        <label class="fl">Шрифт должности</label>
+        <select class="fsel" id="member-role-font">
+          <option value="">Обычный (по умолчанию)</option>
+          <option value="var(--font-d)">Строгий (Bebas Neue)</option>
+          <option value="var(--font-s)">Элегантный (Playfair Display)</option>
+          <option value="cursive">Рукописный</option>
+          <option value="monospace">Моноширинный</option>
+        </select>
+      </div>
+      <div class="fg">
         <label class="fl">Фото участника</label>
-        <div class="img-upload-zone" id="member-photo-zone" onclick="document.getElementById('member-photo-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'member-photo')">
+        <div class="img-upload-zone" id="member-photo-zone" style="min-height:140px" onclick="document.getElementById('member-photo-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleImgDrop(event,'member-photo')">
           <input type="file" id="member-photo-file" accept="image/*" style="display:none" onchange="handleImgFile(event,'member-photo')">
           <div class="img-upload-inner" id="member-photo-preview">
-            <div style="font-size:24px;opacity:.3">👤</div>
+            <div style="font-size:36px;opacity:.3">👤</div>
             <div class="img-upload-txt">Нажмите или перетащите фото</div>
           </div>
         </div>
@@ -1239,7 +1266,7 @@ async function searchAdSlots(){
   resEl.innerHTML='';
 
   try{
-    const r=await API.post('/booking/slots',{color,days,adsPerDay});
+    const r=await API.post('/booking/search',{color,days,adsPerDay});
     renderAdsResults(r);
   }catch(e){
     resEl.innerHTML=`<div class="acard" style="border-color:rgba(232,25,44,.4)">
@@ -1250,9 +1277,12 @@ async function searchAdSlots(){
   }
 }
 
+let lastFoundSlots=[]; // хранится для кнопки "Скопировать все времена"
+
 function renderAdsResults(r){
   const resEl=document.getElementById('ads-results');
   const colorLabel=r.color==='red'?'🔴 Красные (ADV)':'🟢 Зелёные (Weazel News)';
+  lastFoundSlots=r.foundSlots||[];
 
   let missingHtml='';
   if(r.missingDates&&r.missingDates.length){
@@ -1260,15 +1290,6 @@ function renderAdsResults(r){
       Листы ещё не созданы на: ${r.missingDates.map(d=>xe(d)).join(', ')}
     </div>`;
   }
-
-  // Collect ALL unique times across all found slots (not just first N)
-  const allTimes = [];
-  if(r.foundSlots && r.foundSlots.length){
-    r.foundSlots.forEach(s => {
-      if(s.time && !allTimes.includes(s.time)) allTimes.push(s.time);
-    });
-  }
-  const timesText = allTimes.join(', ');
 
   if(!r.foundSlots||!r.foundSlots.length){
     resEl.innerHTML=`<div class="acard">
@@ -1284,21 +1305,41 @@ function renderAdsResults(r){
     <span style="font-size:12px;color:var(--gray)">${s.dates.map(d=>xe(d)).join(', ')}</span>
   </div>`).join('');
 
+  const badge=r.fulfilled
+    ?`<span class="badge" style="background:rgba(46,213,115,.15);color:#2ed573">✓ Найдено ${r.foundSlots.length} (нужно минимум ${r.adsPerDay})</span>`
+    :`<span class="badge" style="background:rgba(232,25,44,.15);color:var(--red)">Недостаточно: найдено ${r.foundSlots.length} из ${r.adsPerDay}</span>`;
+
   resEl.innerHTML=`<div class="acard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px">
       <div style="font-size:14px;color:var(--white)">${colorLabel} · ${r.days} дн. · запрошено ${r.adsPerDay} объявл/день</div>
-      ${r.fulfilled?`<span class="badge" style="background:rgba(46,213,115,.15);color:#2ed573">Найдено ${r.foundSlots.length} из ${r.adsPerDay}</span>`
-        :`<span class="badge" style="background:rgba(232,25,44,.15);color:var(--red)">Недобор: ${r.foundSlots.length} из ${r.adsPerDay}</span>`}
+      ${badge}
     </div>
-    ${rows}
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-o btn-sm" onclick="navigator.clipboard.writeText('${xe(timesText)}').then(()=>toast('Времена скопированы','s')).catch(()=>toast('Ошибка копирования','e'))">
-        📋 Копировать все времена
-      </button>
-      <span style="font-size:11px;color:var(--gray);align-self:center">${allTimes.length} уникальных времен</span>
-    </div>
+    <div style="max-height:400px;overflow-y:auto;margin-top:8px">${rows}</div>
+    <button class="btn btn-o btn-sm" style="width:100%;justify-content:center;margin-top:14px" onclick="copyAllAdTimes()">📋 Скопировать все времена</button>
     ${missingHtml}
   </div>`;
+}
+
+function copyAllAdTimes(){
+  if(!lastFoundSlots.length){toast('Нечего копировать','e');return;}
+  const text=lastFoundSlots.map(s=>s.time).join('\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(
+      ()=>toast(`Скопировано ${lastFoundSlots.length} времени`,'s'),
+      ()=>fallbackCopyText(text)
+    );
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');toast('Скопировано','s');}
+  catch{toast('Не удалось скопировать','e');}
+  document.body.removeChild(ta);
 }
 
 // ══════════════════════════════════════════════
@@ -1400,8 +1441,9 @@ function setUploadedImg(key,url){
   const zone=document.getElementById(key+'-zone');
   const preview=document.getElementById(key+'-preview');
   if(zone)zone.classList.add('has-img');
+  const maxH=key==='member-photo'?140:90;
   if(preview)preview.innerHTML=`<div style="position:relative;width:100%">
-    <img src="${xe(url)}" style="max-width:100%;max-height:90px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
+    <img src="${xe(url)}" style="max-width:100%;max-height:${maxH}px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
     <button type="button" onclick="clearUploadedImg('${key}');event.stopPropagation()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);border:none;color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
   </div><div class="img-upload-sub">✓ Загружено · нажмите чтобы заменить</div>`;
 }
@@ -1412,7 +1454,8 @@ function clearUploadedImg(key){
   if(zone)zone.classList.remove('has-img');if(fi)fi.value='';
   const icons={'news-img':'🖼','news-bg':'🌅','member-photo':'👤'};
   const txts={'news-img':'Перетащите или нажмите','news-bg':'Фон статьи','member-photo':'Фото участника'};
-  if(preview)preview.innerHTML=`<div style="font-size:28px;opacity:.3">${icons[key]||'📷'}</div><div class="img-upload-txt">${txts[key]||'Нажмите для выбора'}</div><div class="img-upload-sub">PNG, JPG, GIF, WEBP</div>`;
+  const iconSize=key==='member-photo'?36:28;
+  if(preview)preview.innerHTML=`<div style="font-size:${iconSize}px;opacity:.3">${icons[key]||'📷'}</div><div class="img-upload-txt">${txts[key]||'Нажмите для выбора'}</div><div class="img-upload-sub">PNG, JPG, GIF, WEBP</div>`;
 }
 
 function preloadUploadZone(key,url){
@@ -1420,8 +1463,9 @@ function preloadUploadZone(key,url){
   const hi=document.getElementById(key+'-input')||document.getElementById(key);if(hi)hi.value=url;
   const zone=document.getElementById(key+'-zone');const preview=document.getElementById(key+'-preview');
   if(zone)zone.classList.add('has-img');
+  const maxH=key==='member-photo'?140:90;
   if(preview)preview.innerHTML=`<div style="position:relative;width:100%">
-    <img src="${xe(url)}" style="max-width:100%;max-height:90px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
+    <img src="${xe(url)}" style="max-width:100%;max-height:${maxH}px;border-radius:6px;object-fit:cover;display:block;margin:0 auto">
     <button type="button" onclick="clearUploadedImg('${key}');event.stopPropagation()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);border:none;color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
   </div><div class="img-upload-sub">Нажмите чтобы заменить</div>`;
 }
@@ -1748,6 +1792,7 @@ function openNewsModal(id=null){
   clearUploadedImg('news-img');clearUploadedImg('news-bg');
   document.getElementById('news-title-color').value='#ffffff';
   document.getElementById('news-text-color').value='#ffffff';
+  document.getElementById('news-author-input').value=CU?CU.name:'';
   setNewsAlign('left');newsBlocks=[];renderNewsBlocks();
   document.getElementById('modal-news-title').textContent='Добавить новость';
   if(id){
@@ -1758,6 +1803,7 @@ function openNewsModal(id=null){
       document.getElementById('news-cat-input').value=n.category||'';
       document.getElementById('news-excerpt-input').value=n.excerpt||'';
       document.getElementById('news-date-input').value=toDatetimeLocal(n.created_at);
+      document.getElementById('news-author-input').value=n.author_name||(CU?CU.name:'');
       setNewsAlign(n.align||'left');
       document.getElementById('news-title-color').value=n.title_color||'#ffffff';
       document.getElementById('news-text-color').value=n.text_color||'#ffffff';
@@ -1784,7 +1830,8 @@ async function saveNews(){
   const title_color=document.getElementById('news-title-color').value;
   const text_color=document.getElementById('news-text-color').value;
   const created_at=fromDatetimeLocal(document.getElementById('news-date-input').value);
-  const body={title,category:document.getElementById('news-cat-input').value.trim(),excerpt:document.getElementById('news-excerpt-input').value.trim(),blocks,img,bg_img,align,title_color,text_color,created_at};
+  const author_name=document.getElementById('news-author-input').value.trim();
+  const body={title,category:document.getElementById('news-cat-input').value.trim(),excerpt:document.getElementById('news-excerpt-input').value.trim(),blocks,img,bg_img,align,title_color,text_color,created_at,author_name};
   try{
     if(eid){await API.put('/news/'+eid,body);toast('Новость обновлена','s');}
     else{await API.post('/news',body);toast('Новость опубликована!','s');}
@@ -1859,33 +1906,55 @@ async function renderTeam(){
     TEAM=await API.get('/team');
     const {cats,members}=TEAM;
     if(!cats.length){el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Состав ещё не добавлен.</div></div>`;return;}
-    el.innerHTML=cats.map(cat=>{
+    el.innerHTML=cats.map((cat,catIdx)=>{
       const cm=members.filter(m=>m.cat_id===cat.id);if(!cm.length&&!canEdit())return'';
       const layout=cat.layout||'pyramid';
       const addBtn=canEdit()?`<div class="team-add-card" onclick="openTeamMemberModal(null,'${cat.id}')"><div style="font-size:22px;opacity:.4">+</div><div>Добавить</div></div>`:'';
       let membersHTML='';
       if(layout==='row'){
-        membersHTML=`<div class="team-row-grid">${cm.map(m=>memberCard(m)).join('')}${addBtn}</div>`;
+        membersHTML=`<div class="team-row-grid">${cm.map((m,i)=>memberCard(m,i===0,i===cm.length-1)).join('')}${addBtn}</div>`;
+      } else if(layout==='grid'){
+        membersHTML=`<div class="team-fixed-grid">${cm.map((m,i)=>memberCard(m,i===0,i===cm.length-1)).join('')}${addBtn}</div>`;
       } else {
         const top=cm[0];const rest=cm.slice(1);
-        membersHTML=`${top?`<div class="team-pyramid-top">${memberCard(top)}</div>`:''}${(rest.length||canEdit())?`<div class="team-grid">${rest.map(m=>memberCard(m)).join('')}${addBtn}</div>`:''}`;
+        membersHTML=`${top?`<div class="team-pyramid-top">${memberCard(top,true,cm.length===1)}</div>`:''}${(rest.length||canEdit())?`<div class="team-grid">${rest.map((m,i)=>memberCard(m,false,i===rest.length-1)).join('')}${addBtn}</div>`:''}`;
       }
+      const layoutLabel={row:'↔ ряд',grid:'▦ сетка',pyramid:'△ пирамида'}[layout]||'△ пирамида';
+      const catMoveBtns=canEdit()?`<div class="cat-move-btns">
+        <button class="move-btn" ${catIdx===0?'disabled':''} onclick="moveCategory('${cat.id}','up')" title="Переместить категорию выше">▲</button>
+        <button class="move-btn" ${catIdx===cats.length-1?'disabled':''} onclick="moveCategory('${cat.id}','down')" title="Переместить категорию ниже">▼</button>
+      </div>`:'';
       return`<div class="team-cat reveal">
         <div class="team-cat-hdr"><div class="team-cat-name">${xe(cat.name)}</div><div class="team-cat-line"></div>
-          ${canEdit()?`<div class="bg-group"><span style="font-size:10px;color:var(--gray);margin-right:4px">${layout==='row'?'↔ ряд':'△ пирамида'}</span><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>`:''}
+          ${canEdit()?`<div class="bg-group">${catMoveBtns}<span style="font-size:10px;color:var(--gray);margin-right:4px">${layoutLabel}</span><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>`:''}
         </div>${membersHTML}
       </div>`;
     }).join('');
   }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
 }
 
-function memberCard(m){
+function memberCard(m,isFirst,isLast){
   const ini=(m.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  return`<div class="team-card"><div class="team-av">${m.photo?`<img src="${xe(m.photo)}" alt="">`:`${ini}`}</div>
-    <div class="team-name">${xe(m.name)}</div>${m.role?`<div class="team-role">${xe(m.role)}</div>`:''}
+  const roleFontStyle=m.role_font?`style="font-family:${xe(m.role_font)}"`:'';
+  const moveBtns=canEdit()?`<div class="move-btns">
+    <button class="move-btn" ${isFirst?'disabled':''} onclick="moveMember('${m.id}','up');event.stopPropagation()" title="Выше">▲</button>
+    <button class="move-btn" ${isLast?'disabled':''} onclick="moveMember('${m.id}','down');event.stopPropagation()" title="Ниже">▼</button>
+  </div>`:'';
+  return`<div class="team-card">${moveBtns}<div class="team-av">${m.photo?`<img src="${xe(m.photo)}" alt="">`:`${ini}`}</div>
+    <div class="team-name">${xe(m.name)}</div>${m.role?`<div class="team-role" ${roleFontStyle}>${xe(m.role)}</div>`:''}
     ${canEdit()?`<div class="bg-group" style="justify-content:center;margin-top:8px"><button class="btn btn-o btn-sm" onclick="editMember('${m.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delMember('${m.id}')">✕</button></div>`:''}
   </div>`;
 }
+
+async function moveMember(id,direction){
+  try{ await API.put(`/team/members/${id}/move`,{direction}); TEAM=await API.get('/team'); renderTeam(); renderTeamMgmt(); }
+  catch(e){ toast(e.error||'Не удалось переместить','e'); }
+}
+async function moveCategory(id,direction){
+  try{ await API.put(`/team/cats/${id}/move`,{direction}); TEAM=await API.get('/team'); renderTeam(); renderTeamMgmt(); }
+  catch(e){ toast(e.error||'Не удалось переместить','e'); }
+}
+
 
 function openTeamCatModal(id=null){
   document.getElementById('team-cat-id').value='';document.getElementById('team-cat-name').value='';
@@ -1912,16 +1981,18 @@ function openTeamMemberModal(id=null,defCat=null){
   const cats=TEAM.cats||[];const sel=document.getElementById('member-cat-select');
   sel.innerHTML=cats.map(c=>`<option value="${c.id}">${xe(c.name)}</option>`).join('');
   ['member-edit-id','member-name','member-role','member-photo'].forEach(i=>document.getElementById(i).value='');
+  const fontSel=document.getElementById('member-role-font');if(fontSel)fontSel.value='';
   clearUploadedImg('member-photo');document.getElementById('modal-member-title').textContent='Добавить участника';
   if(defCat)sel.value=defCat;
-  if(id){const m=(TEAM.members||[]).find(m=>m.id===id);if(m){document.getElementById('member-edit-id').value=m.id;document.getElementById('member-name').value=m.name||'';document.getElementById('member-role').value=m.role||'';document.getElementById('member-photo').value=m.photo||'';sel.value=m.cat_id||'';if(m.photo)preloadUploadZone('member-photo',m.photo);document.getElementById('modal-member-title').textContent='Редактировать участника';}}
+  if(id){const m=(TEAM.members||[]).find(m=>m.id===id);if(m){document.getElementById('member-edit-id').value=m.id;document.getElementById('member-name').value=m.name||'';document.getElementById('member-role').value=m.role||'';document.getElementById('member-photo').value=m.photo||'';if(fontSel)fontSel.value=m.role_font||'';sel.value=m.cat_id||'';if(m.photo)preloadUploadZone('member-photo',m.photo);document.getElementById('modal-member-title').textContent='Редактировать участника';}}
   openModal('modal-team-member');
 }
 function editMember(id){openTeamMemberModal(id);}
 async function saveMember(){
   const name=document.getElementById('member-name').value.trim();if(!name){toast('Укажите имя','e');return}
   const eid=document.getElementById('member-edit-id').value;
-  const body={cat_id:document.getElementById('member-cat-select').value,name,role:document.getElementById('member-role').value.trim(),photo:document.getElementById('member-photo').value.trim()};
+  const role_font=document.getElementById('member-role-font')?.value||'';
+  const body={cat_id:document.getElementById('member-cat-select').value,name,role:document.getElementById('member-role').value.trim(),photo:document.getElementById('member-photo').value.trim(),role_font};
   try{
     if(eid)await API.put('/team/members/'+eid,body);else await API.post('/team/members',body);
     closeModal('modal-team-member');TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Сохранено','s');

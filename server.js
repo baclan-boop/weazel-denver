@@ -92,13 +92,29 @@ async function initDB() {
   // Миграция: добавить новые колонки если БД уже существует
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT ''`);
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
-  // Migration: add sort_order columns for team reordering
-  await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
-  await query(`ALTER TABLE team_cats ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
 
   // Миграция: добавить роль 'advertising' (Advertising Department) в допустимые значения
   await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
   await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising'))`);
+
+  // Миграция: шрифт для описания (должности) участника состава
+  await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_font TEXT DEFAULT ''`);
+
+  // Миграция: если sort_order ещё не проставлен (старые данные до этой версии) —
+  // заполняем его на основе текущего физического порядка строк (ctid), чтобы
+  // кнопки "переместить вверх/вниз" сразу заработали на уже существующих данных.
+  // На новых записях sort_order выставляется явно при создании — эта миграция
+  // их не трогает.
+  await query(`
+    UPDATE team_members m SET sort_order = sub.rn
+    FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY cat_id ORDER BY ctid) AS rn FROM team_members) sub
+    WHERE m.id = sub.id AND m.sort_order = 0
+  `);
+  await query(`
+    UPDATE team_cats c SET sort_order = sub.rn
+    FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY ctid) AS rn FROM team_cats) sub
+    WHERE c.id = sub.id AND c.sort_order = 0
+  `);
 
   const adminEmail = process.env.ADMIN_EMAIL || 'computer52552@gmail.com';
   const adminPass  = process.env.ADMIN_PASSWORD || '098456964';
@@ -183,36 +199,46 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 //   GOOGLE_APPS_SCRIPT_URL — ссылка вида https://script.google.com/macros/s/.../exec
 // Полный код скрипта и инструкция — см. google-apps-script.gs и README.md
 
-// Новый роут для обхода AdBlock и вывода всех окон
-app.post('/api/booking/slots', requireAdvertising, async (req, res) => {
+app.post('/api/booking/search', requireAdvertising, async (req, res) => {
   try {
     const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
     if (!scriptUrl) {
-      return res.status(503).json({ error: 'Google Таблица не подключена.' });
+      return res.status(503).json({ error: 'Google Таблица не подключена. Обратитесь к администратору сайта — нужно указать переменную GOOGLE_APPS_SCRIPT_URL.' });
     }
 
-    let { color, days } = req.body;
+    let { color, days, adsPerDay } = req.body;
     color = color === 'red' ? 'red' : 'green';
     days = Math.max(2, Math.min(7, parseInt(days, 10) || 2));
-    
-    // Передаем большое число, чтобы забрать абсолютно все свободные слоты
-    const adsPerDay = 150; 
+    adsPerDay = Math.max(2, Math.min(10, parseInt(adsPerDay, 10) || 2));
 
     const url = `${scriptUrl}?color=${encodeURIComponent(color)}&days=${days}&adsPerDay=${adsPerDay}`;
     const resp = await fetch(url, { redirect: 'follow' });
     const rawText = await resp.text();
 
+    // Apps Script при неверных настройках доступа ("Who has access")
+    // может вернуть HTML-страницу входа Google вместо JSON. Ловим это явно,
+    // а не даём упасть в невнятный SyntaxError.
     let data;
-    try { data = JSON.parse(rawText); } catch {
-      return res.status(502).json({ error: 'Google Apps Script вернул некорректный ответ.' });
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      const looksLikeGoogleLogin = /accounts\.google\.com|ServiceLogin|<html/i.test(rawText);
+      const hint = looksLikeGoogleLogin
+        ? 'Похоже, Google вернул страницу входа вместо данных. Проверь в настройках развёртывания Apps Script: "Who has access" / "У кого есть доступ" должно быть "Anyone" / "Все", а не "Only myself".'
+        : 'Ответ Apps Script не является JSON.';
+      console.error('Ads search: non-JSON response from Apps Script. Status:', resp.status, 'Snippet:', rawText.slice(0, 300));
+      return res.status(502).json({ error: `Google Apps Script вернул некорректный ответ (код ${resp.status}). ${hint}` });
     }
 
-    if (!resp.ok || data.error) return res.status(502).json({ error: data.error || 'Ошибка скрипта' });
+    if (!resp.ok) {
+      return res.status(502).json({ error: data.error || `Google Apps Script вернул ошибку (код ${resp.status}).` });
+    }
+    if (data.error) return res.status(502).json({ error: data.error });
 
     res.json(data);
   } catch (e) {
-    console.error('Slots error:', e.message);
-    res.status(500).json({ error: 'Не удалось связаться с таблицей: ' + e.message });
+    console.error('Ads search error:', e.message);
+    res.status(500).json({ error: 'Не удалось связаться с Google Apps Script: ' + e.message });
   }
 });
 
@@ -279,8 +305,8 @@ app.post('/api/upload',requireEditor,upload.single('image'),(req,res)=>{ if(!req
 
 // NEWS
 app.get('/api/news',async(req,res)=>{ try{const r=await query('SELECT * FROM news ORDER BY created_at DESC');res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
-app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,author_name?author_name.trim():req.user.name,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
-app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,created_at=COALESCE($10,created_at),updated_at=NOW() WHERE id=$11',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',dateVal,req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const finalAuthor=(author_name&&author_name.trim())?author_name.trim().slice(0,100):req.user.name;await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,finalAuthor,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const authorVal=(author_name&&author_name.trim())?author_name.trim().slice(0,100):null;await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,author_name=COALESCE($10,author_name),created_at=COALESCE($11,created_at),updated_at=NOW() WHERE id=$12',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',authorVal,dateVal,req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 app.delete('/api/news/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM news WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // SERVICES
@@ -291,44 +317,65 @@ app.delete('/api/services/:id',requireEditor,async(req,res)=>{ await query('DELE
 
 // TEAM
 app.get('/api/team',async(req,res)=>{ const c=await query('SELECT * FROM team_cats ORDER BY sort_order');const m=await query('SELECT * FROM team_members ORDER BY sort_order');res.json({cats:c.rows,members:m.rows});});
-app.post('/api/team/cats',requireEditor,async(req,res)=>{ const{name,layout}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});const id=uuid();await query('INSERT INTO team_cats (id,name,layout) VALUES ($1,$2,$3)',[id,name.trim(),layout||'pyramid']);res.json({id,name,layout:layout||'pyramid'});});
+
+app.post('/api/team/cats',requireEditor,async(req,res)=>{
+  const{name,layout}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});
+  const id=uuid();
+  const maxR=await query('SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM team_cats');
+  await query('INSERT INTO team_cats (id,name,layout,sort_order) VALUES ($1,$2,$3,$4)',[id,name.trim(),layout||'pyramid',maxR.rows[0].n]);
+  res.json({id,name,layout:layout||'pyramid'});
+});
 app.put('/api/team/cats/:id',requireEditor,async(req,res)=>{ const{name,layout}=req.body;await query('UPDATE team_cats SET name=$1,layout=$2 WHERE id=$3',[name,layout||'pyramid',req.params.id]);res.json({ok:true});});
 app.delete('/api/team/cats/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_cats WHERE id=$1',[req.params.id]);res.json({ok:true});});
-app.post('/api/team/members',requireEditor,async(req,res)=>{ const{cat_id,name,role,photo}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите имя'});const id=uuid();await query('INSERT INTO team_members (id,cat_id,name,role,photo) VALUES ($1,$2,$3,$4,$5)',[id,cat_id,name.trim(),role||'',photo||'']);res.json({id,cat_id,name,role,photo});});
-app.put('/api/team/members/:id',requireEditor,async(req,res)=>{ const{cat_id,name,role,photo}=req.body;await query('UPDATE team_members SET cat_id=$1,name=$2,role=$3,photo=$4 WHERE id=$5',[cat_id,name,role||'',photo||'',req.params.id]);res.json({ok:true});});
-app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});
 
-// REORDER team members within a category
-app.post('/api/team/members/reorder', requireEditor, async (req, res) => {
-  try {
-    const { orders } = req.body;
-    if (!Array.isArray(orders)) return res.status(400).json({ error: 'Неверный формат' });
-    for (const o of orders) {
-      await query('UPDATE team_members SET sort_order=$1 WHERE id=$2', [o.sort_order, o.id]);
-    }
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+// Переместить категорию вверх/вниз (меняет местами sort_order с соседней категорией)
+app.put('/api/team/cats/:id/move',requireEditor,async(req,res)=>{
+  const{direction}=req.body;
+  const cur=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);
+  if(!cur.rows.length)return res.status(404).json({error:'Категория не найдена'});
+  const curRow=cur.rows[0];
+  const cmp=direction==='up'?'<':'>';
+  const ord=direction==='up'?'DESC':'ASC';
+  const neighborR=await query(`SELECT * FROM team_cats WHERE sort_order ${cmp} $1 ORDER BY sort_order ${ord} LIMIT 1`,[curRow.sort_order]);
+  if(!neighborR.rows.length)return res.json({ok:true,moved:false});
+  const neighbor=neighborR.rows[0];
+  await query('UPDATE team_cats SET sort_order=$1 WHERE id=$2',[neighbor.sort_order,curRow.id]);
+  await query('UPDATE team_cats SET sort_order=$1 WHERE id=$2',[curRow.sort_order,neighbor.id]);
+  res.json({ok:true,moved:true});
 });
-// MOVE team member to another category
-app.put('/api/team/members/:id/move', requireEditor, async (req, res) => {
-  try {
-    const { cat_id } = req.body;
-    if (!cat_id) return res.status(400).json({ error: 'Укажите категорию' });
-    await query('UPDATE team_members SET cat_id=$1 WHERE id=$2', [cat_id, req.params.id]);
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+
+app.post('/api/team/members',requireEditor,async(req,res)=>{
+  const{cat_id,name,role,photo,role_font}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите имя'});
+  const id=uuid();
+  const maxR=await query('SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM team_members WHERE cat_id=$1',[cat_id]);
+  await query('INSERT INTO team_members (id,cat_id,name,role,photo,role_font,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [id,cat_id,name.trim(),role||'',photo||'',role_font||'',maxR.rows[0].n]);
+  res.json({id,cat_id,name,role,photo,role_font});
 });
-// REORDER team categories
-app.post('/api/team/cats/reorder', requireEditor, async (req, res) => {
-  try {
-    const { orders } = req.body;
-    if (!Array.isArray(orders)) return res.status(400).json({ error: 'Неверный формат' });
-    for (const o of orders) {
-      await query('UPDATE team_cats SET sort_order=$1 WHERE id=$2', [o.sort_order, o.id]);
-    }
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});});
+app.put('/api/team/members/:id',requireEditor,async(req,res)=>{
+  const{cat_id,name,role,photo,role_font}=req.body;
+  await query('UPDATE team_members SET cat_id=$1,name=$2,role=$3,photo=$4,role_font=$5 WHERE id=$6',
+    [cat_id,name,role||'',photo||'',role_font||'',req.params.id]);
+  res.json({ok:true});
+});
+app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});});
+
+// Переместить участника вверх/вниз ВНУТРИ его категории
+app.put('/api/team/members/:id/move',requireEditor,async(req,res)=>{
+  const{direction}=req.body;
+  const cur=await query('SELECT * FROM team_members WHERE id=$1',[req.params.id]);
+  if(!cur.rows.length)return res.status(404).json({error:'Участник не найден'});
+  const curRow=cur.rows[0];
+  const cmp=direction==='up'?'<':'>';
+  const ord=direction==='up'?'DESC':'ASC';
+  const neighborR=await query(`SELECT * FROM team_members WHERE cat_id=$1 AND sort_order ${cmp} $2 ORDER BY sort_order ${ord} LIMIT 1`,[curRow.cat_id,curRow.sort_order]);
+  if(!neighborR.rows.length)return res.json({ok:true,moved:false});
+  const neighbor=neighborR.rows[0];
+  await query('UPDATE team_members SET sort_order=$1 WHERE id=$2',[neighbor.sort_order,curRow.id]);
+  await query('UPDATE team_members SET sort_order=$1 WHERE id=$2',[curRow.sort_order,neighbor.id]);
+  res.json({ok:true,moved:true});
+});
+
 
 // SETTINGS
 app.get('/api/settings',async(req,res)=>{ const r=await query('SELECT key,value FROM site_settings');const s={};r.rows.forEach(row=>{try{s[row.key]=JSON.parse(row.value);}catch{s[row.key]=row.value;}});res.json(s);});
