@@ -385,6 +385,84 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
 #mob-nav .mnl-admin{background:var(--red)!important;color:var(--white)!important;margin:10px 1.5rem;border-radius:var(--r);border-left:none!important;width:calc(100% - 3rem)!important;text-align:center!important;font-weight:700}
 #mob-nav .mnl-admin:hover{background:var(--red-dark)!important}
 #mob-nav .mob-divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
+
+/* ═══ CONTRACTS MODULE: roles badge, calculator, contracts table, stats ═══ */
+.b-curator_ad{background:rgba(201,168,76,.13);color:#d8bd6e}
+
+/* Sub-tabs shared by Contracts / Calculator / Stats pages */
+.subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.subtab{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--white);font-size:12px;font-weight:700;letter-spacing:.5px;padding:9px 18px;border-radius:var(--r);cursor:pointer;transition:var(--tr)}
+.subtab:hover{border-color:rgba(255,255,255,.4)}
+.subtab.active.green{background:#1f9d55;border-color:#1f9d55}
+.subtab.active.red{background:var(--red);border-color:var(--red)}
+.subtab.active.plain{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+
+/* CALCULATOR */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.calc-grid{grid-template-columns:1fr}}
+.calc-panel{border-radius:var(--rl);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.calc-panel-hdr{padding:14px 18px;font-family:var(--font-d);font-size:18px;letter-spacing:2px;color:var(--white)}
+.calc-panel.green .calc-panel-hdr{background:#1f9d55}
+.calc-panel.red .calc-panel-hdr{background:var(--red)}
+.calc-panel-body{padding:18px;background:rgba(255,255,255,.02)}
+.calc-results{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.calc-res-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:12px 14px}
+.calc-res-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px}
+.calc-res-val{font-family:var(--font-d);font-size:19px;letter-spacing:1px;color:var(--white)}
+.calc-res-box.hi .calc-res-val{color:var(--gold)}
+.calc-chars{font-size:11px;color:var(--gray);margin-top:6px;text-align:right}
+.calc-panel textarea.fta{min-height:70px}
+
+/* CONTRACTS TABLE */
+.ct-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.ct-datebtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--white);width:34px;height:34px;border-radius:var(--r);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.ct-datebtn:hover{border-color:var(--red);color:var(--red)}
+.ct-date-lbl{font-family:var(--font-d);font-size:18px;letter-spacing:1px;color:var(--white);min-width:150px;text-align:center}
+.ct-save-ind{font-size:11px;color:var(--gray);margin-left:auto;opacity:0;transition:opacity .25s}
+.ct-save-ind.show{opacity:1}
+.ct-save-ind.ok{color:#2ed573}
+.ct-save-ind.err{color:var(--red)}
+.ct-wrap{overflow-x:auto;border-radius:var(--rl);border:1px solid rgba(255,255,255,.08)}
+table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
+.ct-table th{position:sticky;top:0;background:var(--dark2);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;white-space:nowrap}
+.ct-table td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.ct-table.green tr:hover td{background:rgba(46,213,115,.05)}
+.ct-table.red tr:hover td{background:rgba(232,25,44,.05)}
+.ct-table tr.ct-empty td{opacity:.45}
+.ct-table input[type=text],.ct-table input[type=number]{width:100%;min-width:70px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:var(--white);font-size:12px;padding:6px 7px;font-family:var(--font-b)}
+.ct-table input.ct-text{min-width:220px}
+.ct-table input.ct-time-transfer{min-width:64px;text-align:center}
+.ct-table select{width:100%;min-width:130px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:var(--white);font-size:12px;padding:6px 7px}
+.ct-table select option{background:var(--dark2)}
+.ct-table input:disabled,.ct-table select:disabled{opacity:.4;cursor:not-allowed}
+.ct-time-cell{font-family:var(--font-d);font-size:13px;letter-spacing:1px;color:rgba(255,255,255,.75);white-space:nowrap;padding-left:12px!important}
+.ct-status-chk{width:17px;height:17px;cursor:pointer;accent-color:#2ed573}
+.ct-table.red .ct-status-chk{accent-color:var(--red)}
+.ct-readonly-banner{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gray);margin-bottom:14px}
+
+/* WEEKLY STATS */
+.stats-hdr-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.stats-range{font-size:12px;color:var(--gray)}
+.stats-archive-box{display:flex;align-items:center;gap:8px;margin-left:auto}
+.stats-archive-box input{width:150px}
+.kpi-row-bad td{background:rgba(232,25,44,.12)!important}
+.kpi-row-bad .stats-payout{color:#ff6b6b;font-weight:700}
+.stats-payout{font-family:var(--font-d);font-size:14px;letter-spacing:1px}
+.bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:8px}
+.bonus-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:12px 14px}
+.bonus-card.paid{opacity:.45}
+.bonus-card.paid .bonus-amount,.bonus-card.paid .bonus-comment{text-decoration:line-through}
+.bonus-name{font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px}
+.bonus-static{font-size:10px;color:var(--gray);margin-bottom:8px}
+.bonus-amount{font-family:var(--font-d);font-size:17px;color:var(--gold);letter-spacing:1px}
+.bonus-comment{font-size:11px;color:var(--gray);margin-top:4px;line-height:1.4}
+.bonus-actions{display:flex;gap:6px;margin-top:8px}
+.emp-roster-row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:8px 10px;margin-bottom:6px}
+.emp-roster-row.inactive{opacity:.4}
+@media(max-width:600px){
+  .stats-hdr-row{flex-direction:column;align-items:flex-start}
+  .stats-archive-box{margin-left:0}
+}
 </style>
 </head>
 <body>
@@ -622,13 +700,14 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
   <div class="admin-layout">
     <aside class="admin-sb">
       <div class="admin-sb-lbl">Управление</div>
-      <div class="ani active" onclick="switchAdminTab('visitors',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Посетители</div>
-      <div class="ani" onclick="switchAdminTab('users',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Пользователи</div>
-      <div class="ani" onclick="switchAdminTab('news-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Новости</div>
-      <div class="ani" onclick="switchAdminTab('services-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Услуги</div>
-      <div class="ani" onclick="switchAdminTab('team-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> Состав</div>
-      <div class="ani" onclick="switchAdminTab('texts-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Все тексты</div>
-      <div class="ani" onclick="switchAdminTab('site-settings',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Настройки</div>
+      <div class="ani active" data-tab="visitors" onclick="switchAdminTab('visitors',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Посетители</div>
+      <div class="ani" data-tab="users" onclick="switchAdminTab('users',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Пользователи</div>
+      <div class="ani" data-tab="employees" onclick="switchAdminTab('employees',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Сотрудники</div>
+      <div class="ani" data-tab="news-mgmt" onclick="switchAdminTab('news-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Новости</div>
+      <div class="ani" data-tab="services-mgmt" onclick="switchAdminTab('services-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Услуги</div>
+      <div class="ani" data-tab="team-mgmt" onclick="switchAdminTab('team-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> Состав</div>
+      <div class="ani" data-tab="texts-mgmt" onclick="switchAdminTab('texts-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Все тексты</div>
+      <div class="ani" data-tab="site-settings" onclick="switchAdminTab('site-settings',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Настройки</div>
       <div style="margin-top:auto;padding:1rem 14px 0;border-top:1px solid rgba(255,255,255,.05)">
         <button class="btn btn-o btn-sm" style="width:100%;justify-content:center" onclick="showPage('home')">← На сайт</button>
       </div>
@@ -645,10 +724,20 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
 
       <div class="asec" id="admin-users">
         <div class="asec-title">Пользователи</div>
+        <div class="fhint" style="margin-bottom:12px">Доступно Curator AD и выше. Curator AD может выдавать/снимать только роль Advertising Department.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
           <tbody id="users-tbody"></tbody>
         </table></div>
+      </div>
+
+      <div class="asec" id="admin-employees">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+          <div class="asec-title" style="margin:0">Сотрудники</div>
+          <button class="btn btn-p btn-sm" onclick="openEmployeeModal()">+ Сотрудник</button>
+        </div>
+        <div class="fhint" style="margin-bottom:12px">Ростер отдела рекламы (имя персонажа + StaticID) — используется в таблице контрактов («Принял»/«Откинул») и в недельной статистике.</div>
+        <div id="employees-list"></div>
       </div>
 
       <div class="asec" id="admin-news-mgmt">
@@ -785,6 +874,136 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
       </div>
 
       <div id="ads-results" style="margin-top:20px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── КАЛЬКУЛЯТОР КОНТРАКТОВ ─── -->
+<div class="page" id="page-calc">
+  <div class="sec">
+    <div class="sec-inner" style="max-width:1000px">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span>Калькулятор</span></div>
+        <div class="sec-line"></div><div class="sec-tag">Contracts Calculator</div>
+      </div>
+
+      <div class="calc-grid">
+        <!-- ЗЕЛЁНЫЕ -->
+        <div class="calc-panel green">
+          <div class="calc-panel-hdr">🟢 Зелёные объявления</div>
+          <div class="calc-panel-body">
+            <div class="fg"><label class="fl">Текст объявления</label>
+              <textarea class="fta" id="calc-green-text" placeholder="Открыт набор в гос. семью..." oninput="calcRun('green')"></textarea>
+              <div class="calc-chars">Символов: <b id="calc-green-chars">0</b></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-green-perday" value="2" min="2" max="10" oninput="calcRun('green')"></div>
+              <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-green-days" value="2" min="2" max="7" oninput="calcRun('green')"></div>
+            </div>
+            <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-green-discount" value="0" min="0" max="100" oninput="calcRun('green')"></div>
+            <div class="calc-results">
+              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-green-sum">0$</div></div>
+              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-green-treasury">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-green-toemp">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-green-perad">0$</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- КРАСНЫЕ -->
+        <div class="calc-panel red">
+          <div class="calc-panel-hdr">🔴 Красные объявления (СМС)</div>
+          <div class="calc-panel-body">
+            <div class="fg"><label class="fl">Текст объявления</label>
+              <textarea class="fta" id="calc-red-text" placeholder="Проходит набор в стрелковую семью..." oninput="calcRun('red')"></textarea>
+              <div class="calc-chars">Символов: <b id="calc-red-chars">0</b></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-red-perday" value="2" min="2" max="10" oninput="calcRun('red')"></div>
+              <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-red-days" value="2" min="2" max="7" oninput="calcRun('red')"></div>
+            </div>
+            <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-red-discount" value="0" min="0" max="100" oninput="calcRun('red')"></div>
+            <div class="calc-results">
+              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-red-sum">0$</div></div>
+              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-red-treasury">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-red-toemp">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-red-perad">0$</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── ТАБЛИЦА КОНТРАКТОВ ─── -->
+<div class="page" id="page-contracts">
+  <div class="sec">
+    <div class="sec-inner" style="max-width:1200px">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span>Контракты</span></div>
+        <div class="sec-line"></div><div class="sec-tag">Contracts Table</div>
+      </div>
+
+      <div class="subtabs">
+        <button class="subtab green" id="ct-tab-green" onclick="switchCTColor('green')">🟢 Зелёные объявления</button>
+        <button class="subtab red" id="ct-tab-red" onclick="switchCTColor('red')">🔴 Красные объявления</button>
+      </div>
+
+      <div class="ct-toolbar">
+        <button class="ct-datebtn" onclick="shiftCTDate(-1)">‹</button>
+        <div class="ct-date-lbl" id="ct-date-lbl">—</div>
+        <button class="ct-datebtn" onclick="shiftCTDate(1)">›</button>
+        <button class="btn btn-o btn-sm" onclick="setCTDateToday()">Сегодня</button>
+        <input type="date" class="fi" id="ct-date-picker" style="width:150px" onchange="setCTDate(this.value)">
+        <span class="ct-save-ind" id="ct-save-ind">Сохранено ✓</span>
+      </div>
+
+      <div id="ct-table-holder" class="ct-wrap">
+        <div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── СТАТИСТИКА ЗА НЕДЕЛЮ ─── -->
+<div class="page" id="page-stats">
+  <div class="sec">
+    <div class="sec-inner" style="max-width:1200px">
+      <div class="sec-div reveal">
+        <div class="sec-title"><span>Статистика</span></div>
+        <div class="sec-line"></div><div class="sec-tag">Weekly Dashboard</div>
+      </div>
+
+      <div class="stats-hdr-row">
+        <div class="subtabs" style="margin-bottom:0">
+          <button class="subtab plain" id="stats-tab-0" onclick="switchStatsTab(0)">Текущая неделя</button>
+          <button class="subtab plain" id="stats-tab-1" onclick="switchStatsTab(1)">Прошлая неделя</button>
+        </div>
+        <div class="stats-archive-box" id="stats-archive-box" style="display:none">
+          <input type="date" class="fi" id="stats-archive-date">
+          <button class="btn btn-o btn-sm" onclick="loadStatsArchive()">🔎 Архив</button>
+        </div>
+      </div>
+      <div class="stats-range" id="stats-range">—</div>
+
+      <div class="acard" style="margin-top:16px">
+        <div class="acard-title" style="margin-bottom:10px">Статистика по работе</div>
+        <div class="tw"><table class="dt" id="stats-table">
+          <thead><tr><th>Имя Фамилия</th><th>Принято ЗО</th><th>Отправлено ЗО</th><th>Принято КО</th><th>Отправлено КО</th><th>К выплате</th></tr></thead>
+          <tbody id="stats-tbody"></tbody>
+        </table></div>
+        <div class="fhint" style="margin-top:10px">Строка подсвечивается красным, если сумма «К выплате» меньше 15,000$.</div>
+      </div>
+
+      <div class="acard">
+        <div class="acard-hdr"><div class="acard-title">Премирование</div>
+          <button class="btn btn-p btn-sm" onclick="openBonusModal()">+ Премия</button>
+        </div>
+        <div class="acard-sub" style="margin-bottom:8px">Сотрудники, задействованные на этой неделе — для распределения бонусов руководством.</div>
+        <div class="bonus-grid" id="bonus-grid"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1008,14 +1227,48 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
       <div class="fg"><label class="fl">Назначить роль</label>
         <select class="fsel" id="role-select">
           <option value="guest">Гость</option>
-          <option value="editor">Редактор</option>
           <option value="advertising">Advertising Department</option>
+          <option value="curator_ad">Curator AD</option>
+          <option value="editor">Редактор</option>
           <option value="admin">Администратор</option>
         </select>
+        <div class="fhint" id="role-hint"></div>
       </div>
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-role')">Отмена</button>
         <button class="btn btn-p btn-sm" onclick="saveRole()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BONUS MODAL -->
+<div class="mo" id="modal-bonus">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Премия сотруднику</div><button class="mclose" onclick="closeModal('modal-bonus')">✕</button></div>
+    <div class="mbody">
+      <div class="fg"><label class="fl">Сотрудник *</label><select class="fsel" id="bonus-emp-select"></select></div>
+      <div class="fg"><label class="fl">Сумма ($)</label><input type="number" class="fi" id="bonus-amount" min="0" value="0"></div>
+      <div class="fg"><label class="fl">Комментарий</label><input type="text" class="fi" id="bonus-comment" placeholder="Выплаты AD"></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-bonus')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveBonus()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYEE MODAL -->
+<div class="mo" id="modal-employee">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl" id="modal-emp-title">Сотрудник</div><button class="mclose" onclick="closeModal('modal-employee')">✕</button></div>
+    <div class="mbody">
+      <input type="hidden" id="emp-edit-id">
+      <div class="fg"><label class="fl">Имя персонажа *</label><input type="text" class="fi" id="emp-name" placeholder="Luna Lodge"></div>
+      <div class="fg"><label class="fl">StaticID</label><input type="text" class="fi" id="emp-static" placeholder="167714"></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-employee')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveEmployee()">Сохранить</button>
       </div>
     </div>
   </div>
@@ -1085,9 +1338,16 @@ let TEAM = {cats:[], members:[]};
 let SETTINGS = {};
 
 const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin');
-const canAds = () => CU && (CU.role==='advertising'||CU.role==='admin');
+const canAds = () => CU && ['advertising','curator_ad','editor','admin'].includes(CU.role);
+const isCuratorPlus = () => CU && ['curator_ad','editor','admin'].includes(CU.role);
 const isAdmin = () => CU && CU.role==='admin';
-const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':r==='advertising'?'Advertising Dept.':'Гость';
+const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+function canChangeUserRole(targetRole){
+  if(!CU)return false;
+  if(CU.role==='admin')return true;
+  if(CU.role==='curator_ad')return['guest','advertising'].includes(targetRole);
+  return false;
+}
 
 // ══════════════════════════════════════════════
 // SECURITY UTILS
@@ -1176,14 +1436,20 @@ function renderHeader(){
       <span style="font-size:11px;color:var(--gray)" class="mob-hide-name">${xe(CU.name)}</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('ads')">Объявления</button>`:''}
-      ${canEdit()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
+      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('calc')">Калькулятор</button>`:''}
+      ${isCuratorPlus()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('contracts')">Контракты</button>`:''}
+      ${isCuratorPlus()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('stats')">Статистика</button>`:''}
+      ${(canEdit()||isCuratorPlus())?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('ads');closeMobMenu()">📢 Объявления</button>`:''}
-      ${canEdit()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
+      ${canAds()?`<button class="mnl" onclick="showPage('calc');closeMobMenu()">🧮 Калькулятор</button>`:''}
+      ${isCuratorPlus()?`<button class="mnl" onclick="showPage('contracts');closeMobMenu()">📋 Контракты</button>`:''}
+      ${isCuratorPlus()?`<button class="mnl" onclick="showPage('stats');closeMobMenu()">📊 Статистика</button>`:''}
+      ${(canEdit()||isCuratorPlus())?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(255,255,255,.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
   } else {
@@ -1210,8 +1476,11 @@ function closeMobMenu(){
 // ══════════════════════════════════════════════
 let curPage='home';
 async function showPage(page){
-  if(page==='admin'&&!canEdit()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='admin'&&!(canEdit()||isCuratorPlus())){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   if(page==='ads'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='calc'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='contracts'&&!isCuratorPlus()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='stats'&&!isCuratorPlus()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
   const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
@@ -1226,12 +1495,15 @@ async function showPage(page){
   if(page==='team')await renderTeam();
   if(page==='about')loadAbout();
   if(page==='admin')await renderAdmin();
+  if(page==='calc')initCalculators();
+  if(page==='contracts')await openContractsTab(CT_STATE.color);
+  if(page==='stats')await loadStatsTab(STATS_STATE.offset);
   document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===page));
   setTimeout(initReveal,80);
 }
 
 function logVisit(page){
-  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',ads:'Объявления'};
+  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',ads:'Объявления',calc:'Калькулятор',contracts:'Контракты',stats:'Статистика'};
   API.post('/visitors',{page:labels[page]||page}).catch(()=>{});
 }
 
@@ -1341,6 +1613,320 @@ function fallbackCopyText(text){
   catch{toast('Не удалось скопировать','e');}
   document.body.removeChild(ta);
 }
+
+// ══════════════════════════════════════════════
+// КАЛЬКУЛЯТОР КОНТРАКТОВ
+// Зелёные: символ × 300 ; Красные (СМС): символ × 150
+// На казну = 90%, на руки сотруднику = 10%, выплата за 1 объявление = (сумма*0.1)/(объявл_в_день*дни)
+// ══════════════════════════════════════════════
+function fmtMoney(n){ if(!isFinite(n))n=0; return Math.round(n).toLocaleString('ru-RU')+'$'; }
+
+function calcRun(color){
+  const text=document.getElementById(`calc-${color}-text`).value||'';
+  const chars=text.length;
+  let perDay=parseInt(document.getElementById(`calc-${color}-perday`).value,10); if(isNaN(perDay))perDay=2; perDay=Math.max(2,Math.min(10,perDay));
+  let days=parseInt(document.getElementById(`calc-${color}-days`).value,10); if(isNaN(days))days=2; days=Math.max(2,Math.min(7,days));
+  let discount=parseFloat(document.getElementById(`calc-${color}-discount`).value); if(isNaN(discount)||discount<0)discount=0; if(discount>100)discount=100;
+
+  const rate=color==='red'?150:300;
+  const baseSum=perDay*days*chars*rate;
+  const orderSum=baseSum*(1-discount/100);
+  const treasury=orderSum*0.9;
+  const toEmployee=orderSum*0.1;
+  const perAd=(perDay*days)>0 ? (orderSum*0.1)/(perDay*days) : 0;
+
+  document.getElementById(`calc-${color}-chars`).textContent=chars;
+  document.getElementById(`calc-${color}-sum`).textContent=fmtMoney(orderSum);
+  document.getElementById(`calc-${color}-treasury`).textContent=fmtMoney(treasury);
+  document.getElementById(`calc-${color}-toemp`).textContent=fmtMoney(toEmployee);
+  document.getElementById(`calc-${color}-perad`).textContent=fmtMoney(perAd);
+
+  LAST_CALC[color]={text,chars,perDay,days,discount,orderSum,treasury,toEmployee,perAd};
+}
+let LAST_CALC={green:null,red:null};
+function initCalculators(){ calcRun('green'); calcRun('red'); }
+
+// ══════════════════════════════════════════════
+// СОТРУДНИКИ (roster отдела рекламы)
+// ══════════════════════════════════════════════
+let EMPLOYEES=[];
+async function ensureEmployeesLoaded(force){
+  if(EMPLOYEES.length&&!force)return EMPLOYEES;
+  try{ EMPLOYEES=await API.get('/employees'); }catch{ EMPLOYEES=[]; }
+  return EMPLOYEES;
+}
+
+async function renderEmployees(){
+  const el=document.getElementById('employees-list');if(!el)return;
+  await ensureEmployeesLoaded(true);
+  if(!EMPLOYEES.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Сотрудников пока нет</div>`;return;}
+  el.innerHTML=EMPLOYEES.map(e=>`<div class="emp-roster-row${e.active?'':' inactive'}">
+    <div><span style="color:var(--white);font-weight:600">${xe(e.name)}</span>${e.static_id?`<span style="color:var(--gray);font-size:11px;margin-left:8px">ID ${xe(e.static_id)}</span>`:''}${!e.active?`<span class="badge b-guest" style="margin-left:8px">неактивен</span>`:''}</div>
+    <div><button class="btn btn-o btn-sm" style="width:100%;justify-content:center" onclick="toggleEmployeeActive('${e.id}',${!e.active})">${e.active?'Деактив.':'Актив.'}</button></div>
+    <div class="bg-group"><button class="btn btn-o btn-sm" onclick="editEmployee('${e.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delEmployee('${e.id}')">✕</button></div>
+  </div>`).join('');
+}
+
+function openEmployeeModal(id){
+  document.getElementById('emp-edit-id').value=id||'';
+  document.getElementById('modal-emp-title').textContent=id?'Изменить сотрудника':'Добавить сотрудника';
+  if(id){
+    const e=EMPLOYEES.find(x=>x.id===id);
+    document.getElementById('emp-name').value=e?.name||'';
+    document.getElementById('emp-static').value=e?.static_id||'';
+  } else {
+    document.getElementById('emp-name').value='';document.getElementById('emp-static').value='';
+  }
+  openModal('modal-employee');
+}
+function editEmployee(id){ openEmployeeModal(id); }
+
+async function saveEmployee(){
+  const id=document.getElementById('emp-edit-id').value;
+  const name=document.getElementById('emp-name').value.trim();
+  const static_id=document.getElementById('emp-static').value.trim();
+  if(!name){toast('Укажите имя','e');return;}
+  try{
+    if(id)await API.put('/employees/'+id,{name,static_id});
+    else await API.post('/employees',{name,static_id});
+    closeModal('modal-employee');await renderEmployees();toast('Сохранено','s');
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function toggleEmployeeActive(id,active){
+  try{await API.put('/employees/'+id,{active});await renderEmployees();}catch(e){toast(e.error||'Ошибка','e');}
+}
+async function delEmployee(id){
+  try{await API.del('/employees/'+id);await renderEmployees();toast('Удалено','s');}catch(e){toast(e.error||'Ошибка','e');}
+}
+
+// ══════════════════════════════════════════════
+// ТАБЛИЦА КОНТРАКТОВ
+// ══════════════════════════════════════════════
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+const CT_STATE={ color:'green', date:todayISO() };
+
+function fmtCTDate(iso){
+  try{ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',weekday:'short'}); }
+  catch{ return iso; }
+}
+function fmtPlainDate(iso){
+  try{ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+  catch{ return iso; }
+}
+function shiftISO(iso,days){
+  const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+days);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+async function switchCTColor(color){
+  CT_STATE.color=color;
+  document.getElementById('ct-tab-green').classList.toggle('active',color==='green');
+  document.getElementById('ct-tab-red').classList.toggle('active',color==='red');
+  await loadContractsTable();
+}
+async function shiftCTDate(days){ CT_STATE.date=shiftISO(CT_STATE.date,days); await loadContractsTable(); }
+async function setCTDateToday(){ CT_STATE.date=todayISO(); await loadContractsTable(); }
+async function setCTDate(val){ if(val){CT_STATE.date=val; await loadContractsTable();} }
+
+async function openContractsTab(color){
+  CT_STATE.color=color||'green';
+  document.getElementById('ct-tab-green')?.classList.toggle('active',CT_STATE.color==='green');
+  document.getElementById('ct-tab-red')?.classList.toggle('active',CT_STATE.color==='red');
+  await ensureEmployeesLoaded();
+  await loadContractsTable();
+}
+
+let CT_ROWS=[];
+async function loadContractsTable(){
+  const holder=document.getElementById('ct-table-holder');
+  document.getElementById('ct-date-lbl').textContent=fmtCTDate(CT_STATE.date);
+  document.getElementById('ct-date-picker').value=CT_STATE.date;
+  holder.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div>`;
+  try{
+    await ensureEmployeesLoaded();
+    const r=await API.get(`/contracts?color=${CT_STATE.color}&date=${CT_STATE.date}`);
+    CT_ROWS=r.slots||[];
+    renderContractsTable();
+  }catch(e){
+    holder.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--red)">⚠ ${xe(e.error||'Нет доступа')}</div>`;
+  }
+}
+
+function empOptions(selectedId){
+  const activeEmps=EMPLOYEES.filter(e=>e.active||e.id===selectedId);
+  return `<option value="">—</option>`+activeEmps.map(e=>`<option value="${e.id}" ${e.id===selectedId?'selected':''}>${xe(e.name)}</option>`).join('');
+}
+
+function renderContractsTable(){
+  const holder=document.getElementById('ct-table-holder');
+  const color=CT_STATE.color;
+  const rows=CT_ROWS.map(s=>{
+    const empty=!s.text&&!s.price&&!s.accepted_id&&!s.declined_id;
+    return `<tr data-id="${s.id}" class="${empty?'ct-empty':''}">
+      <td style="text-align:center"><input type="checkbox" class="ct-status-chk" ${s.status?'checked':''} onchange="ctSave('${s.id}',{status:this.checked})"></td>
+      <td class="ct-time-cell">${xe(s.slot_time)}</td>
+      <td><input type="number" min="0" value="${Number(s.price)||0}" onchange="ctSave('${s.id}',{price:Number(this.value)||0})"></td>
+      <td><input type="text" class="ct-text" value="${xe(s.text||'')}" data-role="text" onchange="ctSave('${s.id}',{text:this.value})"></td>
+      <td><select onchange="ctSave('${s.id}',{accepted_id:this.value||null})">${empOptions(s.accepted_id)}</select></td>
+      <td><select onchange="ctSave('${s.id}',{declined_id:this.value||null})">${empOptions(s.declined_id)}</select></td>
+      <td><input type="number" min="0" value="${Number(s.payout)||0}" onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
+      <td><input type="text" class="ct-time-transfer" placeholder="ЧЧ:ММ" maxlength="5" value="${xe(s.transfer_time||'')}" data-role="transfer" data-orig="${xe(s.slot_time)}" oninput="ctMaskTransfer(this)" onchange="ctTransferChanged(this,'${s.id}')"></td>
+    </tr>`;
+  }).join('');
+  holder.innerHTML=`<table class="ct-table ${color}">
+    <thead><tr><th>Статус</th><th>Время</th><th>Цена контракта</th><th>Текст</th><th>Принял</th><th>Откинул</th><th>К выплате</th><th>Время переноса</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// Маска ввода: после первых 2 цифр автоматически ставим двоеточие (ЧЧ:ММ)
+function ctMaskTransfer(input){
+  let digits=input.value.replace(/\D/g,'').slice(0,4);
+  if(digits.length>=3) input.value=digits.slice(0,2)+':'+digits.slice(2);
+  else input.value=digits;
+}
+// Как только время переноса указано — автоподстановка шаблона в «Текст» этой же строки
+function ctTransferChanged(input,id){
+  const val=input.value.trim();
+  const isValid=/^([01]\d|2[0-3]):[0-5]\d$/.test(val);
+  const row=input.closest('tr');
+  const textInput=row.querySelector('[data-role="text"]');
+  const payload={transfer_time:val};
+  if(isValid){
+    const origTime=input.dataset.orig;
+    const newText=`«Перенос и ${origTime}»`;
+    textInput.value=newText;
+    payload.text=newText;
+  }
+  ctSave(id,payload);
+}
+
+let CT_SAVE_TIMER=null;
+async function ctSave(id,fields){
+  const ind=document.getElementById('ct-save-ind');
+  ind.textContent='Сохранение...';ind.className='ct-save-ind show';
+  try{
+    const updated=await API.put('/contracts/'+id,fields);
+    const idx=CT_ROWS.findIndex(r=>r.id===id);
+    if(idx>-1)CT_ROWS[idx]=updated;
+    ind.textContent='Сохранено ✓';ind.className='ct-save-ind show ok';
+  }catch(e){
+    ind.textContent=e.error||'Ошибка сохранения';ind.className='ct-save-ind show err';
+    toast(e.error||'Ошибка сохранения','e');
+  }
+  clearTimeout(CT_SAVE_TIMER);
+  CT_SAVE_TIMER=setTimeout(()=>{ind.classList.remove('show')},2000);
+}
+
+// ══════════════════════════════════════════════
+// НЕДЕЛЬНАЯ СТАТИСТИКА
+// ══════════════════════════════════════════════
+const STATS_STATE={ offset:0, range:null, employees:[], bonuses:[] };
+
+function switchStatsTab(offset){
+  STATS_STATE.offset=offset;
+  document.getElementById('stats-tab-0').classList.toggle('active',offset===0);
+  document.getElementById('stats-tab-1').classList.toggle('active',offset===1);
+  document.getElementById('stats-archive-box').style.display='flex';
+  loadStatsTab(offset);
+}
+
+async function loadStatsTab(offset){
+  document.getElementById('stats-tab-0')?.classList.toggle('active',offset===0);
+  document.getElementById('stats-tab-1')?.classList.toggle('active',offset===1);
+  await ensureEmployeesLoaded();
+  try{
+    const r=await API.get(`/stats/week?offset=${offset}`);
+    applyStatsResponse(r);
+  }catch(e){
+    document.getElementById('stats-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--red)">⚠ ${xe(e.error||'Нет доступа')}</td></tr>`;
+  }
+}
+
+async function loadStatsArchive(){
+  const dateVal=document.getElementById('stats-archive-date').value;
+  if(!dateVal){toast('Укажите дату','e');return;}
+  document.getElementById('stats-tab-0').classList.remove('active');
+  document.getElementById('stats-tab-1').classList.remove('active');
+  try{
+    const r=await API.get(`/stats/week?date=${dateVal}`);
+    applyStatsResponse(r);
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+
+function applyStatsResponse(r){
+  STATS_STATE.range=r.range; STATS_STATE.employees=r.employees||[]; STATS_STATE.bonuses=r.bonuses||[];
+  document.getElementById('stats-range').textContent=`Период с ${fmtPlainDate(r.range.start)} по ${fmtPlainDate(r.range.end)}`;
+  document.getElementById('stats-archive-box').style.display='flex';
+  renderStatsTable();
+  renderBonusGrid();
+}
+
+function renderStatsTable(){
+  const tb=document.getElementById('stats-tbody');
+  const emps=STATS_STATE.employees;
+  if(!emps.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--gray);padding:1.5rem">Сотрудников нет — добавьте их в Панели → Сотрудники</td></tr>`;return;}
+  tb.innerHTML=emps.map(e=>{
+    const bad=e.payout<15000;
+    return `<tr class="${bad?'kpi-row-bad':''}">
+      <td>${xe(e.name)}${e.static_id?` <span style="color:var(--gray);font-size:10px">#${xe(e.static_id)}</span>`:''}</td>
+      <td>${e.acceptedGreen}</td><td>${e.sentGreen}</td><td>${e.acceptedRed}</td><td>${e.sentRed}</td>
+      <td class="stats-payout">${fmtMoney(e.payout)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBonusGrid(){
+  const el=document.getElementById('bonus-grid');
+  const involved=STATS_STATE.employees.filter(e=>e.acceptedGreen||e.acceptedRed);
+  const bonuses=STATS_STATE.bonuses;
+  if(!bonuses.length){
+    el.innerHTML=involved.length
+      ?`<div style="grid-column:1/-1;color:var(--gray);font-size:12px">Премий пока не назначено. Задействованы: ${involved.map(e=>xe(e.name)).join(', ')}</div>`
+      :`<div style="grid-column:1/-1;color:var(--gray);font-size:12px">На этой неделе ещё никто не работал</div>`;
+    return;
+  }
+  el.innerHTML=bonuses.map(b=>`<div class="bonus-card ${b.paid?'paid':''}">
+    <div class="bonus-name">${xe(b.emp_name||'—')}</div>
+    <div class="bonus-static">${b.static_id?'StaticID '+xe(b.static_id):''}</div>
+    <div class="bonus-amount">${fmtMoney(b.amount)}</div>
+    ${b.comment?`<div class="bonus-comment">${xe(b.comment)}</div>`:''}
+    <div class="bonus-actions">
+      <button class="btn btn-o btn-sm" onclick="toggleBonusPaid('${b.id}',${!b.paid})">${b.paid?'Вернуть':'Выплачено'}</button>
+      <button class="btn btn-d btn-sm" onclick="delBonus('${b.id}')">✕</button>
+    </div>
+  </div>`).join('');
+}
+
+async function openBonusModal(){
+  await ensureEmployeesLoaded();
+  const sel=document.getElementById('bonus-emp-select');
+  sel.innerHTML=EMPLOYEES.map(e=>`<option value="${e.id}">${xe(e.name)}${e.static_id?' (#'+xe(e.static_id)+')':''}</option>`).join('')||`<option value="">Нет сотрудников</option>`;
+  document.getElementById('bonus-amount').value=0;
+  document.getElementById('bonus-comment').value='';
+  openModal('modal-bonus');
+}
+async function saveBonus(){
+  const employee_id=document.getElementById('bonus-emp-select').value;
+  const amount=Number(document.getElementById('bonus-amount').value)||0;
+  const comment=document.getElementById('bonus-comment').value.trim();
+  if(!employee_id){toast('Выберите сотрудника','e');return;}
+  const week_start=(STATS_STATE.range&&STATS_STATE.range.start)||todayISO();
+  try{
+    await API.post('/bonuses',{employee_id,week_start,amount,comment});
+    closeModal('modal-bonus');
+    await loadStatsTab(STATS_STATE.offset);
+    toast('Премия добавлена','s');
+  }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function toggleBonusPaid(id,paid){
+  try{ await API.put('/bonuses/'+id,{paid}); await loadStatsTab(STATS_STATE.offset); }catch(e){toast(e.error||'Ошибка','e');}
+}
+async function delBonus(id){
+  try{ await API.del('/bonuses/'+id); await loadStatsTab(STATS_STATE.offset); toast('Удалено','s'); }catch(e){toast(e.error||'Ошибка','e');}
+}
+
+
 
 // ══════════════════════════════════════════════
 // BACKGROUNDS (stored in localStorage — non-sensitive)
@@ -2185,7 +2771,21 @@ function renderTickerList(){
 // ADMIN PANEL
 // ══════════════════════════════════════════════
 async function renderAdmin(){
-  renderVisitors();renderUsers();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
+  applyAdminSidebarForRole();
+  renderVisitors();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
+}
+
+// Curator AD видит в Панели только «Пользователи» и «Сотрудники» — остальные разделы
+// (Посетители, Новости, Услуги, Состав, Тексты, Настройки) остаются зоной Редактора/Администратора.
+function applyAdminSidebarForRole(){
+  const limited=CU&&CU.role==='curator_ad';
+  const allowedForCurator=['users','employees'];
+  document.querySelectorAll('.admin-sb .ani[data-tab]').forEach(ani=>{
+    ani.style.display=(limited&&!allowedForCurator.includes(ani.dataset.tab))?'none':'flex';
+  });
+  if(limited&&!document.getElementById('admin-users').classList.contains('active')){
+    switchAdminTab('users',document.querySelector('.admin-sb .ani[data-tab="users"]'));
+  }
 }
 
 function switchAdminTab(tab,el){
@@ -2213,7 +2813,7 @@ async function renderUsers(){
       <td><span style="font-family:monospace;font-size:11px;color:var(--gray)">${xe(u.email)}</span></td>
       <td><span class="badge b-${u.role}">${rlbl(u.role)}</span></td>
       <td>${fd(u.created_at)}</td>
-      <td>${isAdmin()&&u.id!==CU?.id?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'—'}</td>
+      <td>${u.id!==CU?.id&&canChangeUserRole(u.role)?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'—'}</td>
     </tr>`).join('');
   }catch{el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
 }
@@ -2266,7 +2866,17 @@ function openRoleModal(uid,currentRole){
   let name='Пользователь';
   users_rendered.forEach(tr=>{const btn=tr.querySelector(`[onclick*="${uid}"]`);if(btn)name=tr.cells[0]?.textContent||name;});
   document.getElementById('role-username').textContent=name;
-  document.getElementById('role-select').value=currentRole||'guest';
+  const sel=document.getElementById('role-select');
+  const hint=document.getElementById('role-hint');
+  if(CU.role==='curator_ad'){
+    // Curator AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
+    Array.from(sel.options).forEach(o=>o.disabled=!['guest','advertising'].includes(o.value));
+    hint.textContent='Curator AD может назначать только роль Advertising Department.';
+  } else {
+    Array.from(sel.options).forEach(o=>o.disabled=false);
+    hint.textContent='';
+  }
+  sel.value=currentRole||'guest';
   openModal('modal-role');
 }
 

@@ -94,9 +94,45 @@ async function initDB() {
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT ''`);
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
 
-  // Миграция: добавить роль 'advertising' (Advertising Department) в допустимые значения
+  // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Curator AD)
   await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
-  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising'))`);
+  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising','curator_ad'))`);
+
+  // ─── Модуль «Контракты» (роли, таблица контрактов, калькулятор, статистика) ───
+  await query(`
+    CREATE TABLE IF NOT EXISTS employees (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, static_id TEXT DEFAULT '',
+      active BOOLEAN NOT NULL DEFAULT true, sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS contract_slots (
+      id TEXT PRIMARY KEY,
+      color TEXT NOT NULL CHECK(color IN ('green','red')),
+      slot_date DATE NOT NULL,
+      slot_time TEXT NOT NULL,
+      status BOOLEAN NOT NULL DEFAULT false,
+      price NUMERIC NOT NULL DEFAULT 0,
+      text TEXT DEFAULT '',
+      accepted_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+      declined_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+      payout NUMERIC NOT NULL DEFAULT 0,
+      transfer_time TEXT DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(color, slot_date, slot_time)
+    );
+    CREATE INDEX IF NOT EXISTS idx_contract_slots_date ON contract_slots(slot_date);
+    CREATE TABLE IF NOT EXISTS bonuses (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT REFERENCES employees(id) ON DELETE CASCADE,
+      week_start DATE NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      comment TEXT DEFAULT '',
+      paid BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_bonuses_week ON bonuses(week_start);
+  `);
 
   // Миграция: шрифт для описания (должности) участника состава
   await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_font TEXT DEFAULT ''`);
@@ -178,6 +214,45 @@ function maskEmail(e) {
 function safeUser(u) { if(!u)return null; const {pwd_hash,...s}=u; return s; }
 function parseJSON(s,d=[]) { try{return JSON.parse(s);}catch{return d;} }
 
+// ─── Недельная статистика: понедельник—воскресенье, UTC-даты без времени ───
+function mondayOf(d){
+  const dt=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
+  const day=dt.getUTCDay(); const diff=(day===0?-6:1-day);
+  dt.setUTCDate(dt.getUTCDate()+diff); return dt;
+}
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function weekRange(offset=0){
+  const thisMonday=mondayOf(new Date());
+  const start=new Date(thisMonday); start.setUTCDate(start.getUTCDate()-offset*7);
+  const end=new Date(start); end.setUTCDate(end.getUTCDate()+6);
+  return { start:fmtDate(start), end:fmtDate(end) };
+}
+function weekRangeForDate(dateStr){
+  const mon=mondayOf(new Date(dateStr));
+  const end=new Date(mon); end.setUTCDate(end.getUTCDate()+6);
+  return { start:fmtDate(mon), end:fmtDate(end) };
+}
+
+// ─── Расписание слотов таблицы контрактов (по умолчанию 13:00 → 03:00 след. дня, шаг 10 мин) ───
+async function getSchedule(){
+  try{
+    const r=await query(`SELECT value FROM site_settings WHERE key='contractSchedule'`);
+    if(r.rows.length){ const v=JSON.parse(r.rows[0].value); if(v&&v.start&&v.end) return { start:v.start, end:v.end, intervalMin:Number(v.intervalMin)||10 }; }
+  }catch{}
+  return { start:'13:00', end:'03:00', intervalMin:10 };
+}
+function genTimeSlots(start,end,intervalMin){
+  const toMin=t=>{ const [h,m]=t.split(':').map(Number); return h*60+m; };
+  let s=toMin(start), e=toMin(end); if(e<=s) e+=24*60;
+  const out=[];
+  for(let t=s;t<e;t+=intervalMin){
+    const hh=String(Math.floor((t%1440)/60)).padStart(2,'0');
+    const mm=String(t%60).padStart(2,'0');
+    out.push(`${hh}:${mm}`);
+  }
+  return out;
+}
+
 async function requireAuth(req,res,next){
   if(!req.session?.userId) return res.status(401).json({error:'Требуется авторизация'});
   const r=await query('SELECT * FROM users WHERE id=$1',[req.session.userId]);
@@ -186,7 +261,8 @@ async function requireAuth(req,res,next){
 }
 async function requireEditor(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
 async function requireAdmin(req,res,next){  await requireAuth(req,res,()=>{ if(req.user.role!=='admin')return res.status(403).json({error:'Только для администратора'});next();}); }
-async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+async function requireStaffMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
 const upload = multer({
   storage: multer.diskStorage({ destination: UPLOADS_DIR, filename: (req,f,cb)=>cb(null,uuid()+path.extname(f.originalname).toLowerCase().replace(/[^.a-z0-9]/g,'')||'.jpg') }),
@@ -301,8 +377,169 @@ app.post('/api/auth/logout',(req,res)=>{ req.session.destroy(()=>res.json({ok:tr
 app.get('/api/auth/me', async (req,res)=>{ if(!req.session?.userId)return res.json({user:null}); try{const r=await query('SELECT * FROM users WHERE id=$1',[req.session.userId]);res.json({user:safeUser(r.rows[0])||null});}catch{res.json({user:null});} });
 
 // USERS
-app.get('/api/users',requireAdmin,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
-app.put('/api/users/:id/role',requireAdmin,async(req,res)=>{ const{role}=req.body;if(!['guest','editor','admin','advertising'].includes(role))return res.status(400).json({error:'Неверная роль'});if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);res.json({ok:true});});
+// Просмотр списка пользователей — доступен Curator AD и выше (Редактор, Администратор).
+app.get('/api/users',requireStaffMgmt,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
+
+// Изменение роли — иерархия:
+//  • Администратор — может назначить любую роль любому пользователю.
+//  • Curator AD — эксклюзивное право выдавать/снимать ИМЕННО роль Advertising Department,
+//    и только пользователям, которые сейчас Guest либо уже Advertising (не может трогать более высокие роли).
+//  • Редактор — доступ к списку только на просмотр, менять роли не может (это зона ответственности Curator AD).
+app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
+  const{role}=req.body;
+  const ROLES=['guest','advertising','curator_ad','editor','admin'];
+  if(!ROLES.includes(role))return res.status(400).json({error:'Неверная роль'});
+  if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});
+  if(req.user.role==='editor'){
+    return res.status(403).json({error:'Изменение ролей доступно только Curator AD или Администратору'});
+  }
+  if(req.user.role==='curator_ad'){
+    if(!['guest','advertising'].includes(role))return res.status(403).json({error:'Curator AD может назначать только роль Advertising Department'});
+    const targetR=await query('SELECT role FROM users WHERE id=$1',[req.params.id]);
+    if(!targetR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
+    if(!['guest','advertising'].includes(targetR.rows[0].role))return res.status(403).json({error:'Недостаточно прав для изменения этой роли'});
+  }
+  await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);
+  res.json({ok:true});
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// СОТРУДНИКИ (роster отдела рекламы: имя персонажа + StaticID)
+// Используется в выпадающих списках «Принял/Откинул» таблицы контрактов
+// и в недельной статистике. Доступ — Curator AD и выше.
+// ═══════════════════════════════════════════════════════════════════════
+app.get('/api/employees',requireStaffMgmt,async(req,res)=>{
+  try{ const r=await query('SELECT * FROM employees ORDER BY sort_order,name'); res.json(r.rows); }
+  catch(e){res.status(500).json({error:e.message});}
+});
+app.post('/api/employees',requireStaffMgmt,async(req,res)=>{
+  try{
+    const{name,static_id}=req.body;
+    if(!name?.trim())return res.status(400).json({error:'Укажите имя сотрудника'});
+    const id=uuid();
+    const maxR=await query('SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM employees');
+    await query('INSERT INTO employees (id,name,static_id,sort_order) VALUES ($1,$2,$3,$4)',[id,name.trim(),(static_id||'').toString().trim(),maxR.rows[0].n]);
+    res.json({id,name:name.trim(),static_id:(static_id||'').toString().trim(),active:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+app.put('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
+  try{
+    const{name,static_id,active}=req.body;
+    await query('UPDATE employees SET name=COALESCE($1,name), static_id=COALESCE($2,static_id), active=COALESCE($3,active) WHERE id=$4',
+      [name===undefined?null:name.trim(), static_id===undefined?null:(static_id||'').toString().trim(), active===undefined?null:active, req.params.id]);
+    res.json({ok:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+app.delete('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
+  try{ await query('DELETE FROM employees WHERE id=$1',[req.params.id]); res.json({ok:true}); }
+  catch(e){res.status(500).json({error:e.message});}
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// ТАБЛИЦА КОНТРАКТОВ (интерактивное расписание объявлений на день)
+// Доступ на просмотр/редактирование — Curator AD и выше. Advertising Department
+// сюда намеренно НЕ допускается (см. ТЗ — им доступен только Калькулятор).
+// ═══════════════════════════════════════════════════════════════════════
+app.get('/api/contracts',requireStaffMgmt,async(req,res)=>{
+  try{
+    let{color,date}=req.query;
+    color=color==='red'?'red':'green';
+    if(!date||isNaN(Date.parse(date)))date=new Date().toISOString().slice(0,10);
+    const sched=await getSchedule();
+    const slots=genTimeSlots(sched.start,sched.end,sched.intervalMin||10);
+    for(const t of slots){
+      await query('INSERT INTO contract_slots (id,color,slot_date,slot_time) VALUES ($1,$2,$3,$4) ON CONFLICT (color,slot_date,slot_time) DO NOTHING',[uuid(),color,date,t]);
+    }
+    const r=await query(`
+      SELECT cs.*, ea.name AS accepted_name, ed.name AS declined_name
+      FROM contract_slots cs
+      LEFT JOIN employees ea ON ea.id=cs.accepted_id
+      LEFT JOIN employees ed ON ed.id=cs.declined_id
+      WHERE cs.color=$1 AND cs.slot_date=$2`,[color,date]);
+    const order={}; slots.forEach((t,i)=>order[t]=i);
+    r.rows.sort((a,b)=>(order[a.slot_time]??0)-(order[b.slot_time]??0));
+    res.json({ color, date, schedule:sched, slots:r.rows });
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+app.put('/api/contracts/:id',requireStaffMgmt,async(req,res)=>{
+  try{
+    const{status,price,text,accepted_id,declined_id,payout,transfer_time}=req.body;
+    const cur=await query('SELECT * FROM contract_slots WHERE id=$1',[req.params.id]);
+    if(!cur.rows.length)return res.status(404).json({error:'Слот не найден'});
+    const c=cur.rows[0];
+    await query(`UPDATE contract_slots SET
+        status=COALESCE($1,status), price=COALESCE($2,price), text=COALESCE($3,text),
+        accepted_id=$4, declined_id=$5, payout=COALESCE($6,payout), transfer_time=COALESCE($7,transfer_time),
+        updated_at=NOW()
+      WHERE id=$8`,
+      [ status===undefined?null:status,
+        price===undefined?null:price,
+        text===undefined?null:text,
+        accepted_id===undefined?c.accepted_id:(accepted_id||null),
+        declined_id===undefined?c.declined_id:(declined_id||null),
+        payout===undefined?null:payout,
+        transfer_time===undefined?null:transfer_time,
+        req.params.id ]);
+    const r=await query(`
+      SELECT cs.*, ea.name AS accepted_name, ed.name AS declined_name
+      FROM contract_slots cs
+      LEFT JOIN employees ea ON ea.id=cs.accepted_id
+      LEFT JOIN employees ed ON ed.id=cs.declined_id
+      WHERE cs.id=$1`,[req.params.id]);
+    res.json(r.rows[0]);
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// НЕДЕЛЬНАЯ СТАТИСТИКА
+// offset=0 — текущая неделя, offset=1 — прошлая. Параметр date — точечный
+// просмотр произвольной недели из глубокого архива (данные не удаляются,
+// просто не показываются вкладками по умолчанию).
+// ═══════════════════════════════════════════════════════════════════════
+app.get('/api/stats/week',requireStaffMgmt,async(req,res)=>{
+  try{
+    let offset=parseInt(req.query.offset,10); if(isNaN(offset)||offset<0)offset=0;
+    const range=(req.query.date&&!isNaN(Date.parse(req.query.date))) ? weekRangeForDate(req.query.date) : weekRange(offset);
+    const emps=await query('SELECT * FROM employees ORDER BY sort_order,name');
+    const slots=await query('SELECT * FROM contract_slots WHERE slot_date BETWEEN $1 AND $2',[range.start,range.end]);
+    const stats={};
+    emps.rows.forEach(e=>{ stats[e.id]={ id:e.id, name:e.name, static_id:e.static_id, acceptedGreen:0, sentGreen:0, acceptedRed:0, sentRed:0, payout:0 }; });
+    slots.rows.forEach(s=>{
+      if(!s.accepted_id||!stats[s.accepted_id])return;
+      const st=stats[s.accepted_id];
+      if(s.color==='green'){ st.acceptedGreen++; if(s.status)st.sentGreen++; }
+      else { st.acceptedRed++; if(s.status)st.sentRed++; }
+      st.payout+=Number(s.payout)||0;
+    });
+    const bonuses=await query(`SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.week_start=$1 ORDER BY b.created_at`,[range.start]);
+    res.json({ range, employees:Object.values(stats), bonuses:bonuses.rows });
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+// ─── Премирование ───
+app.post('/api/bonuses',requireStaffMgmt,async(req,res)=>{
+  try{
+    const{employee_id,week_start,amount,comment}=req.body;
+    if(!employee_id||!week_start||isNaN(Date.parse(week_start)))return res.status(400).json({error:'Укажите сотрудника и неделю'});
+    const id=uuid();
+    await query('INSERT INTO bonuses (id,employee_id,week_start,amount,comment) VALUES ($1,$2,$3,$4,$5)',[id,employee_id,week_start,Number(amount)||0,(comment||'').toString().slice(0,300)]);
+    const r=await query('SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.id=$1',[id]);
+    res.json(r.rows[0]);
+  }catch(e){res.status(500).json({error:e.message});}
+});
+app.put('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
+  try{
+    const{amount,comment,paid}=req.body;
+    await query('UPDATE bonuses SET amount=COALESCE($1,amount), comment=COALESCE($2,comment), paid=COALESCE($3,paid) WHERE id=$4',
+      [amount===undefined?null:Number(amount), comment===undefined?null:comment.toString().slice(0,300), paid===undefined?null:paid, req.params.id]);
+    res.json({ok:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+app.delete('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
+  try{ await query('DELETE FROM bonuses WHERE id=$1',[req.params.id]); res.json({ok:true}); }
+  catch(e){res.status(500).json({error:e.message});}
+});
 
 // UPLOAD
 app.post('/api/upload',requireEditor,upload.single('image'),(req,res)=>{ if(!req.file)return res.status(400).json({error:'Файл не загружен'});res.json({url:`/uploads/${req.file.filename}`});});
