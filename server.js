@@ -65,7 +65,8 @@ async function initDB() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS services (
-      id TEXT PRIMARY KEY, name TEXT NOT NULL, items TEXT DEFAULT '[]', sort_order INTEGER DEFAULT 0
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, items TEXT DEFAULT '[]', sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS team_cats (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, layout TEXT DEFAULT 'pyramid', sort_order INTEGER DEFAULT 0
@@ -99,6 +100,9 @@ async function initDB() {
 
   // Миграция: шрифт для описания (должности) участника состава
   await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_font TEXT DEFAULT ''`);
+
+  // Миграция: дата создания категории услуг (нужна для защиты от дублей при двойной отправке формы)
+  await query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
 
   // Миграция: если sort_order ещё не проставлен (старые данные до этой версии) —
   // заполняем его на основе текущего физического порядка строк (ctid), чтобы
@@ -311,7 +315,18 @@ app.delete('/api/news/:id',requireEditor,async(req,res)=>{ await query('DELETE F
 
 // SERVICES
 app.get('/api/services',async(req,res)=>{ const r=await query('SELECT * FROM services ORDER BY sort_order');res.json(r.rows.map(s=>({...s,items:parseJSON(s.items)})));});
-app.post('/api/services',requireEditor,async(req,res)=>{ const{name,items}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});const id=uuid();await query('INSERT INTO services (id,name,items) VALUES ($1,$2,$3)',[id,name.trim(),JSON.stringify(items||[])]);res.json({id,name,items:items||[]});});
+app.post('/api/services',requireEditor,async(req,res)=>{
+  const{name,items}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});
+  // Защита от дублей при повторной/двойной отправке одной и той же формы
+  // (например, двойной клик по кнопке «Сохранить» до того, как пришёл ответ сервера):
+  // если точно такая же категория (имя + услуги) была создана в последние 10 секунд — не создаём вторую.
+  const dup=await query(
+    `SELECT id FROM services WHERE name=$1 AND items=$2 AND created_at > NOW() - INTERVAL '10 seconds' ORDER BY created_at DESC LIMIT 1`,
+    [name.trim(),JSON.stringify(items||[])]
+  ).catch(()=>({rows:[]}));
+  if(dup.rows.length)return res.json({id:dup.rows[0].id,name,items:items||[]});
+  const id=uuid();await query('INSERT INTO services (id,name,items) VALUES ($1,$2,$3)',[id,name.trim(),JSON.stringify(items||[])]);res.json({id,name,items:items||[]});
+});
 app.put('/api/services/:id',requireEditor,async(req,res)=>{ const{name,items}=req.body;await query('UPDATE services SET name=$1,items=$2 WHERE id=$3',[name,JSON.stringify(items||[]),req.params.id]);res.json({ok:true});});
 app.delete('/api/services/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM services WHERE id=$1',[req.params.id]);res.json({ok:true});});
 

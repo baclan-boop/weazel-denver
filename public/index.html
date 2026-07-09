@@ -925,7 +925,7 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
       </div>
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-service')">Отмена</button>
-        <button class="btn btn-p btn-sm" onclick="saveSvcCat()">Сохранить</button>
+        <button class="btn btn-p btn-sm" id="svc-save-btn" onclick="saveSvcCat()">Сохранить</button>
       </div>
     </div>
   </div>
@@ -1878,19 +1878,24 @@ function openServiceModal(id=null){
   openModal('modal-service');
 }
 function addSvcRow(item=null){
-  const ed=document.getElementById('svc-items-editor');const d=document.createElement('div');d.style.cssText='display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:8px';
-  d.innerHTML=`<div style="display:grid;gap:5px"><input class="fi" placeholder="Название" data-r="name" value="${xe(item?.name||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Цена" data-r="price" value="${xe(item?.price||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Описание" data-r="desc" value="${xe(item?.desc||'')}" style="padding:7px 10px;font-size:12px"></div><button class="btn btn-d btn-sm" style="align-self:start" onclick="this.closest('div[style]').remove()">✕</button>`;
+  const ed=document.getElementById('svc-items-editor');const d=document.createElement('div');d.className='svc-editor-row';d.style.cssText='display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:8px';
+  d.innerHTML=`<div style="display:grid;gap:5px"><input class="fi" placeholder="Название" data-r="name" value="${xe(item?.name||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Цена" data-r="price" value="${xe(item?.price||'')}" style="padding:7px 10px;font-size:12px"><input class="fi" placeholder="Описание" data-r="desc" value="${xe(item?.desc||'')}" style="padding:7px 10px;font-size:12px"></div><button class="btn btn-d btn-sm" style="align-self:start" onclick="this.closest('.svc-editor-row').remove()">✕</button>`;
   ed.appendChild(d);
 }
+let SVC_SAVING=false;
 async function saveSvcCat(){
+  if(SVC_SAVING)return; // защита от двойного клика/тапа — иначе категория создаётся дважды
   const name=document.getElementById('svc-cat-name').value.trim();if(!name){toast('Укажите название','e');return}
   const eid=document.getElementById('svc-cat-id').value;
-  const rows=document.getElementById('svc-items-editor').querySelectorAll('div[style]');
+  const rows=document.getElementById('svc-items-editor').querySelectorAll('.svc-editor-row');
   const items=[];rows.forEach(row=>{const n=row.querySelector('[data-r="name"]')?.value.trim();if(n)items.push({id:'si'+Date.now()+Math.random().toString(36).slice(2),name:n,price:row.querySelector('[data-r="price"]')?.value.trim()||'',desc:row.querySelector('[data-r="desc"]')?.value.trim()||''});});
+  const btn=document.getElementById('svc-save-btn');
+  SVC_SAVING=true;if(btn){btn.disabled=true;btn.textContent='Сохранение...';}
   try{
     if(eid)await API.put('/services/'+eid,{name,items});else await API.post('/services',{name,items});
     closeModal('modal-service');SERVICES=await API.get('/services');renderServices();renderServicesMgmt();toast('Сохранено','s');
   }catch(e){toast(e.error||'Ошибка','e');}
+  finally{SVC_SAVING=false;if(btn){btn.disabled=false;btn.textContent='Сохранить';}}
 }
 async function delSvcCat(id){
   if(!confirm('Удалить категорию?'))return;
