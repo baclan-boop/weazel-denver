@@ -492,6 +492,102 @@ app.put('/api/contracts/:id',requireStaffMgmt,async(req,res)=>{
 });
 
 // ═══════════════════════════════════════════════════════════════════════
+// ДОБАВИТЬ КОНТРАКТ (массовое заполнение слотов из вкладки «Добавить контракт»)
+// Принимает: color, times (список ЧЧ:ММ — если объявлений в день несколько),
+// dates (список дат — всегда начиная со следующего дня, считает фронтенд),
+// text, accepted_id, discount. Проверяет, что КАЖДАЯ пара время×дата свободна
+// (текст пуст и сотрудник не назначен); если занято хоть одно — ничего не
+// меняет и возвращает список занятых слотов. Если всё свободно — одним
+// действием проставляет текст/принявшего сотрудника и авто-считает
+// цену/выплату за 1 объявление по той же формуле, что в Калькуляторе.
+// ═══════════════════════════════════════════════════════════════════════
+app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
+  try {
+    let { color, times, dates, text, accepted_id, discount } = req.body;
+    color = color === 'red' ? 'red' : 'green';
+    text = (text || '').toString().trim();
+    if (!text) return res.status(400).json({ error: 'Укажите текст объявления' });
+    if (!accepted_id) return res.status(400).json({ error: 'Выберите сотрудника, принявшего контракт' });
+
+    const emp = await query('SELECT id FROM employees WHERE id=$1', [accepted_id]);
+    if (!emp.rows.length) return res.status(400).json({ error: 'Сотрудник не найден' });
+
+    const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!Array.isArray(times) || !times.length) return res.status(400).json({ error: 'Укажите хотя бы одно время' });
+    times = [...new Set(times)];
+    if (times.some(t => !timeRe.test(t))) return res.status(400).json({ error: 'Некорректный формат времени' });
+
+    if (!Array.isArray(dates) || !dates.length) return res.status(400).json({ error: 'Укажите срок контракта' });
+    dates = [...new Set(dates)];
+    if (dates.some(d => isNaN(Date.parse(d)))) return res.status(400).json({ error: 'Некорректная дата' });
+
+    // Контракт обязательно заполняется начиная не раньше чем с завтрашнего дня
+    const tomorrow = new Date(); tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    if (dates.some(d => d < tomorrowStr)) {
+      return res.status(400).json({ error: 'Контракт можно заполнять только начиная со следующего дня' });
+    }
+
+    discount = parseFloat(discount); if (isNaN(discount) || discount < 0) discount = 0; if (discount > 100) discount = 100;
+
+    // Времена должны входить в действующее расписание слотов таблицы контрактов
+    const sched = await getSchedule();
+    const validTimes = new Set(genTimeSlots(sched.start, sched.end, sched.intervalMin || 10));
+    if (times.some(t => !validTimes.has(t))) {
+      return res.status(400).json({ error: 'Одно из указанных времён не входит в расписание слотов' });
+    }
+
+    const pairs = [];
+    for (const d of dates) for (const t of times) pairs.push({ d, t });
+
+    // Гарантируем существование строк слотов на каждую нужную пару (дата,время)
+    for (const { d, t } of pairs) {
+      await query('INSERT INTO contract_slots (id,color,slot_date,slot_time) VALUES ($1,$2,$3,$4) ON CONFLICT (color,slot_date,slot_time) DO NOTHING', [uuid(), color, d, t]);
+    }
+
+    // Проверяем свободны ли нужные слоты (слот свободен, если текст пуст и сотрудник не назначен)
+    const existing = await query(
+      `SELECT to_char(slot_date,'YYYY-MM-DD') AS d, slot_time AS t, text, accepted_id
+       FROM contract_slots WHERE color=$1 AND slot_date = ANY($2::date[]) AND slot_time = ANY($3::text[])`,
+      [color, dates, times]
+    );
+    const map = new Map();
+    existing.rows.forEach(r => map.set(`${r.d}_${r.t}`, r));
+
+    const busy = [];
+    for (const { d, t } of pairs) {
+      const row = map.get(`${d}_${t}`);
+      const free = row && (!row.text || !row.text.trim()) && !row.accepted_id;
+      if (!free) busy.push({ date: d, time: t });
+    }
+    if (busy.length) return res.status(409).json({ error: 'Некоторые слоты уже заняты', busy });
+
+    // Расчёт как в Калькуляторе: символ × 300 (зелёные) / × 150 (красные); казна 90% / сотрудник 10%
+    const rate = color === 'red' ? 150 : 300;
+    const chars = text.length;
+    const totalAds = times.length * dates.length;
+    const baseSum = totalAds * chars * rate;
+    const orderSum = baseSum * (1 - discount / 100);
+    const treasury = orderSum * 0.9;
+    const toEmployee = orderSum * 0.1;
+    const perAd = totalAds > 0 ? toEmployee / totalAds : 0;
+    const pricePerAd = totalAds > 0 ? orderSum / totalAds : 0;
+
+    for (const { d, t } of pairs) {
+      await query(
+        `UPDATE contract_slots SET text=$1, accepted_id=$2, price=$3, payout=$4, updated_at=NOW() WHERE color=$5 AND slot_date=$6 AND slot_time=$7`,
+        [text, accepted_id, pricePerAd, perAd, color, d, t]
+      );
+    }
+
+    res.json({
+      ok: true, filled: pairs.length, color, dates, times,
+      calc: { chars, totalAds, rate, discount, baseSum, orderSum, treasury, toEmployee, perAd, pricePerAd }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
 // НЕДЕЛЬНАЯ СТАТИСТИКА
 // offset=0 — текущая неделя, offset=1 — прошлая. Параметр date — точечный
 // просмотр произвольной недели из глубокого архива (данные не удаляются,

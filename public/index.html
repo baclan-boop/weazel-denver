@@ -463,6 +463,14 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   .stats-hdr-row{flex-direction:column;align-items:flex-start}
   .stats-archive-box{margin-left:0}
 }
+
+/* ЕДИНАЯ ПАНЕЛЬ РЕКЛАМЫ (Объявления/Калькулятор/Контракты/Статистика) */
+.adhub-tab{display:none}
+.adhub-tab.active{display:block}
+
+/* Строки времени в форме «Добавить контракт» */
+.ct-add-time-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.ct-add-time-row select{flex:1}
 </style>
 </head>
 <body>
@@ -838,170 +846,214 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   </div>
 </div>
 
-<!-- ─── ОБЪЯВЛЕНИЯ (Advertising Department) ─── -->
-<div class="page" id="page-ads">
-  <div class="sec">
-    <div class="sec-inner" style="max-width:720px">
-      <div class="sec-div reveal">
-        <div class="sec-title"><span>Объявления</span></div>
-        <div class="sec-line"></div><div class="sec-tag">Ads Booking</div>
-      </div>
-
-      <div class="acard" style="padding:24px">
-        <div class="fg">
-          <label class="fl">Тип объявлений</label>
-          <div style="display:flex;gap:10px;margin-top:8px">
-            <button type="button" id="ads-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="setAdsColor('green')">🟢 Зелёные (Weazel News)</button>
-            <button type="button" id="ads-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="setAdsColor('red')">🔴 Красные (ADV)</button>
-          </div>
-          <input type="hidden" id="ads-color-input" value="green">
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-          <div class="fg">
-            <label class="fl">Срок (дней)</label>
-            <input type="number" class="fi" id="ads-days-input" min="2" max="7" value="2">
-            <div class="fhint">От 2 до 7 дней</div>
-          </div>
-          <div class="fg">
-            <label class="fl">Объявлений в день</label>
-            <input type="number" class="fi" id="ads-per-day-input" min="2" max="10" value="2">
-            <div class="fhint">От 2 до 10 в день</div>
-          </div>
-        </div>
-
-        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:8px" onclick="searchAdSlots()" id="ads-search-btn">🔍 Найти свободные слоты</button>
-      </div>
-
-      <div id="ads-results" style="margin-top:20px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ─── КАЛЬКУЛЯТОР КОНТРАКТОВ ─── -->
-<div class="page" id="page-calc">
-  <div class="sec">
-    <div class="sec-inner" style="max-width:1000px">
-      <div class="sec-div reveal">
-        <div class="sec-title"><span>Калькулятор</span></div>
-        <div class="sec-line"></div><div class="sec-tag">Contracts Calculator</div>
-      </div>
-
-      <div class="calc-grid">
-        <!-- ЗЕЛЁНЫЕ -->
-        <div class="calc-panel green">
-          <div class="calc-panel-hdr">🟢 Зелёные объявления</div>
-          <div class="calc-panel-body">
-            <div class="fg"><label class="fl">Текст объявления</label>
-              <textarea class="fta" id="calc-green-text" placeholder="Открыт набор в гос. семью..." oninput="calcRun('green')"></textarea>
-              <div class="calc-chars">Символов: <b id="calc-green-chars">0</b></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-green-perday" value="2" min="2" max="10" oninput="calcRun('green')"></div>
-              <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-green-days" value="2" min="2" max="7" oninput="calcRun('green')"></div>
-            </div>
-            <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-green-discount" value="0" min="0" max="100" oninput="calcRun('green')"></div>
-            <div class="calc-results">
-              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-green-sum">0$</div></div>
-              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-green-treasury">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-green-toemp">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-green-perad">0$</div></div>
-            </div>
-          </div>
-        </div>
-        <!-- КРАСНЫЕ -->
-        <div class="calc-panel red">
-          <div class="calc-panel-hdr">🔴 Красные объявления (СМС)</div>
-          <div class="calc-panel-body">
-            <div class="fg"><label class="fl">Текст объявления</label>
-              <textarea class="fta" id="calc-red-text" placeholder="Проходит набор в стрелковую семью..." oninput="calcRun('red')"></textarea>
-              <div class="calc-chars">Символов: <b id="calc-red-chars">0</b></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-red-perday" value="2" min="2" max="10" oninput="calcRun('red')"></div>
-              <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-red-days" value="2" min="2" max="7" oninput="calcRun('red')"></div>
-            </div>
-            <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-red-discount" value="0" min="0" max="100" oninput="calcRun('red')"></div>
-            <div class="calc-results">
-              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-red-sum">0$</div></div>
-              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-red-treasury">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-red-toemp">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-red-perad">0$</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- ─── ТАБЛИЦА КОНТРАКТОВ ─── -->
-<div class="page" id="page-contracts">
+<!-- ─── РЕКЛАМА: единая панель (Объявления / Калькулятор / Контракты / Статистика) ─── -->
+<div class="page" id="page-adhub">
   <div class="sec">
     <div class="sec-inner" style="max-width:1200px">
       <div class="sec-div reveal">
-        <div class="sec-title"><span>Контракты</span></div>
-        <div class="sec-line"></div><div class="sec-tag">Contracts Table</div>
+        <div class="sec-title"><span>Реклама</span></div>
+        <div class="sec-line"></div><div class="sec-tag">Advertising Panel</div>
       </div>
 
-      <div class="subtabs">
-        <button class="subtab green" id="ct-tab-green" onclick="switchCTColor('green')">🟢 Зелёные объявления</button>
-        <button class="subtab red" id="ct-tab-red" onclick="switchCTColor('red')">🔴 Красные объявления</button>
+      <div class="subtabs" id="adhub-tabs">
+        <button class="subtab plain" id="adhub-tab-ads" onclick="switchAdHubTab('ads')">Объявления</button>
+        <button class="subtab plain" id="adhub-tab-calc" onclick="switchAdHubTab('calc')">Калькулятор</button>
+        <button class="subtab plain" id="adhub-tab-contracts" onclick="switchAdHubTab('contracts')">Контракты</button>
+        <button class="subtab plain" id="adhub-tab-stats" onclick="switchAdHubTab('stats')">Статистика</button>
       </div>
 
-      <div class="ct-toolbar">
-        <button class="ct-datebtn" onclick="shiftCTDate(-1)">‹</button>
-        <div class="ct-date-lbl" id="ct-date-lbl">—</div>
-        <button class="ct-datebtn" onclick="shiftCTDate(1)">›</button>
-        <button class="btn btn-o btn-sm" onclick="setCTDateToday()">Сегодня</button>
-        <input type="date" class="fi" id="ct-date-picker" style="width:150px" onchange="setCTDate(this.value)">
-        <span class="ct-save-ind" id="ct-save-ind">Сохранено ✓</span>
-      </div>
+      <!-- ОБЪЯВЛЕНИЯ -->
+      <div class="adhub-tab" id="adhub-ads">
+        <div style="max-width:720px">
+          <div class="acard" style="padding:24px">
+            <div class="fg">
+              <label class="fl">Тип объявлений</label>
+              <div style="display:flex;gap:10px;margin-top:8px">
+                <button type="button" id="ads-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="setAdsColor('green')">🟢 Зелёные (Weazel News)</button>
+                <button type="button" id="ads-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="setAdsColor('red')">🔴 Красные (ADV)</button>
+              </div>
+              <input type="hidden" id="ads-color-input" value="green">
+            </div>
 
-      <div id="ct-table-holder" class="ct-wrap">
-        <div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div>
-      </div>
-    </div>
-  </div>
-</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+              <div class="fg">
+                <label class="fl">Срок (дней)</label>
+                <input type="number" class="fi" id="ads-days-input" min="2" max="7" value="2">
+                <div class="fhint">От 2 до 7 дней</div>
+              </div>
+              <div class="fg">
+                <label class="fl">Объявлений в день</label>
+                <input type="number" class="fi" id="ads-per-day-input" min="2" max="10" value="2">
+                <div class="fhint">От 2 до 10 в день</div>
+              </div>
+            </div>
 
-<!-- ─── СТАТИСТИКА ЗА НЕДЕЛЮ ─── -->
-<div class="page" id="page-stats">
-  <div class="sec">
-    <div class="sec-inner" style="max-width:1200px">
-      <div class="sec-div reveal">
-        <div class="sec-title"><span>Статистика</span></div>
-        <div class="sec-line"></div><div class="sec-tag">Weekly Dashboard</div>
-      </div>
+            <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:8px" onclick="searchAdSlots()" id="ads-search-btn">🔍 Найти свободные слоты</button>
+          </div>
 
-      <div class="stats-hdr-row">
-        <div class="subtabs" style="margin-bottom:0">
-          <button class="subtab plain" id="stats-tab-0" onclick="switchStatsTab(0)">Текущая неделя</button>
-          <button class="subtab plain" id="stats-tab-1" onclick="switchStatsTab(1)">Прошлая неделя</button>
+          <div id="ads-results" style="margin-top:20px"></div>
         </div>
-        <div class="stats-archive-box" id="stats-archive-box" style="display:none">
-          <input type="date" class="fi" id="stats-archive-date">
-          <button class="btn btn-o btn-sm" onclick="loadStatsArchive()">🔎 Архив</button>
-        </div>
-      </div>
-      <div class="stats-range" id="stats-range">—</div>
-
-      <div class="acard" style="margin-top:16px">
-        <div class="acard-title" style="margin-bottom:10px">Статистика по работе</div>
-        <div class="tw"><table class="dt" id="stats-table">
-          <thead><tr><th>Имя Фамилия</th><th>Принято ЗО</th><th>Отправлено ЗО</th><th>Принято КО</th><th>Отправлено КО</th><th>К выплате</th></tr></thead>
-          <tbody id="stats-tbody"></tbody>
-        </table></div>
-        <div class="fhint" style="margin-top:10px">Строка подсвечивается красным, если сумма «К выплате» меньше 15,000$.</div>
       </div>
 
-      <div class="acard">
-        <div class="acard-hdr"><div class="acard-title">Премирование</div>
-          <button class="btn btn-p btn-sm" onclick="openBonusModal()">+ Премия</button>
+      <!-- КАЛЬКУЛЯТОР -->
+      <div class="adhub-tab" id="adhub-calc">
+        <div class="calc-grid">
+          <!-- ЗЕЛЁНЫЕ -->
+          <div class="calc-panel green">
+            <div class="calc-panel-hdr">🟢 Зелёные объявления</div>
+            <div class="calc-panel-body">
+              <div class="fg"><label class="fl">Текст объявления</label>
+                <textarea class="fta" id="calc-green-text" placeholder="Открыт набор в гос. семью..." oninput="calcRun('green')"></textarea>
+                <div class="calc-chars">Символов: <b id="calc-green-chars">0</b></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-green-perday" value="2" min="2" max="10" oninput="calcRun('green')"></div>
+                <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-green-days" value="2" min="2" max="7" oninput="calcRun('green')"></div>
+              </div>
+              <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-green-discount" value="0" min="0" max="100" oninput="calcRun('green')"></div>
+              <div class="calc-results">
+                <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-green-sum">0$</div></div>
+                <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-green-treasury">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-green-toemp">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-green-perad">0$</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- КРАСНЫЕ -->
+          <div class="calc-panel red">
+            <div class="calc-panel-hdr">🔴 Красные объявления (СМС)</div>
+            <div class="calc-panel-body">
+              <div class="fg"><label class="fl">Текст объявления</label>
+                <textarea class="fta" id="calc-red-text" placeholder="Проходит набор в стрелковую семью..." oninput="calcRun('red')"></textarea>
+                <div class="calc-chars">Символов: <b id="calc-red-chars">0</b></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="fg"><label class="fl">Объявл. в день (2–10)</label><input type="number" class="fi" id="calc-red-perday" value="2" min="2" max="10" oninput="calcRun('red')"></div>
+                <div class="fg"><label class="fl">Кол-во дней (2–7)</label><input type="number" class="fi" id="calc-red-days" value="2" min="2" max="7" oninput="calcRun('red')"></div>
+              </div>
+              <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-red-discount" value="0" min="0" max="100" oninput="calcRun('red')"></div>
+              <div class="calc-results">
+                <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-red-sum">0$</div></div>
+                <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-red-treasury">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-red-toemp">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-red-perad">0$</div></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="acard-sub" style="margin-bottom:8px">Сотрудники, задействованные на этой неделе — для распределения бонусов руководством.</div>
-        <div class="bonus-grid" id="bonus-grid"></div>
+      </div>
+
+      <!-- КОНТРАКТЫ -->
+      <div class="adhub-tab" id="adhub-contracts">
+        <div class="subtabs">
+          <button class="subtab green" id="ct-tab-green" onclick="switchCTColor('green')">🟢 Зелёные объявления</button>
+          <button class="subtab red" id="ct-tab-red" onclick="switchCTColor('red')">🔴 Красные объявления</button>
+          <button class="subtab plain" id="ct-tab-add" onclick="switchCTView('add')">➕ Добавить контракт</button>
+        </div>
+
+        <div id="ct-view-table">
+          <div class="ct-toolbar">
+            <button class="ct-datebtn" onclick="shiftCTDate(-1)">‹</button>
+            <div class="ct-date-lbl" id="ct-date-lbl">—</div>
+            <button class="ct-datebtn" onclick="shiftCTDate(1)">›</button>
+            <button class="btn btn-o btn-sm" onclick="setCTDateToday()">Сегодня</button>
+            <input type="date" class="fi" id="ct-date-picker" style="width:150px" onchange="setCTDate(this.value)">
+            <span class="ct-save-ind" id="ct-save-ind">Сохранено ✓</span>
+          </div>
+
+          <div id="ct-table-holder" class="ct-wrap">
+            <div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div>
+          </div>
+        </div>
+
+        <div id="ct-view-add" style="display:none">
+          <div class="acard" style="max-width:640px;padding:22px">
+            <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
+            <div class="acard-sub" style="margin-bottom:16px">Заполняется автоматически, начиная со следующего дня. Если хотя бы один нужный слот занят — контракт не создастся, будет показано, что именно занято.</div>
+
+            <div class="fg">
+              <label class="fl">Тип объявлений</label>
+              <div style="display:flex;gap:10px;margin-top:8px">
+                <button type="button" id="ctadd-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="ctAddSetColor('green')">🟢 Зелёные</button>
+                <button type="button" id="ctadd-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="ctAddSetColor('red')">🔴 Красные</button>
+              </div>
+            </div>
+
+            <div class="fg">
+              <label class="fl">Время показа (объявлений в день — можно добавить несколько)</label>
+              <div id="ctadd-times"></div>
+              <button type="button" class="btn btn-o btn-sm" style="margin-top:4px" onclick="ctAddAddTimeRow()">+ Ещё время</button>
+            </div>
+
+            <div class="fg">
+              <label class="fl">Срок контракта (дней)</label>
+              <input type="number" class="fi" id="ctadd-days" min="1" max="30" value="2" oninput="ctAddRun()">
+              <div class="fhint" id="ctadd-daterange">—</div>
+            </div>
+
+            <div class="fg">
+              <label class="fl">Текст объявления</label>
+              <textarea class="fta" id="ctadd-text" placeholder="Открыт набор в гос. семью..." oninput="ctAddRun()"></textarea>
+              <div class="calc-chars">Символов: <b id="ctadd-chars">0</b></div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="fg">
+                <label class="fl">Скидка (%)</label>
+                <input type="number" class="fi" id="ctadd-discount" min="0" max="100" value="0" oninput="ctAddRun()">
+              </div>
+              <div class="fg">
+                <label class="fl">Кто принял контракт</label>
+                <select class="fsel" id="ctadd-employee"></select>
+              </div>
+            </div>
+
+            <div class="calc-results">
+              <div class="calc-res-box"><div class="calc-res-lbl">Всего объявлений</div><div class="calc-res-val" id="ctadd-total">0</div></div>
+              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="ctadd-sum">0$</div></div>
+              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="ctadd-treasury">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="ctadd-toemp">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="ctadd-perad">0$</div></div>
+              <div class="calc-res-box hi"><div class="calc-res-lbl">Цена за 1 объявление</div><div class="calc-res-val" id="ctadd-priceperad">0$</div></div>
+            </div>
+
+            <div id="ctadd-error" style="display:none;margin-top:14px;color:var(--red);font-size:12px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.28);border-radius:var(--r);padding:10px 12px;line-height:1.5"></div>
+
+            <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:16px" id="ctadd-submit" onclick="submitCTAdd()">✅ Проверить и создать контракт</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- СТАТИСТИКА -->
+      <div class="adhub-tab" id="adhub-stats">
+        <div class="stats-hdr-row">
+          <div class="subtabs" style="margin-bottom:0">
+            <button class="subtab plain" id="stats-tab-0" onclick="switchStatsTab(0)">Текущая неделя</button>
+            <button class="subtab plain" id="stats-tab-1" onclick="switchStatsTab(1)">Прошлая неделя</button>
+          </div>
+          <div class="stats-archive-box" id="stats-archive-box" style="display:none">
+            <input type="date" class="fi" id="stats-archive-date">
+            <button class="btn btn-o btn-sm" onclick="loadStatsArchive()">🔎 Архив</button>
+          </div>
+        </div>
+        <div class="stats-range" id="stats-range">—</div>
+
+        <div class="acard" style="margin-top:16px">
+          <div class="acard-title" style="margin-bottom:10px">Статистика по работе</div>
+          <div class="tw"><table class="dt" id="stats-table">
+            <thead><tr><th>Имя Фамилия</th><th>Принято ЗО</th><th>Отправлено ЗО</th><th>Принято КО</th><th>Отправлено КО</th><th>К выплате</th></tr></thead>
+            <tbody id="stats-tbody"></tbody>
+          </table></div>
+          <div class="fhint" style="margin-top:10px">Строка подсвечивается красным, если сумма «К выплате» меньше 15,000$.</div>
+        </div>
+
+        <div class="acard">
+          <div class="acard-hdr"><div class="acard-title">Премирование</div>
+            <button class="btn btn-p btn-sm" onclick="openBonusModal()">+ Премия</button>
+          </div>
+          <div class="acard-sub" style="margin-bottom:8px">Сотрудники, задействованные на этой неделе — для распределения бонусов руководством.</div>
+          <div class="bonus-grid" id="bonus-grid"></div>
+        </div>
       </div>
 
     </div>
@@ -1435,20 +1487,14 @@ function renderHeader(){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
       <span style="font-size:11px;color:var(--gray)" class="mob-hide-name">${xe(CU.name)}</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
-      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('ads')">Объявления</button>`:''}
-      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('calc')">Калькулятор</button>`:''}
-      ${isCuratorPlus()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('contracts')">Контракты</button>`:''}
-      ${isCuratorPlus()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('stats')">Статистика</button>`:''}
+      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
       ${(canEdit()||isCuratorPlus())?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
-      ${canAds()?`<button class="mnl" onclick="showPage('ads');closeMobMenu()">📢 Объявления</button>`:''}
-      ${canAds()?`<button class="mnl" onclick="showPage('calc');closeMobMenu()">🧮 Калькулятор</button>`:''}
-      ${isCuratorPlus()?`<button class="mnl" onclick="showPage('contracts');closeMobMenu()">📋 Контракты</button>`:''}
-      ${isCuratorPlus()?`<button class="mnl" onclick="showPage('stats');closeMobMenu()">📊 Статистика</button>`:''}
+      ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
       ${(canEdit()||isCuratorPlus())?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(255,255,255,.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
@@ -1477,10 +1523,7 @@ function closeMobMenu(){
 let curPage='home';
 async function showPage(page){
   if(page==='admin'&&!(canEdit()||isCuratorPlus())){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
-  if(page==='ads'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
-  if(page==='calc'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
-  if(page==='contracts'&&!isCuratorPlus()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
-  if(page==='stats'&&!isCuratorPlus()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='adhub'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
   const pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');
@@ -1495,16 +1538,50 @@ async function showPage(page){
   if(page==='team')await renderTeam();
   if(page==='about')loadAbout();
   if(page==='admin')await renderAdmin();
-  if(page==='calc')initCalculators();
-  if(page==='contracts')await openContractsTab(CT_STATE.color);
-  if(page==='stats')await loadStatsTab(STATS_STATE.offset);
+  if(page==='adhub')await initAdHub();
   document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===page));
   setTimeout(initReveal,80);
 }
 
 function logVisit(page){
-  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',ads:'Объявления',calc:'Калькулятор',contracts:'Контракты',stats:'Статистика'};
+  const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',adhub:'Реклама'};
   API.post('/visitors',{page:labels[page]||page}).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════
+// ЕДИНАЯ ПАНЕЛЬ «РЕКЛАМА»: Объявления / Калькулятор / Контракты / Статистика
+// ══════════════════════════════════════════════
+function adHubAllowedTabs(){
+  const t=[];
+  if(canAds())t.push('ads','calc');
+  if(isCuratorPlus())t.push('contracts','stats');
+  return t;
+}
+let ADHUB_TAB='ads';
+async function switchAdHubTab(tab){
+  const allowed=adHubAllowedTabs();
+  if(!allowed.includes(tab)){
+    toast('Нет доступа','e');
+    tab=allowed[0];
+    if(!tab)return;
+  }
+  ADHUB_TAB=tab;
+  document.querySelectorAll('.adhub-tab').forEach(el=>el.classList.remove('active'));
+  const cur=document.getElementById('adhub-'+tab); if(cur)cur.classList.add('active');
+  ['ads','calc','contracts','stats'].forEach(t=>{
+    const b=document.getElementById('adhub-tab-'+t);
+    if(!b)return;
+    b.style.display=allowed.includes(t)?'':'none';
+    b.classList.toggle('active',t===tab);
+  });
+  if(tab==='calc')initCalculators();
+  if(tab==='contracts')await openContractsTab(CT_STATE.color);
+  if(tab==='stats')await loadStatsTab(STATS_STATE.offset);
+}
+async function initAdHub(){
+  const allowed=adHubAllowedTabs();
+  const tab=allowed.includes(ADHUB_TAB)?ADHUB_TAB:(allowed[0]||'ads');
+  await switchAdHubTab(tab);
 }
 
 // ══════════════════════════════════════════════
@@ -1718,20 +1795,42 @@ function shiftISO(iso,days){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+function ctShowView(view){
+  const vt=document.getElementById('ct-view-table');
+  const va=document.getElementById('ct-view-add');
+  if(vt)vt.style.display=view==='add'?'none':'';
+  if(va)va.style.display=view==='add'?'':'none';
+  document.getElementById('ct-tab-add')?.classList.toggle('active',view==='add');
+}
+
 async function switchCTColor(color){
   CT_STATE.color=color;
   document.getElementById('ct-tab-green').classList.toggle('active',color==='green');
   document.getElementById('ct-tab-red').classList.toggle('active',color==='red');
+  ctShowView('table');
   await loadContractsTable();
 }
 async function shiftCTDate(days){ CT_STATE.date=shiftISO(CT_STATE.date,days); await loadContractsTable(); }
 async function setCTDateToday(){ CT_STATE.date=todayISO(); await loadContractsTable(); }
 async function setCTDate(val){ if(val){CT_STATE.date=val; await loadContractsTable();} }
 
+async function switchCTView(view){
+  if(view==='add'){
+    document.getElementById('ct-tab-green')?.classList.remove('active');
+    document.getElementById('ct-tab-red')?.classList.remove('active');
+    ctShowView('add');
+    CTADD_STATE.color=CT_STATE.color; // по умолчанию — тот же цвет, что был открыт в таблице
+    await initCTAddForm();
+  } else {
+    await switchCTColor(CT_STATE.color);
+  }
+}
+
 async function openContractsTab(color){
   CT_STATE.color=color||'green';
   document.getElementById('ct-tab-green')?.classList.toggle('active',CT_STATE.color==='green');
   document.getElementById('ct-tab-red')?.classList.toggle('active',CT_STATE.color==='red');
+  ctShowView('table');
   await ensureEmployeesLoaded();
   await loadContractsTable();
 }
@@ -1816,6 +1915,156 @@ async function ctSave(id,fields){
   }
   clearTimeout(CT_SAVE_TIMER);
   CT_SAVE_TIMER=setTimeout(()=>{ind.classList.remove('show')},2000);
+}
+
+// ══════════════════════════════════════════════
+// ДОБАВИТЬ КОНТРАКТ (вкладка внутри «Контракты»)
+// Указываем время(-ена) показа, срок в днях и текст — сервер сам проверяет,
+// свободны ли эти времена на нужные дни, и если да — одним действием
+// проставляет текст/принявшего сотрудника и считает цену/выплату как
+// в Калькуляторе. Контракт всегда заполняется начиная со следующего дня.
+// ══════════════════════════════════════════════
+const CTADD_STATE={ color:'green' };
+let CTADD_SELECTED_TIMES=[];
+
+// Времена берём из уже загруженного расписания слотов (CT_ROWS) —
+// оно одинаковое для обоих цветов, поэтому не важно, какой цвет открыт в таблице.
+function getScheduleTimes(){
+  if(CT_ROWS&&CT_ROWS.length)return CT_ROWS.map(r=>r.slot_time);
+  return [];
+}
+
+function ctAddSetColor(color){
+  CTADD_STATE.color=color;
+  const gBtn=document.getElementById('ctadd-color-green');
+  const rBtn=document.getElementById('ctadd-color-red');
+  if(color==='green'){ gBtn.className='btn btn-p'; gBtn.style.background='#2ed573'; rBtn.className='btn btn-o'; rBtn.style.background=''; }
+  else { rBtn.className='btn btn-p'; rBtn.style.background='var(--red)'; gBtn.className='btn btn-o'; gBtn.style.background=''; }
+  ctAddRun();
+}
+
+function renderCTAddTimeRows(){
+  const holder=document.getElementById('ctadd-times');
+  const times=getScheduleTimes();
+  if(!times.length){
+    holder.innerHTML=`<div class="fhint">Расписание слотов ещё не загружено — откройте вкладку 🟢 или 🔴 хотя бы раз.</div>`;
+    return;
+  }
+  holder.innerHTML=CTADD_SELECTED_TIMES.map((val,idx)=>`
+    <div class="ct-add-time-row">
+      <select class="fsel" onchange="ctAddTimeChanged(${idx},this.value)">
+        ${times.map(t=>`<option value="${t}" ${t===val?'selected':''}>${t}</option>`).join('')}
+      </select>
+      ${CTADD_SELECTED_TIMES.length>1?`<button type="button" class="btn btn-d btn-sm" onclick="ctAddRemoveTimeRow(${idx})">✕</button>`:''}
+    </div>`).join('');
+}
+function ctAddTimeChanged(idx,val){ CTADD_SELECTED_TIMES[idx]=val; ctAddRun(); }
+function ctAddAddTimeRow(){
+  const times=getScheduleTimes();
+  if(!times.length)return;
+  if(CTADD_SELECTED_TIMES.length>=10){toast('Максимум 10 времён в день','e');return;}
+  const unused=times.find(t=>!CTADD_SELECTED_TIMES.includes(t));
+  CTADD_SELECTED_TIMES.push(unused||times[0]);
+  renderCTAddTimeRows();
+  ctAddRun();
+}
+function ctAddRemoveTimeRow(idx){
+  if(CTADD_SELECTED_TIMES.length<=1)return;
+  CTADD_SELECTED_TIMES.splice(idx,1);
+  renderCTAddTimeRows();
+  ctAddRun();
+}
+
+// Даты контракта: всегда начиная со следующего дня после сегодняшнего
+function ctAddComputeDates(days){
+  const dates=[];
+  let d=shiftISO(todayISO(),1);
+  for(let i=0;i<days;i++){ dates.push(d); d=shiftISO(d,1); }
+  return dates;
+}
+
+function ctAddRun(){
+  const text=document.getElementById('ctadd-text').value||'';
+  const chars=text.length;
+  let days=parseInt(document.getElementById('ctadd-days').value,10); if(isNaN(days)||days<1)days=1; if(days>30)days=30;
+  let discount=parseFloat(document.getElementById('ctadd-discount').value); if(isNaN(discount)||discount<0)discount=0; if(discount>100)discount=100;
+
+  const timesCount=CTADD_SELECTED_TIMES.length||1;
+  const totalAds=timesCount*days;
+  const rate=CTADD_STATE.color==='red'?150:300;
+  const baseSum=totalAds*chars*rate;
+  const orderSum=baseSum*(1-discount/100);
+  const treasury=orderSum*0.9;
+  const toEmployee=orderSum*0.1;
+  const perAd=totalAds>0?toEmployee/totalAds:0;
+  const priceAd=totalAds>0?orderSum/totalAds:0;
+
+  document.getElementById('ctadd-chars').textContent=chars;
+  document.getElementById('ctadd-total').textContent=totalAds;
+  document.getElementById('ctadd-sum').textContent=fmtMoney(orderSum);
+  document.getElementById('ctadd-treasury').textContent=fmtMoney(treasury);
+  document.getElementById('ctadd-toemp').textContent=fmtMoney(toEmployee);
+  document.getElementById('ctadd-perad').textContent=fmtMoney(perAd);
+  document.getElementById('ctadd-priceperad').textContent=fmtMoney(priceAd);
+
+  const dates=ctAddComputeDates(days);
+  const rangeEl=document.getElementById('ctadd-daterange');
+  if(dates.length)rangeEl.textContent=dates.length===1?`Дата: ${fmtPlainDate(dates[0])}`:`С ${fmtPlainDate(dates[0])} по ${fmtPlainDate(dates[dates.length-1])} (${dates.length} дн.)`;
+}
+
+async function initCTAddForm(){
+  const errEl=document.getElementById('ctadd-error'); errEl.style.display='none'; errEl.textContent='';
+  ctAddSetColor(CTADD_STATE.color==='red'?'red':'green');
+  if(!CT_ROWS.length)await loadContractsTable();
+  if(!CTADD_SELECTED_TIMES.length){
+    const times=getScheduleTimes();
+    if(times.length)CTADD_SELECTED_TIMES=[times[0]];
+  }
+  renderCTAddTimeRows();
+  await ensureEmployeesLoaded();
+  const sel=document.getElementById('ctadd-employee');
+  const activeEmps=EMPLOYEES.filter(e=>e.active);
+  sel.innerHTML=activeEmps.length
+    ? activeEmps.map(e=>`<option value="${e.id}">${xe(e.name)}</option>`).join('')
+    : `<option value="">Нет активных сотрудников</option>`;
+  ctAddRun();
+}
+
+async function submitCTAdd(){
+  const errEl=document.getElementById('ctadd-error');
+  errEl.style.display='none'; errEl.textContent='';
+
+  const text=document.getElementById('ctadd-text').value.trim();
+  const days=parseInt(document.getElementById('ctadd-days').value,10)||0;
+  const discount=parseFloat(document.getElementById('ctadd-discount').value)||0;
+  const employeeId=document.getElementById('ctadd-employee').value;
+  const times=[...CTADD_SELECTED_TIMES];
+  const dates=ctAddComputeDates(days);
+
+  if(!text){toast('Укажите текст объявления','e');return;}
+  if(!employeeId){toast('Выберите сотрудника, принявшего контракт','e');return;}
+  if(!times.length){toast('Укажите хотя бы одно время','e');return;}
+  if(!dates.length){toast('Укажите срок контракта','e');return;}
+
+  const btn=document.getElementById('ctadd-submit');
+  btn.disabled=true; btn.textContent='Проверяю...';
+  try{
+    const r=await API.post('/contracts/bulk',{ color:CTADD_STATE.color, times, dates, text, accepted_id:employeeId, discount });
+    toast(`Контракт создан: заполнено ${r.filled} слот(ов)`,'s');
+    CT_STATE.color=CTADD_STATE.color;
+    CT_STATE.date=dates[0];
+    await switchCTColor(CT_STATE.color);
+  }catch(e){
+    if(e.busy&&e.busy.length){
+      const list=e.busy.map(b=>`${fmtPlainDate(b.date)} ${b.time}`).join(', ');
+      errEl.textContent=`Заняты слоты: ${list}. Измените время или срок и попробуйте снова.`;
+    } else {
+      errEl.textContent=e.error||'Ошибка при создании контракта';
+    }
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false; btn.textContent='✅ Проверить и создать контракт';
+  }
 }
 
 // ══════════════════════════════════════════════
