@@ -539,8 +539,9 @@ app.put('/api/contracts/:id',requireStaffMgmt,async(req,res)=>{
 // text, accepted_id, discount. Проверяет, что КАЖДАЯ пара время×дата свободна
 // (текст пуст и сотрудник не назначен); если занято хоть одно — ничего не
 // меняет и возвращает список занятых слотов. Если всё свободно — одним
-// действием проставляет текст/принявшего сотрудника и авто-считает
-// цену/выплату за 1 объявление по той же формуле, что в Калькуляторе.
+// действием проставляет текст/принявшего сотрудника; цена контракта (price)
+// это полная сумма заказа за весь контракт, а payout — выплата за 1 объявление,
+// считаются по той же формуле, что в Калькуляторе.
 // ═══════════════════════════════════════════════════════════════════════
 app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
   try {
@@ -612,18 +613,22 @@ app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
     const treasury = orderSum * 0.9;
     const toEmployee = orderSum * 0.1;
     const perAd = totalAds > 0 ? toEmployee / totalAds : 0;
-    const pricePerAd = totalAds > 0 ? orderSum / totalAds : 0;
 
+    // В саму таблицу «Контракты» текст сохраняется с префиксом команды /wnews —
+    // так его можно сразу скопировать и вставить в игровой чат. Цена и выплата
+    // при этом считаются по исходному тексту БЕЗ префикса (см. chars/orderSum выше),
+    // чтобы префикс не влиял на стоимость объявления.
+    const wnewsText = `/wnews ${text}`;
     for (const { d, t } of pairs) {
       await query(
         `UPDATE contract_slots SET text=$1, accepted_id=$2, price=$3, payout=$4, updated_at=NOW() WHERE color=$5 AND slot_date=$6 AND slot_time=$7`,
-        [text, accepted_id, pricePerAd, perAd, color, d, t]
+        [wnewsText, accepted_id, orderSum, perAd, color, d, t]
       );
     }
 
     res.json({
       ok: true, filled: pairs.length, color, dates, times,
-      calc: { chars, totalAds, rate, discount, baseSum, orderSum, treasury, toEmployee, perAd, pricePerAd }
+      calc: { chars, totalAds, rate, discount, baseSum, orderSum, treasury, toEmployee, perAd }
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

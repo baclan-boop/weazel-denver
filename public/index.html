@@ -1014,7 +1014,6 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="ctadd-treasury">0$</div></div>
               <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="ctadd-toemp">0$</div></div>
               <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="ctadd-perad">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">Цена за 1 объявление</div><div class="calc-res-val" id="ctadd-priceperad">0$</div></div>
             </div>
 
             <div id="ctadd-error" style="display:none;margin-top:14px;color:var(--red);font-size:12px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.28);border-radius:var(--r);padding:10px 12px;line-height:1.5"></div>
@@ -1997,7 +1996,6 @@ function ctAddRun(){
   const treasury=orderSum*0.9;
   const toEmployee=orderSum*0.1;
   const perAd=totalAds>0?toEmployee/totalAds:0;
-  const priceAd=totalAds>0?orderSum/totalAds:0;
 
   document.getElementById('ctadd-chars').textContent=chars;
   document.getElementById('ctadd-total').textContent=totalAds;
@@ -2005,7 +2003,6 @@ function ctAddRun(){
   document.getElementById('ctadd-treasury').textContent=fmtMoney(treasury);
   document.getElementById('ctadd-toemp').textContent=fmtMoney(toEmployee);
   document.getElementById('ctadd-perad').textContent=fmtMoney(perAd);
-  document.getElementById('ctadd-priceperad').textContent=fmtMoney(priceAd);
 
   const dates=ctAddComputeDates(days);
   const rangeEl=document.getElementById('ctadd-daterange');
