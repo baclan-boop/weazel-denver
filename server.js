@@ -447,9 +447,10 @@ app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
 // ═══════════════════════════════════════════════════════════════════════
 // СОТРУДНИКИ (роster отдела рекламы: имя персонажа + StaticID)
 // Используется в выпадающих списках «Принял/Откинул» таблицы контрактов
-// и в недельной статистике. Доступ — Curator AD и выше.
+// и в недельной статистике. Просмотр — Advertising Department и выше;
+// добавление/редактирование/удаление — только Curator AD и выше.
 // ═══════════════════════════════════════════════════════════════════════
-app.get('/api/employees',requireStaffMgmt,async(req,res)=>{
+app.get('/api/employees',requireAdvertising,async(req,res)=>{
   try{ const r=await query('SELECT * FROM employees ORDER BY sort_order,name'); res.json(r.rows); }
   catch(e){res.status(500).json({error:e.message});}
 });
@@ -478,10 +479,13 @@ app.delete('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
 
 // ═══════════════════════════════════════════════════════════════════════
 // ТАБЛИЦА КОНТРАКТОВ (интерактивное расписание объявлений на день)
-// Доступ на просмотр/редактирование — Curator AD и выше. Advertising Department
-// сюда намеренно НЕ допускается (см. ТЗ — им доступен только Калькулятор).
+// Просмотр — доступен Advertising Department и выше (Curator AD, Редактор,
+// Администратор). Редактирование большинства полей — тоже, НО для роли
+// Advertising Department поля «Цена контракта», «Текст», «Принял» и
+// «К выплате» доступны только на просмотр (см. проверку внутри PUT ниже) —
+// им можно менять статус, «Откинул» и время переноса.
 // ═══════════════════════════════════════════════════════════════════════
-app.get('/api/contracts',requireStaffMgmt,async(req,res)=>{
+app.get('/api/contracts',requireAdvertising,async(req,res)=>{
   try{
     let{color,date}=req.query;
     color=color==='red'?'red':'green';
@@ -503,9 +507,16 @@ app.get('/api/contracts',requireStaffMgmt,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
-app.put('/api/contracts/:id',requireStaffMgmt,async(req,res)=>{
+app.put('/api/contracts/:id',requireAdvertising,async(req,res)=>{
   try{
     const{status,price,text,accepted_id,declined_id,payout,transfer_time}=req.body;
+    // Advertising Department видит контракты, но не имеет права менять цену,
+    // текст, принявшего сотрудника и сумму к выплате — это зона ответственности
+    // Curator AD и выше. Им доступны только статус, «Откинул» и время переноса.
+    if(req.user.role==='advertising'){
+      const forbidden=['price','text','accepted_id','payout'].filter(f=>req.body[f]!==undefined);
+      if(forbidden.length)return res.status(403).json({error:'Advertising Dept. может менять только статус, «Откинул» и время переноса'});
+    }
     const cur=await query('SELECT * FROM contract_slots WHERE id=$1',[req.params.id]);
     if(!cur.rows.length)return res.status(404).json({error:'Слот не найден'});
     const c=cur.rows[0];
@@ -638,21 +649,31 @@ app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
 // offset=0 — текущая неделя, offset=1 — прошлая. Параметр date — точечный
 // просмотр произвольной недели из глубокого архива (данные не удаляются,
 // просто не показываются вкладками по умолчанию).
+// Просмотр доступен Advertising Department и выше — управление премиями
+// (создание/редактирование/удаление) по-прежнему только Curator AD и выше.
 // ═══════════════════════════════════════════════════════════════════════
-app.get('/api/stats/week',requireStaffMgmt,async(req,res)=>{
+app.get('/api/stats/week',requireAdvertising,async(req,res)=>{
   try{
     let offset=parseInt(req.query.offset,10); if(isNaN(offset)||offset<0)offset=0;
     const range=(req.query.date&&!isNaN(Date.parse(req.query.date))) ? weekRangeForDate(req.query.date) : weekRange(offset);
     const emps=await query('SELECT * FROM employees ORDER BY sort_order,name');
     const slots=await query('SELECT * FROM contract_slots WHERE slot_date BETWEEN $1 AND $2',[range.start,range.end]);
     const stats={};
-    emps.rows.forEach(e=>{ stats[e.id]={ id:e.id, name:e.name, static_id:e.static_id, acceptedGreen:0, sentGreen:0, acceptedRed:0, sentRed:0, payout:0 }; });
+    emps.rows.forEach(e=>{ stats[e.id]={ id:e.id, name:e.name, static_id:e.static_id, acceptedGreen:0, sentGreen:0, acceptedRed:0, sentRed:0, payout:0, declinedCount:0, declinedPayout:0 }; });
     slots.rows.forEach(s=>{
-      if(!s.accepted_id||!stats[s.accepted_id])return;
-      const st=stats[s.accepted_id];
-      if(s.color==='green'){ st.acceptedGreen++; if(s.status)st.sentGreen++; }
-      else { st.acceptedRed++; if(s.status)st.sentRed++; }
-      st.payout+=Number(s.payout)||0;
+      if(s.accepted_id && stats[s.accepted_id]){
+        const st=stats[s.accepted_id];
+        if(s.color==='green'){ st.acceptedGreen++; if(s.status)st.sentGreen++; }
+        else { st.acceptedRed++; if(s.status)st.sentRed++; }
+        st.payout+=Number(s.payout)||0;
+      }
+      // Премия начисляется тому, кто стоит в «Откинул» — сумма из «К выплате»
+      // этого слота, суммируется по всем слотам сотрудника за период.
+      if(s.declined_id && stats[s.declined_id]){
+        const st=stats[s.declined_id];
+        st.declinedCount++;
+        st.declinedPayout+=Number(s.payout)||0;
+      }
     });
     const bonuses=await query(`SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.week_start=$1 ORDER BY b.created_at`,[range.start]);
     res.json({ range, employees:Object.values(stats), bonuses:bonuses.rows });

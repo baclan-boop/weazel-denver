@@ -1048,7 +1048,10 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
         <div class="acard">
           <div class="acard-hdr"><div class="acard-title">Премирование</div>
-            <button class="btn btn-p btn-sm" onclick="openBonusModal()">+ Премия</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-o btn-sm" id="stats-premiums-export-btn" onclick="openPremiumsExportModal()" style="display:none">📋 Выписать премии</button>
+              <button class="btn btn-p btn-sm" id="stats-add-bonus-btn" onclick="openBonusModal()" style="display:none">+ Премия</button>
+            </div>
           </div>
           <div class="acard-sub" style="margin-bottom:8px">Сотрудники, задействованные на этой неделе — для распределения бонусов руководством.</div>
           <div class="bonus-grid" id="bonus-grid"></div>
@@ -1309,6 +1312,21 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   </div>
 </div>
 
+<!-- PREMIUMS EXPORT MODAL -->
+<div class="mo" id="modal-premiums-export">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Выписать премии</div><button class="mclose" onclick="closeModal('modal-premiums-export')">✕</button></div>
+    <div class="mbody">
+      <div class="fhint" style="margin-bottom:10px">Все сотрудники, задействованные за этот период. Сумма — это «К выплате» со всех слотов, где сотрудник стоит в «Откинул» за период. Формат: StaticID;сумма;комментарий (без пробелов, через точку с запятой) — по одному сотруднику на строку.</div>
+      <div class="fg"><textarea class="fta" id="premiums-export-text" rows="10" readonly style="font-family:monospace;font-size:12px"></textarea></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-premiums-export')">Закрыть</button>
+        <button class="btn btn-p btn-sm" onclick="copyPremiumsExport()">📋 Скопировать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- EMPLOYEE MODAL -->
 <div class="mo" id="modal-employee">
   <div class="modal">
@@ -1391,6 +1409,7 @@ let SETTINGS = {};
 const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin');
 const canAds = () => CU && ['advertising','curator_ad','editor','admin'].includes(CU.role);
 const isCuratorPlus = () => CU && ['curator_ad','editor','admin'].includes(CU.role);
+const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
 const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
 function canChangeUserRole(targetRole){
@@ -1553,7 +1572,9 @@ function logVisit(page){
 function adHubAllowedTabs(){
   const t=[];
   if(canAds())t.push('ads','calc');
-  if(isCuratorPlus())t.push('contracts','stats');
+  // Контракты и Статистика: полный доступ у Curator AD и выше, и просмотр (с
+  // ограниченным редактированием — см. renderContractsTable/renderBonusGrid) — у Advertising Department.
+  if(isCuratorPlus()||isAdvertisingOnly())t.push('contracts','stats');
   return t;
 }
 let ADHUB_TAB='ads';
@@ -1814,6 +1835,7 @@ async function setCTDateToday(){ CT_STATE.date=todayISO(); await loadContractsTa
 async function setCTDate(val){ if(val){CT_STATE.date=val; await loadContractsTable();} }
 
 async function switchCTView(view){
+  if(view==='add'&&!isCuratorPlus()){toast('Нет доступа','e');return;}
   if(view==='add'){
     document.getElementById('ct-tab-green')?.classList.remove('active');
     document.getElementById('ct-tab-red')?.classList.remove('active');
@@ -1829,6 +1851,9 @@ async function openContractsTab(color){
   CT_STATE.color=color||'green';
   document.getElementById('ct-tab-green')?.classList.toggle('active',CT_STATE.color==='green');
   document.getElementById('ct-tab-red')?.classList.toggle('active',CT_STATE.color==='red');
+  // «Добавить контракт» — только для Curator AD и выше; Advertising Department эту кнопку не видит.
+  const addTabBtn=document.getElementById('ct-tab-add');
+  if(addTabBtn)addTabBtn.style.display=isCuratorPlus()?'':'none';
   ctShowView('table');
   await ensureEmployeesLoaded();
   await loadContractsTable();
@@ -1858,16 +1883,20 @@ function empOptions(selectedId){
 function renderContractsTable(){
   const holder=document.getElementById('ct-table-holder');
   const color=CT_STATE.color;
+  // Advertising Department видит таблицу, но не может менять цену, текст,
+  // принявшего и сумму к выплате — эти поля блокируются (disabled).
+  // Статус, «Откинул» и время переноса остаются доступны для редактирования.
+  const roLock=isAdvertisingOnly();
   const rows=CT_ROWS.map(s=>{
     const empty=!s.text&&!s.price&&!s.accepted_id&&!s.declined_id;
     return `<tr data-id="${s.id}" class="${empty?'ct-empty':''}">
       <td style="text-align:center"><input type="checkbox" class="ct-status-chk" ${s.status?'checked':''} onchange="ctSave('${s.id}',{status:this.checked})"></td>
       <td class="ct-time-cell">${xe(s.slot_time)}</td>
-      <td><input type="number" min="0" value="${Number(s.price)||0}" onchange="ctSave('${s.id}',{price:Number(this.value)||0})"></td>
-      <td><input type="text" class="ct-text" value="${xe(s.text||'')}" data-role="text" onchange="ctSave('${s.id}',{text:this.value})"></td>
-      <td><select onchange="ctSave('${s.id}',{accepted_id:this.value||null})">${empOptions(s.accepted_id)}</select></td>
+      <td><input type="number" min="0" value="${Number(s.price)||0}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{price:Number(this.value)||0})"></td>
+      <td><input type="text" class="ct-text" value="${xe(s.text||'')}" data-role="text" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{text:this.value})"></td>
+      <td><select ${roLock?'disabled':''} onchange="ctSave('${s.id}',{accepted_id:this.value||null})">${empOptions(s.accepted_id)}</select></td>
       <td><select onchange="ctSave('${s.id}',{declined_id:this.value||null})">${empOptions(s.declined_id)}</select></td>
-      <td><input type="number" min="0" value="${Number(s.payout)||0}" onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
+      <td><input type="number" min="0" value="${Number(s.payout)||0}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
       <td><input type="text" class="ct-time-transfer" placeholder="ЧЧ:ММ" maxlength="5" value="${xe(s.transfer_time||'')}" data-role="transfer" data-orig="${xe(s.slot_time)}" oninput="ctMaskTransfer(this)" onchange="ctTransferChanged(this,'${s.id}')"></td>
     </tr>`;
   }).join('');
@@ -2136,6 +2165,11 @@ function applyStatsResponse(r){
   STATS_STATE.range=r.range; STATS_STATE.employees=r.employees||[]; STATS_STATE.bonuses=r.bonuses||[];
   document.getElementById('stats-range').textContent=`Период с ${fmtPlainDate(r.range.start)} по ${fmtPlainDate(r.range.end)}`;
   document.getElementById('stats-archive-box').style.display='flex';
+  // Управление премиями (выписка/ручное добавление/выплата) — только Curator AD и выше.
+  // Advertising Department видит статистику и уже назначенные премии, но без действий.
+  const mgmt=isCuratorPlus();
+  document.getElementById('stats-premiums-export-btn').style.display=mgmt?'':'none';
+  document.getElementById('stats-add-bonus-btn').style.display=mgmt?'':'none';
   renderStatsTable();
   renderBonusGrid();
 }
@@ -2156,7 +2190,8 @@ function renderStatsTable(){
 
 function renderBonusGrid(){
   const el=document.getElementById('bonus-grid');
-  const involved=STATS_STATE.employees.filter(e=>e.acceptedGreen||e.acceptedRed);
+  const mgmt=isCuratorPlus();
+  const involved=STATS_STATE.employees.filter(e=>e.acceptedGreen||e.acceptedRed||e.declinedCount);
   const bonuses=STATS_STATE.bonuses;
   if(!bonuses.length){
     el.innerHTML=involved.length
@@ -2169,10 +2204,10 @@ function renderBonusGrid(){
     <div class="bonus-static">${b.static_id?'StaticID '+xe(b.static_id):''}</div>
     <div class="bonus-amount">${fmtMoney(b.amount)}</div>
     ${b.comment?`<div class="bonus-comment">${xe(b.comment)}</div>`:''}
-    <div class="bonus-actions">
+    ${mgmt?`<div class="bonus-actions">
       <button class="btn btn-o btn-sm" onclick="toggleBonusPaid('${b.id}',${!b.paid})">${b.paid?'Вернуть':'Выплачено'}</button>
       <button class="btn btn-d btn-sm" onclick="delBonus('${b.id}')">✕</button>
-    </div>
+    </div>`:''}
   </div>`).join('');
 }
 
@@ -2203,6 +2238,41 @@ async function toggleBonusPaid(id,paid){
 async function delBonus(id){
   try{ await API.del('/bonuses/'+id); await loadStatsTab(STATS_STATE.offset); toast('Удалено','s'); }catch(e){toast(e.error||'Ошибка','e');}
 }
+
+// ─── Выписать премии (по «Откинул») ───
+// Премия сотруднику = сумма «К выплате» со всех слотов текущего периода, где
+// он стоит в колонке «Откинул» (суммируется). В список попадают ВСЕ
+// сотрудники, задействованные за период хоть как-то (приняли или откинули),
+// в формате StaticID;сумма;Выплаты AD — без пробелов, через точку с запятой.
+function buildPremiumsExportLines(){
+  const skippedNoStatic=[];
+  const lines=STATS_STATE.employees
+    .filter(e=>e.acceptedGreen||e.acceptedRed||e.declinedCount)
+    .filter(e=>{
+      if(!e.static_id){ skippedNoStatic.push(e.name); return false; }
+      return true;
+    })
+    .map(e=>`${e.static_id};${Math.round(e.declinedPayout||0)};Выплаты AD`);
+  return { lines, skippedNoStatic };
+}
+function openPremiumsExportModal(){
+  const { lines, skippedNoStatic } = buildPremiumsExportLines();
+  document.getElementById('premiums-export-text').value=lines.join('\n');
+  if(skippedNoStatic.length)toast('Без StaticID (пропущены): '+skippedNoStatic.join(', '),'e');
+  else if(!lines.length)toast('За этот период никто не работал','e');
+  openModal('modal-premiums-export');
+}
+function copyPremiumsExport(){
+  const ta=document.getElementById('premiums-export-text');
+  const text=ta.value;
+  if(!text){toast('Нечего копировать','e');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('Скопировано','s'), ()=>fallbackCopyText(text));
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
 
 
 
