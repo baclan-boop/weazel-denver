@@ -17,6 +17,7 @@ const path         = require('path');
 const fs           = require('fs');
 const crypto       = require('crypto');
 const multer       = require('multer');
+const cloudinary   = require('cloudinary').v2;
 
 const PORT           = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
@@ -31,6 +32,43 @@ if (!DATABASE_URL) {
 
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// ─── CLOUDINARY: постоянное хранилище для загруженных картинок ───────────
+// Render/Fly пересоздают диск контейнера при каждом деплое — всё, что
+// сохранено локально в UPLOADS_DIR, пропадает. Поэтому все загрузки
+// (фоны страниц, аватарки участников состава, картинки новостей) теперь
+// уходят в Cloudinary — облако, независимое от деплоя сайта.
+// Нужны 3 переменные окружения: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY,
+// CLOUDINARY_API_SECRET (см. Dashboard → Product Environment Credentials
+// на cloudinary.com). Если их нет — сайт продолжит работать, но упадёт
+// обратно на локальный диск (только для локальной разработки: на проде
+// без этих переменных загруженные файлы будут теряться при редеплое).
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
+const CLOUDINARY_API_KEY    = process.env.CLOUDINARY_API_KEY || '';
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
+const CLOUDINARY_ENABLED    = !!(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+
+if (CLOUDINARY_ENABLED) {
+  cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+  console.log('Cloudinary подключён — загруженные файлы переживут редеплой');
+} else {
+  console.warn('ВНИМАНИЕ: Cloudinary не настроен (нет CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET). Загруженные через сайт картинки (фоны, аватарки, изображения новостей) будут теряться при каждом редеплое!');
+}
+
+function uploadBufferToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'weazel-news', resource_type: 'image' },
+      (err, result) => { if (err) reject(err); else resolve(result); }
+    );
+    stream.end(buffer);
+  });
+}
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
@@ -264,8 +302,11 @@ async function requireAdmin(req,res,next){  await requireAuth(req,res,()=>{ if(r
 async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 async function requireStaffMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
+// Файл принимаем в память (buffer), а не сразу на диск: так его можно
+// отправить в Cloudinary. Если Cloudinary не настроен — пишем этот же
+// buffer на диск сами (см. роут /api/upload ниже).
 const upload = multer({
-  storage: multer.diskStorage({ destination: UPLOADS_DIR, filename: (req,f,cb)=>cb(null,uuid()+path.extname(f.originalname).toLowerCase().replace(/[^.a-z0-9]/g,'')||'.jpg') }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 15*1024*1024 },
   fileFilter: (req,f,cb) => { if(!f.mimetype.startsWith('image/'))return cb(new Error('Только изображения')); cb(null,true); }
 });
@@ -638,7 +679,27 @@ app.delete('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
 });
 
 // UPLOAD
-app.post('/api/upload',requireEditor,upload.single('image'),(req,res)=>{ if(!req.file)return res.status(400).json({error:'Файл не загружен'});res.json({url:`/uploads/${req.file.filename}`});});
+// Единая точка загрузки картинок для всего сайта: фоны страниц,
+// аватарки участников состава ("Состав"), изображения новостей и т.д.
+// Все они используют этот один роут — поэтому подключение Cloudinary
+// здесь автоматически чинит проблему с потерей файлов при редеплое
+// сразу везде, включая аватарки.
+app.post('/api/upload',requireEditor,upload.single('image'),async(req,res)=>{
+  if(!req.file)return res.status(400).json({error:'Файл не загружен'});
+  try{
+    if(CLOUDINARY_ENABLED){
+      const result=await uploadBufferToCloudinary(req.file.buffer);
+      return res.json({url:result.secure_url});
+    }
+    const ext=path.extname(req.file.originalname||'').toLowerCase().replace(/[^.a-z0-9]/g,'')||'.jpg';
+    const filename=uuid()+ext;
+    fs.writeFileSync(path.join(UPLOADS_DIR,filename),req.file.buffer);
+    return res.json({url:`/uploads/${filename}`});
+  }catch(e){
+    console.error('Ошибка загрузки файла:',e.message);
+    return res.status(500).json({error:'Не удалось загрузить файл: '+e.message});
+  }
+});
 
 // NEWS
 app.get('/api/news',async(req,res)=>{ try{const r=await query('SELECT * FROM news ORDER BY created_at DESC');res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
