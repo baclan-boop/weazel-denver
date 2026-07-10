@@ -1883,20 +1883,52 @@ function ctMaskTransfer(input){
   if(digits.length>=3) input.value=digits.slice(0,2)+':'+digits.slice(2);
   else input.value=digits;
 }
-// Как только время переноса указано — автоподстановка шаблона в «Текст» этой же строки
-function ctTransferChanged(input,id){
-  const val=input.value.trim();
-  const isValid=/^([01]\d|2[0-3]):[0-5]\d$/.test(val);
-  const row=input.closest('tr');
-  const textInput=row.querySelector('[data-role="text"]');
-  const payload={transfer_time:val};
+// Как только время переноса указано — пометка «Перенос с ЧЧ:ММ» автоматически
+// проставляется в строку ЦЕЛЕВОГО времени (на которое перенесли), а не в эту же
+// строку. Текст исходной строки (реальный текст контракта) при этом не трогаем.
+async function ctTransferChanged(input,id){
+  const newVal=input.value.trim();
+  const isValid=/^([01]\d|2[0-3]):[0-5]\d$/.test(newVal);
+  const origTime=input.dataset.orig;
+  const rowData=CT_ROWS.find(r=>r.id===id);
+  const prevVal=rowData?(rowData.transfer_time||''):'';
+  const markText=`Перенос с ${origTime}`;
+
+  let targetId=null;
   if(isValid){
-    const origTime=input.dataset.orig;
-    const newText=`«Перенос и ${origTime}»`;
-    textInput.value=newText;
-    payload.text=newText;
+    const target=CT_ROWS.find(r=>r.slot_time===newVal);
+    if(!target){
+      toast('Нет слота на '+newVal,'e');
+      input.value=prevVal;
+      return;
+    }
+    const hasOtherContent=target.text && target.text!==markText && !/^Перенос с /.test(target.text);
+    if(hasOtherContent && !confirm(`В строке ${newVal} уже есть текст:\n«${target.text}»\n\nЗаписать поверх пометку «${markText}»?`)){
+      input.value=prevVal;
+      return;
+    }
+    targetId=target.id;
   }
-  ctSave(id,payload);
+
+  // Сохраняем само время переноса в исходной строке — её текст не меняем
+  await ctSave(id,{transfer_time:newVal});
+
+  // Если раньше был указан перенос на другой слот — снимаем пометку со старого целевого слота
+  if(prevVal && prevVal!==newVal && /^([01]\d|2[0-3]):[0-5]\d$/.test(prevVal)){
+    const oldTarget=CT_ROWS.find(r=>r.slot_time===prevVal);
+    if(oldTarget && oldTarget.text===markText){
+      await ctSave(oldTarget.id,{text:''});
+      const oldInput=document.querySelector(`tr[data-id="${oldTarget.id}"] [data-role="text"]`);
+      if(oldInput)oldInput.value='';
+    }
+  }
+
+  // Проставляем пометку «Перенос с ЧЧ:ММ» в строку нового целевого времени
+  if(isValid && targetId){
+    await ctSave(targetId,{text:markText});
+    const targetInput=document.querySelector(`tr[data-id="${targetId}"] [data-role="text"]`);
+    if(targetInput)targetInput.value=markText;
+  }
 }
 
 let CT_SAVE_TIMER=null;
