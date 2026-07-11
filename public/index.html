@@ -2439,6 +2439,16 @@ async function renderHomeNews(){
       :`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Новостей пока нет.</div></div>`;
   }catch{el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
   buildTicker();
+  // ИСПРАВЛЕНИЕ БАГА: карточки новостей рождаются с классом reveal (opacity:0)
+  // и становятся видимыми только когда IntersectionObserver из initReveal()
+  // их «увидит». Раньше это происходило только при обычном переходе по
+  // вкладкам сайта (showPage вызывает initReveal в конце). Но если список
+  // обновляется НАПРЯМУЮ — после добавления/редактирования/удаления новости
+  // прямо на этой же странице — новые карточки никто не «замечал», и они
+  // оставались невидимыми (хотя кнопки на них продолжали работать) до
+  // следующего обычного перехода на вкладку. Теперь каждая такая функция
+  // сама запускает проверку заново.
+  setTimeout(initReveal,50);
 }
 
 async function renderAllNews(){
@@ -2448,6 +2458,7 @@ async function renderAllNews(){
     el.innerHTML=NEWS.length?NEWS.map((n,i)=>ncHTML(n,i===0)).join('')
       :`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📰</div><div class="empty-tx">Новостей пока нет.</div></div>`;
   }catch{el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📰</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+  setTimeout(initReveal,50); // см. комментарий в renderHomeNews() выше
 }
 
 function isEmbed(u){return u.includes('fliphtml5.com')||u.includes('youtube.com')||u.includes('youtu.be')||u.includes('vimeo.com')}
@@ -2804,7 +2815,8 @@ async function renderServices(){
           ${it.desc?`<div class="svc-desc">${xe(it.desc)}</div>`:''}
         </div>`).join('')}
       </div>`).join('')}</div>`;
-  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-tx">Ошибка загрузки</div></div>`;return;}
+  setTimeout(initReveal,50); // см. комментарий в renderHomeNews() выше — те же карточки reveal
 }
 
 function openServiceModal(id=null){
@@ -2871,7 +2883,14 @@ async function renderTeam(){
         </div>${membersHTML}
       </div>`;
     }).join('');
-  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+  }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Ошибка загрузки</div></div>`;return;}
+  // ИСПРАВЛЕНИЕ БАГА: см. подробный комментарий в renderHomeNews() — карточки
+  // .team-cat рождаются невидимыми (reveal) и без повторного запуска
+  // initReveal() оставались невидимыми (хотя кнопки на них работали) после
+  // любого обновления состава НЕ через обычный переход по вкладкам сайта
+  // (после добавления/редактирования/удаления/перемещения участника или
+  // категории). Это и была причина «сотрудники не появляются».
+  setTimeout(initReveal,50);
 }
 
 function memberCard(m,isFirst,isLast){
