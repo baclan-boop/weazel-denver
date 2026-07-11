@@ -3171,6 +3171,10 @@ async function renderUsers(){
 async function renderNewsMgmt(){
   const el=document.getElementById('news-mgmt-tbody');if(!el)return;
   const alignIcon={left:'◀',center:'▶◀',right:'▶'};
+  // Подгружаем свежий список сама функция — иначе при первом открытии Панели
+  // (без предварительного захода на публичную страницу «Новости») или после
+  // редактирования список мог остаться пустым/устаревшим до перезагрузки страницы.
+  try{ NEWS=await API.get('/news'); }catch{ el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:1.5rem">Ошибка загрузки</td></tr>`; return; }
   if(!NEWS.length){el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:1.5rem">Новостей нет</td></tr>`;return;}
   el.innerHTML=NEWS.map(n=>`<tr>
     <td style="max-width:220px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(n.title)}</div></td>
@@ -3184,6 +3188,8 @@ async function renderNewsMgmt(){
 
 async function renderServicesMgmt(){
   const el=document.getElementById('services-mgmt-list');if(!el)return;
+  // См. комментарий в renderNewsMgmt выше — та же причина, тот же фикс.
+  try{ SERVICES=await API.get('/services'); }catch{ el.innerHTML=`<div style="color:var(--gray);font-size:13px">Ошибка загрузки</div>`; return; }
   if(!SERVICES.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Категорий нет</div>`;return;}
   el.innerHTML=SERVICES.map(c=>`<div class="acard"><div class="acard-hdr">
     <div><div class="acard-title">${xe(c.name)}</div><div class="acard-sub">${(c.items||[]).length} услуг</div></div>
@@ -3193,6 +3199,15 @@ async function renderServicesMgmt(){
 
 async function renderTeamMgmt(){
   const el=document.getElementById('team-mgmt-list');if(!el)return;
+  // ИСПРАВЛЕНИЕ БАГА: раньше эта функция использовала глобальную переменную
+  // TEAM как есть, а свежими данными её наполняла только публичная страница
+  // «Состав» (renderTeam()). Если админ ни разу не открывал эту публичную
+  // страницу в текущей сессии — либо если после редактирования участника
+  // повторный запрос данных по какой-то причине не проходил — список в
+  // Панели → Состав оставался пустым/устаревшим до полной перезагрузки
+  // страницы. Теперь renderTeamMgmt() сама всегда подгружает актуальные
+  // данные, как это уже делает renderEmployees().
+  try{ TEAM=await API.get('/team'); }catch{ el.innerHTML=`<div style="color:var(--gray);font-size:13px">Ошибка загрузки</div>`; return; }
   const {cats,members}=TEAM;
   if(!cats.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Категорий нет</div>`;return;}
   el.innerHTML=cats.map(cat=>{
