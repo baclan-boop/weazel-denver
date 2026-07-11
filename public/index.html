@@ -2918,22 +2918,39 @@ async function delTeamCat(id){
   await API.del('/team/cats/'+id);TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Удалено','i');
 }
 
-function openTeamMemberModal(id=null,defCat=null){
-  const cats=TEAM.cats||[];const sel=document.getElementById('member-cat-select');
+async function openTeamMemberModal(id=null,defCat=null){
+  // ИСПРАВЛЕНИЕ БАГА: раньше список категорий в выпадающем списке брался из
+  // глобальной переменной TEAM «как есть». Если к этому моменту TEAM.cats
+  // была пустой/устаревшей — выпадающий список открывался БЕЗ единого пункта,
+  // а при сохранении в базу тихо уходила пустая категория (cat_id=''),
+  // из-за чего участник переставал показываться вообще где-либо на
+  // публичной странице «Состав». Теперь список категорий всегда сначала
+  // подгружается заново.
+  try{ TEAM=await API.get('/team'); }catch{ toast('Не удалось загрузить категории','e'); return; }
+  const cats=TEAM.cats||[];
+  const sel=document.getElementById('member-cat-select');
+  if(!cats.length){ toast('Сначала добавьте хотя бы одну категорию состава','e'); return; }
   sel.innerHTML=cats.map(c=>`<option value="${c.id}">${xe(c.name)}</option>`).join('');
   ['member-edit-id','member-name','member-role','member-photo'].forEach(i=>document.getElementById(i).value='');
   const fontSel=document.getElementById('member-role-font');if(fontSel)fontSel.value='';
   clearUploadedImg('member-photo');document.getElementById('modal-member-title').textContent='Добавить участника';
   if(defCat)sel.value=defCat;
-  if(id){const m=(TEAM.members||[]).find(m=>m.id===id);if(m){document.getElementById('member-edit-id').value=m.id;document.getElementById('member-name').value=m.name||'';document.getElementById('member-role').value=m.role||'';document.getElementById('member-photo').value=m.photo||'';if(fontSel)fontSel.value=m.role_font||'';sel.value=m.cat_id||'';if(m.photo)preloadUploadZone('member-photo',m.photo);document.getElementById('modal-member-title').textContent='Редактировать участника';}}
+  if(id){const m=(TEAM.members||[]).find(m=>m.id===id);if(m){document.getElementById('member-edit-id').value=m.id;document.getElementById('member-name').value=m.name||'';document.getElementById('member-role').value=m.role||'';document.getElementById('member-photo').value=m.photo||'';if(fontSel)fontSel.value=m.role_font||'';sel.value=m.cat_id||'';
+    // Если у участника вообще нет валидной категории (последствие старого
+    // бага) — выпадающий список молча остался бы на первом пункте без
+    // видимого предупреждения. Явно подсвечиваем это админу.
+    if(!m.cat_id||!cats.some(c=>c.id===m.cat_id)){toast('У этого участника не было категории — выберите её и сохраните','e');}
+    if(m.photo)preloadUploadZone('member-photo',m.photo);document.getElementById('modal-member-title').textContent='Редактировать участника';}}
   openModal('modal-team-member');
 }
 function editMember(id){openTeamMemberModal(id);}
 async function saveMember(){
   const name=document.getElementById('member-name').value.trim();if(!name){toast('Укажите имя','e');return}
+  const cat_id=document.getElementById('member-cat-select').value;
+  if(!cat_id){toast('Выберите категорию','e');return}
   const eid=document.getElementById('member-edit-id').value;
   const role_font=document.getElementById('member-role-font')?.value||'';
-  const body={cat_id:document.getElementById('member-cat-select').value,name,role:document.getElementById('member-role').value.trim(),photo:document.getElementById('member-photo').value.trim(),role_font};
+  const body={cat_id,name,role:document.getElementById('member-role').value.trim(),photo:document.getElementById('member-photo').value.trim(),role_font};
   try{
     if(eid)await API.put('/team/members/'+eid,body);else await API.post('/team/members',body);
     closeModal('modal-team-member');TEAM=await API.get('/team');renderTeam();renderTeamMgmt();toast('Сохранено','s');
@@ -3210,7 +3227,21 @@ async function renderTeamMgmt(){
   try{ TEAM=await API.get('/team'); }catch{ el.innerHTML=`<div style="color:var(--gray);font-size:13px">Ошибка загрузки</div>`; return; }
   const {cats,members}=TEAM;
   if(!cats.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Категорий нет</div>`;return;}
-  el.innerHTML=cats.map(cat=>{
+  const catIds=new Set(cats.map(c=>c.id));
+  // Участники, у которых категория оказалась пустой/битой (последствие старого
+  // бага с очисткой cat_id) — их не видно НИ В ОДНОЙ категории на публичной
+  // странице. Показываем их отдельным блоком, чтобы можно было открыть и
+  // просто заново выбрать категорию — без доступа к базе напрямую.
+  const orphans=members.filter(m=>!m.cat_id||!catIds.has(m.cat_id));
+  const orphansHTML=orphans.length?`<div class="acard" style="border-color:rgba(224,60,60,.4);margin-bottom:14px">
+    <div class="acard-hdr"><div><div class="acard-title" style="color:var(--red)">⚠ Без категории (${orphans.length})</div><div class="acard-sub">Эти участники не отображаются на публичной странице «Состав» — откройте и выберите категорию заново.</div></div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${orphans.map(m=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(224,60,60,.08);border:1px solid rgba(224,60,60,.3);border-radius:6px;padding:5px 10px">
+      <span style="font-size:12px;color:var(--white)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
+      <button class="btn btn-o btn-sm" style="padding:2px 6px;font-size:10px" onclick="editMember('${m.id}')">✎ Исправить</button>
+      <button class="btn btn-d btn-sm" style="padding:2px 6px;font-size:10px" onclick="delMember('${m.id}')">✕</button>
+    </div>`).join('')}</div>
+  </div>`:'';
+  el.innerHTML=orphansHTML+cats.map(cat=>{
     const cm=members.filter(m=>m.cat_id===cat.id);
     return`<div class="acard"><div class="acard-hdr">
       <div><div class="acard-title">${xe(cat.name)}</div><div class="acard-sub">${cm.length} участников</div></div>
