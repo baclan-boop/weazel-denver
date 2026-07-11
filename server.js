@@ -659,20 +659,22 @@ app.get('/api/stats/week',requireAdvertising,async(req,res)=>{
     const emps=await query('SELECT * FROM employees ORDER BY sort_order,name');
     const slots=await query('SELECT * FROM contract_slots WHERE slot_date BETWEEN $1 AND $2',[range.start,range.end]);
     const stats={};
-    emps.rows.forEach(e=>{ stats[e.id]={ id:e.id, name:e.name, static_id:e.static_id, acceptedGreen:0, sentGreen:0, acceptedRed:0, sentRed:0, payout:0, declinedCount:0, declinedPayout:0 }; });
+    emps.rows.forEach(e=>{ stats[e.id]={ id:e.id, name:e.name, static_id:e.static_id, acceptedGreen:0, sentGreen:0, acceptedRed:0, sentRed:0, payout:0, declinedCount:0 }; });
     slots.rows.forEach(s=>{
       if(s.accepted_id && stats[s.accepted_id]){
         const st=stats[s.accepted_id];
         if(s.color==='green'){ st.acceptedGreen++; if(s.status)st.sentGreen++; }
         else { st.acceptedRed++; if(s.status)st.sentRed++; }
-        st.payout+=Number(s.payout)||0;
       }
-      // Премия начисляется тому, кто стоит в «Откинул» — сумма из «К выплате»
-      // этого слота, суммируется по всем слотам сотрудника за период.
+      // «К выплате» начисляется тому, кто стоит в «Откинул» (а не «Принял») —
+      // именно этот сотрудник Advertising Department фактически обработал и
+      // отправил объявление в игре, поэтому оплата (payout слота) идёт ему.
+      // «Принял» — просто тот, кто изначально оформил контракт с клиентом,
+      // и учитывается отдельно только в счётчиках «Принято ЗО/КО» выше.
       if(s.declined_id && stats[s.declined_id]){
         const st=stats[s.declined_id];
         st.declinedCount++;
-        st.declinedPayout+=Number(s.payout)||0;
+        st.payout+=Number(s.payout)||0;
       }
     });
     const bonuses=await query(`SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.week_start=$1 ORDER BY b.created_at`,[range.start]);
