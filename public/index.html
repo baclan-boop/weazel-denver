@@ -1982,9 +1982,11 @@ function ctCopyRowText(id,btn){
 // ══════════════════════════════════════════════
 // БЛИЖАЙШИЕ ОБЪЯВЛЕНИЯ К ОТПРАВКЕ (сверху вкладки «Контракты»)
 // Собирает зелёные и красные слоты с заполненным текстом и ещё не
-// отмеченные как отправленные (status=false) за сегодня и завтра,
-// сортирует по фактическому времени отправки (с учётом того, что
-// расписание может переходить через полночь) и показывает ближайшие.
+// отмеченные как отправленные (status=false) за сегодня и завтра.
+// Показывает: ВСЕ просроченные (время уже прошло, но не отправлено, не
+// старше 6 часов) + ровно 1 ближайшее предстоящее зелёное + 1 ближайшее
+// предстоящее красное. Учитывает, что расписание может переходить через
+// полночь (например 13:00 → 03:00 следующих суток).
 // ══════════════════════════════════════════════
 let CT_UPCOMING=[];
 // Переводит slot_time («ЧЧ:ММ») + slot_date в реальный Date с учётом того,
@@ -2024,12 +2026,15 @@ async function loadUpcomingAds(){
     const collect=(resp,color)=>(resp.slots||[])
       .filter(s=>s.text && s.text.trim() && !s.status)
       .map(s=>({ id:s.id, color, text:s.text, slot_time:s.slot_time, dt:ctSlotActualDate(resp.date,s.slot_time,schedStart) }));
-    let all=[...collect(g0,'green'),...collect(g1,'green'),...collect(r0,'red'),...collect(r1,'red')];
-    const cutoff=Date.now()-6*60*60*1000; // не показываем то, что просрочено более чем на 6 часов
-    all=all.filter(s=>s.dt.getTime()>=cutoff);
-    all.sort((a,b)=>a.dt-b.dt);
-    all=all.slice(0,8);
-    renderUpcomingAds(all);
+    const all=[...collect(g0,'green'),...collect(g1,'green'),...collect(r0,'red'),...collect(r1,'red')];
+    const now=Date.now();
+    const cutoff=now-6*60*60*1000; // просроченные показываем не дольше 6 часов
+    // Все просроченные — время уже прошло, но объявление не отмечено отправленным
+    const overdue=all.filter(s=>s.dt.getTime()<now && s.dt.getTime()>=cutoff).sort((a,b)=>a.dt-b.dt);
+    // Плюс ровно по одному ближайшему предстоящему объявлению каждого цвета
+    const nearestOf=color=>all.filter(s=>s.color===color && s.dt.getTime()>=now).sort((a,b)=>a.dt-b.dt)[0];
+    const result=[overdue,[nearestOf('green')],[nearestOf('red')]].flat().filter(Boolean);
+    renderUpcomingAds(result);
   }catch(e){
     box.innerHTML=`<div class="ct-upcoming-empty">Не удалось загрузить</div>`;
   }
