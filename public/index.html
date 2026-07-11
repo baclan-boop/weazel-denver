@@ -1317,7 +1317,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   <div class="modal">
     <div class="mhdr"><div class="mttl">Выписать премии</div><button class="mclose" onclick="closeModal('modal-premiums-export')">✕</button></div>
     <div class="mbody">
-      <div class="fhint" style="margin-bottom:10px">Все сотрудники, задействованные за этот период. Сумма — это «К выплате» со всех слотов, где сотрудник стоит в «Откинул» за период. Формат: StaticID;сумма;комментарий (без пробелов, через точку с запятой) — по одному сотруднику на строку.</div>
+      <div class="fhint" style="margin-bottom:10px">Все сотрудники, задействованные за этот период. Сумма — это то же самое «К выплате», что в таблице статистики выше. Формат: StaticID;сумма;комментарий (без пробелов, через точку с запятой) — по одному сотруднику на строку.</div>
       <div class="fg"><textarea class="fta" id="premiums-export-text" rows="10" readonly style="font-family:monospace;font-size:12px"></textarea></div>
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-premiums-export')">Закрыть</button>
@@ -2239,11 +2239,13 @@ async function delBonus(id){
   try{ await API.del('/bonuses/'+id); await loadStatsTab(STATS_STATE.offset); toast('Удалено','s'); }catch(e){toast(e.error||'Ошибка','e');}
 }
 
-// ─── Выписать премии (по «Откинул») ───
-// Премия сотруднику = сумма «К выплате» со всех слотов текущего периода, где
-// он стоит в колонке «Откинул» (суммируется). В список попадают ВСЕ
-// сотрудники, задействованные за период хоть как-то (приняли или откинули),
-// в формате StaticID;сумма;Выплаты AD — без пробелов, через точку с запятой.
+// ─── Выписать премии ───
+// Премия сотруднику = та же сумма, что показана в колонке «К выплате» в
+// таблице статистики (payout по слотам, где сотрудник стоит в «Принял»,
+// за просматриваемый период). В список попадают ВСЕ сотрудники,
+// задействованные за период хоть как-то (приняли или откинули хотя бы
+// один слот), в формате StaticID;сумма;Выплаты AD — без пробелов, через
+// точку с запятой.
 function buildPremiumsExportLines(){
   const skippedNoStatic=[];
   const lines=STATS_STATE.employees
@@ -2252,7 +2254,7 @@ function buildPremiumsExportLines(){
       if(!e.static_id){ skippedNoStatic.push(e.name); return false; }
       return true;
     })
-    .map(e=>`${e.static_id};${Math.round(e.declinedPayout||0)};Выплаты AD`);
+    .map(e=>`${e.static_id};${Math.round(e.payout||0)};Выплаты AD`);
   return { lines, skippedNoStatic };
 }
 function openPremiumsExportModal(){
