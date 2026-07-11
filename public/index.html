@@ -488,6 +488,16 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   .stats-archive-box{margin-left:0}
 }
 
+/* СТАТИСТИКА ПОСЕЩЕНИЙ САЙТА (вкладка «Посетители» в Панели) */
+.visits-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:8px}
+.visits-kpi{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:14px 10px;text-align:center}
+.visits-kpi-val{font-family:var(--font-d);font-size:24px;color:var(--white);letter-spacing:1px}
+.visits-kpi-lbl{font-size:10.5px;color:var(--gray);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.visits-daily-bar-wrap{display:flex;align-items:center;gap:8px}
+.visits-daily-bar-track{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.visits-daily-bar-fill{height:100%;background:var(--red);border-radius:3px}
+.visits-sub-title{font-size:14px;color:var(--white);margin:22px 0 10px;font-family:var(--font-d);letter-spacing:1px}
+
 /* ЕДИНАЯ ПАНЕЛЬ РЕКЛАМЫ (Объявления/Калькулятор/Контракты/Статистика) */
 .adhub-tab{display:none}
 .adhub-tab.active{display:block}
@@ -748,6 +758,23 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec active" id="admin-visitors">
         <div class="asec-title">Посетители</div>
+
+        <div class="visits-kpi-row" id="visits-kpi-row">
+          <div class="visits-kpi"><div class="visits-kpi-val" id="vk-today">—</div><div class="visits-kpi-lbl">Сегодня</div></div>
+          <div class="visits-kpi"><div class="visits-kpi-val" id="vk-yesterday">—</div><div class="visits-kpi-lbl">Вчера</div></div>
+          <div class="visits-kpi"><div class="visits-kpi-val" id="vk-7">—</div><div class="visits-kpi-lbl">За 7 дней</div></div>
+          <div class="visits-kpi"><div class="visits-kpi-val" id="vk-30">—</div><div class="visits-kpi-lbl">За 30 дней</div></div>
+          <div class="visits-kpi"><div class="visits-kpi-val" id="vk-all">—</div><div class="visits-kpi-lbl">Всего за всё время</div></div>
+        </div>
+        <div class="fhint" style="margin-bottom:18px">Считаются уникальные посетители по устройству (браузеру) — один визит с одного устройства учитывается не чаще раза в день, а переключение между разделами сайта счётчик не увеличивает.</div>
+
+        <div class="tw"><table class="dt" id="visits-daily-table">
+          <thead><tr><th>Дата</th><th style="width:60%">Уникальных посетителей</th></tr></thead>
+          <tbody id="visits-daily-tbody"><tr><td colspan="2" style="text-align:center;color:var(--gray);padding:1.5rem">Загрузка...</td></tr></tbody>
+        </table></div>
+
+        <div class="visits-sub-title">Журнал переходов</div>
+        <div class="fhint" style="margin-bottom:12px">Полный список всех переходов по разделам сайта (без дедупликации) — для отслеживания активности конкретных посетителей.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Страница</th><th>Дата и время</th></tr></thead>
           <tbody id="visitors-tbody"></tbody>
@@ -1598,6 +1625,37 @@ async function showPage(page){
 function logVisit(page){
   const labels={home:'Главная',news:'Новости','news-full':'Статья',services:'Услуги',team:'Состав',about:'О нас',admin:'Панель',auth:'Авторизация',adhub:'Реклама'};
   API.post('/visitors',{page:labels[page]||page}).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════
+// СТАТИСТИКА ПОСЕЩЕНИЙ САЙТА
+// В отличие от logVisit() выше (сырой журнал КАЖДОГО перехода по разделам),
+// эта функция шлётся РОВНО ОДИН РАЗ за визит — при первой загрузке
+// страницы (см. вызов в BOOT), а не при каждом showPage()/переключении
+// вкладок. visitor_id — случайный ID, который создаётся один раз и
+// хранится в localStorage, то есть привязан к конкретному устройству/
+// браузеру и переживает перезапуск сайта — за счёт этого повторные заходы
+// с одного и того же устройства не плодят новые «посещения» на сервере
+// (там ещё и своя дедупликация по дню — см. /api/site-visits).
+// ══════════════════════════════════════════════
+function getVisitorDeviceId(){
+  try{
+    let id=localStorage.getItem('wn_device_id');
+    if(!id){
+      id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+      localStorage.setItem('wn_device_id',id);
+    }
+    return id;
+  }catch(e){ return null; } // localStorage недоступен (приватный режим и т.п.) — просто не считаем визит
+}
+function logSiteVisit(){
+  try{
+    if(sessionStorage.getItem('wn_visit_sent'))return; // за эту вкладку/сессию уже отправляли
+    sessionStorage.setItem('wn_visit_sent','1');
+  }catch(e){}
+  const visitor_id=getVisitorDeviceId();
+  if(!visitor_id)return;
+  API.post('/site-visits',{visitor_id}).catch(()=>{});
 }
 
 // ══════════════════════════════════════════════
@@ -3335,7 +3393,7 @@ function renderTickerList(){
 // ══════════════════════════════════════════════
 async function renderAdmin(){
   applyAdminSidebarForRole();
-  renderVisitors();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
+  renderVisitors();renderVisitsStats();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
 }
 
 // Curator AD видит в Панели только «Пользователи» и «Сотрудники» — остальные разделы
@@ -3365,6 +3423,29 @@ async function renderVisitors(){
     if(!vl.length){el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray);padding:1.5rem">Посетителей пока нет</td></tr>`;return;}
     el.innerHTML=vl.map(v=>`<tr><td>${xe(v.user_name)}</td><td>${xe(v.page)}</td><td>${fdt(v.visited_at)}</td></tr>`).join('');
   }catch{el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
+}
+
+// Дедуплицированная статистика посещений — см. /api/site-visits/stats.
+async function renderVisitsStats(){
+  const tb=document.getElementById('visits-daily-tbody');if(!tb)return;
+  try{
+    const s=await API.get('/site-visits/stats');
+    document.getElementById('vk-today').textContent=s.today;
+    document.getElementById('vk-yesterday').textContent=s.yesterday;
+    document.getElementById('vk-7').textContent=s.last7;
+    document.getElementById('vk-30').textContent=s.last30;
+    document.getElementById('vk-all').textContent=s.allTime;
+    const daily=[...s.daily].reverse(); // свежие дни сверху
+    if(!daily.length){ tb.innerHTML=`<tr><td colspan="2" style="text-align:center;color:var(--gray);padding:1.5rem">Посещений пока нет</td></tr>`; return; }
+    const max=Math.max(1,...daily.map(d=>d.count));
+    tb.innerHTML=daily.map(d=>`<tr>
+      <td>${xe(fmtPlainDate(d.date))}</td>
+      <td><div class="visits-daily-bar-wrap"><span style="min-width:22px">${d.count}</span><div class="visits-daily-bar-track"><div class="visits-daily-bar-fill" style="width:${Math.round(d.count/max*100)}%"></div></div></div></td>
+    </tr>`).join('');
+  }catch{
+    ['vk-today','vk-yesterday','vk-7','vk-30','vk-all'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
+    tb.innerHTML=`<tr><td colspan="2" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;
+  }
 }
 
 async function renderUsers(){
@@ -3541,6 +3622,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   applyITEStyles();
   await renderHomeNews();
   logVisit('home');
+  logSiteVisit();
   setTimeout(initReveal,150);
 });
 

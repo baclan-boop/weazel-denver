@@ -118,6 +118,17 @@ async function initDB() {
       page TEXT DEFAULT '', ip_hash TEXT DEFAULT '',
       visited_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    -- Статистика посещений сайта: 1 запись = 1 уникальное устройство за 1 день
+    -- (UNIQUE(visitor_id,visit_date) + ON CONFLICT DO NOTHING при записи).
+    -- Не путать с таблицей visitors выше — там сырой журнал КАЖДОГО перехода
+    -- между разделами сайта, здесь — дедуплицированные посещения для статистики.
+    CREATE TABLE IF NOT EXISTS site_visits (
+      id TEXT PRIMARY KEY, visitor_id TEXT NOT NULL,
+      visit_date DATE NOT NULL, ip_hash TEXT DEFAULT '',
+      first_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(visitor_id, visit_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visit_date);
     CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT DEFAULT '');
     CREATE TABLE IF NOT EXISTS login_attempts (
       ip_hash TEXT PRIMARY KEY, count INTEGER DEFAULT 0, locked_until TIMESTAMPTZ
@@ -822,6 +833,48 @@ app.put('/api/settings',requireEditor,async(req,res)=>{ try{for(const[k,v]of Obj
 // VISITORS
 app.post('/api/visitors',async(req,res)=>{ try{const{page}=req.body;let name='Гость';if(req.session?.userId){const r=await query('SELECT name FROM users WHERE id=$1',[req.session.userId]);name=r.rows[0]?.name||'Гость';}await query('INSERT INTO visitors (user_name,page,ip_hash) VALUES ($1,$2,$3)',[name,page||'?',hashIP(req.ip)]);await query('DELETE FROM visitors WHERE id NOT IN (SELECT id FROM visitors ORDER BY id DESC LIMIT 500)');res.json({ok:true});}catch{res.json({ok:true});}});
 app.get('/api/visitors',requireAdmin,async(req,res)=>{ const r=await query('SELECT user_name,page,visited_at FROM visitors ORDER BY id DESC LIMIT 200');res.json(r.rows);});
+
+// ═══════════════════════════════════════════════════════════════════════
+// СТАТИСТИКА ПОСЕЩЕНИЙ САЙТА
+// Клиент шлёт сюда ОДИН раз за визит (не на каждое переключение вкладок —
+// см. logSiteVisit() во фронтенде, вызывается один раз при загрузке
+// страницы), с visitor_id — случайным ID, который генерируется на клиенте
+// и хранится в localStorage (переживает переключения вкладок и перезапуск
+// браузера, привязан к конкретному устройству/браузеру). Благодаря
+// UNIQUE(visitor_id,visit_date) + ON CONFLICT DO NOTHING один и тот же
+// visitor_id за один день создаёт ровно одну запись, сколько бы раз
+// человек ни заходил и ни обновлял страницу в этот день.
+// ═══════════════════════════════════════════════════════════════════════
+app.post('/api/site-visits',async(req,res)=>{
+  try{
+    const visitor_id=(req.body?.visitor_id||'').toString().trim().slice(0,128);
+    if(!visitor_id)return res.json({ok:true});
+    await query(
+      `INSERT INTO site_visits (id,visitor_id,visit_date,ip_hash) VALUES ($1,$2,CURRENT_DATE,$3)
+       ON CONFLICT (visitor_id,visit_date) DO NOTHING`,
+      [uuid(),visitor_id,hashIP(req.ip)]
+    );
+    res.json({ok:true});
+  }catch{res.json({ok:true});} // статистика не должна ломать работу сайта при сбое
+});
+app.get('/api/site-visits/stats',requireAdmin,async(req,res)=>{
+  try{
+    const [today,yesterday,last7,last30,allTime,daily]=await Promise.all([
+      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=CURRENT_DATE`),
+      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=CURRENT_DATE-1`),
+      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=CURRENT_DATE-6`),
+      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=CURRENT_DATE-29`),
+      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits`),
+      query(`SELECT to_char(visit_date,'YYYY-MM-DD') AS d, COUNT(*)::int AS n FROM site_visits
+             WHERE visit_date>=CURRENT_DATE-13 GROUP BY visit_date ORDER BY visit_date`)
+    ]);
+    res.json({
+      today:today.rows[0].n, yesterday:yesterday.rows[0].n,
+      last7:last7.rows[0].n, last30:last30.rows[0].n, allTime:allTime.rows[0].n,
+      daily:daily.rows.map(r=>({date:r.d,count:r.n}))
+    });
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 // FRONTEND
 app.use(express.static(path.join(__dirname,'public')));
