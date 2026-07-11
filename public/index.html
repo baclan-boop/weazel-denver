@@ -2023,9 +2023,26 @@ async function loadUpcomingAds(){
       API.get(`/contracts?color=red&date=${tomorrow}`)
     ]);
     const schedStart=(g0.schedule&&g0.schedule.start)||'13:00';
-    const collect=(resp,color)=>(resp.slots||[])
-      .filter(s=>s.text && s.text.trim() && !s.status)
-      .map(s=>({ id:s.id, color, text:s.text, slot_time:s.slot_time, dt:ctSlotActualDate(resp.date,s.slot_time,schedStart) }));
+    // Если в строке стоит служебная пометка «Перенос с ЧЧ:ММ» (её ставит
+    // ctTransferChanged в целевую строку), для панели показываем не саму
+    // пометку, а реальный текст объявления из исходной строки-времени.
+    const MARK_RE=/^Перенос с ([01]\d|2[0-3]):[0-5]\d$/;
+    const collect=(resp,color)=>{
+      const slots=resp.slots||[];
+      const bySlotTime={};
+      slots.forEach(s=>{ bySlotTime[s.slot_time]=s.text; });
+      return slots
+        .filter(s=>s.text && s.text.trim() && !s.status)
+        .map(s=>{
+          let text=s.text;
+          const m=MARK_RE.exec(text);
+          if(m){
+            const origText=bySlotTime[m[1]];
+            if(origText && origText.trim() && !MARK_RE.test(origText)) text=origText;
+          }
+          return { id:s.id, color, text, slot_time:s.slot_time, dt:ctSlotActualDate(resp.date,s.slot_time,schedStart) };
+        });
+    };
     const all=[...collect(g0,'green'),...collect(g1,'green'),...collect(r0,'red'),...collect(r1,'red')];
     const now=Date.now();
     const cutoff=now-6*60*60*1000; // просроченные показываем не дольше 6 часов
