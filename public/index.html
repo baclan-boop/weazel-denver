@@ -2026,7 +2026,7 @@ async function loadUpcomingAds(){
     // Если в строке стоит служебная пометка «Перенос с ЧЧ:ММ» (её ставит
     // ctTransferChanged в целевую строку), для панели показываем не саму
     // пометку, а реальный текст объявления из исходной строки-времени.
-    const MARK_RE=/^Перенос с ([01]\d|2[0-3]):[0-5]\d$/;
+    const MARK_RE=/^Перенос с ((?:[01]\d|2[0-3]):[0-5]\d)$/;
     const collect=(resp,color)=>{
       const slots=resp.slots||[];
       const bySlotTime={};
