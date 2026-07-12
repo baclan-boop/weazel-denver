@@ -18,6 +18,7 @@ const fs           = require('fs');
 const crypto       = require('crypto');
 const multer       = require('multer');
 const cloudinary   = require('cloudinary').v2;
+const sharp        = require('sharp');
 
 const PORT           = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(64).toString('hex');
@@ -68,6 +69,39 @@ function uploadBufferToCloudinary(buffer) {
     );
     stream.end(buffer);
   });
+}
+
+// Бесплатный план Cloudinary принимает картинку не тяжелее 10 МБ
+// (10 485 760 байт) — а фото с телефона/скриншоты часто крупнее. Чтобы
+// загрузка не падала с «File size too large», перед отправкой в Cloudinary
+// пережимаем файл: сначала аккуратно уменьшаем разрешение, если оно
+// избыточно для сайта, затем при необходимости постепенно снижаем
+// качество/разрешение ещё, пока не впишемся в лимит (максимум 6 попыток).
+// GIF не трогаем вообще — пересжатие сломало бы анимацию.
+const CLOUDINARY_MAX_BYTES = 9.5*1024*1024; // небольшой запас под лимит в 10 МБ
+async function shrinkImageIfNeeded(buffer, mimetype) {
+  if (buffer.length <= CLOUDINARY_MAX_BYTES || mimetype === 'image/gif') return buffer;
+  try {
+    const meta = await sharp(buffer).metadata();
+    const format = meta.format === 'png' ? 'png' : meta.format === 'webp' ? 'webp' : 'jpeg';
+    let width = meta.width || 2600;
+    let quality = 85;
+    let out = buffer;
+    for (let i = 0; i < 6; i++) {
+      let pipeline = sharp(buffer, { failOn: 'none' }).rotate(); // rotate() без аргументов — учитывает EXIF-ориентацию
+      if (width < (meta.width || width)) pipeline = pipeline.resize({ width, withoutEnlargement: true });
+      if (format === 'png') out = await pipeline.png({ quality, compressionLevel: 9, palette: true }).toBuffer();
+      else if (format === 'webp') out = await pipeline.webp({ quality }).toBuffer();
+      else out = await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
+      if (out.length <= CLOUDINARY_MAX_BYTES) break;
+      quality = Math.max(40, quality - 12);
+      width = Math.round(width * 0.85);
+    }
+    return out.length < buffer.length ? out : buffer;
+  } catch (e) {
+    console.error('Не удалось сжать изображение перед загрузкой в Cloudinary:', e.message);
+    return buffer; // не получилось сжать — пробуем отправить как есть
+  }
 }
 
 const pool = new Pool({
@@ -129,6 +163,17 @@ async function initDB() {
       UNIQUE(visitor_id, visit_date)
     );
     CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visit_date);
+    -- Журнал редактирования полей: 1 запись = 1 сохранение с массивом
+    -- изменённых полей {field, before, after}. Видно только Администратору
+    -- (см. requireAdmin на роуте /api/edit-logs) — роль Leader сюда доступа
+    -- не имеет, как и к /api/site-visits/stats.
+    CREATE TABLE IF NOT EXISTS edit_logs (
+      id TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      user_name TEXT DEFAULT 'Система', entity TEXT NOT NULL, entity_id TEXT DEFAULT '',
+      entity_label TEXT DEFAULT '', changes JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_edit_logs_created ON edit_logs(created_at DESC);
     CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT DEFAULT '');
     CREATE TABLE IF NOT EXISTS login_attempts (
       ip_hash TEXT PRIMARY KEY, count INTEGER DEFAULT 0, locked_until TIMESTAMPTZ
@@ -144,8 +189,10 @@ async function initDB() {
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
 
   // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Curator AD)
+  // + 'leader' (Лидер — доступ как у Администратора, кроме статистики
+  // посещений и журнала редактирования, см. requireAdmin ниже).
   await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
-  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising','curator_ad'))`);
+  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising','curator_ad','leader'))`);
 
   // ─── Модуль «Контракты» (роли, таблица контрактов, калькулятор, статистика) ───
   await query(`
@@ -255,6 +302,55 @@ const apiLimiter   = rateLimit({ windowMs: 60*1000, max: 200, message: { error: 
 app.use('/api/', apiLimiter);
 
 function hashIP(ip) { return crypto.createHash('sha256').update((ip||'')+SESSION_SECRET).digest('hex').slice(0,16); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// ЖУРНАЛ РЕДАКТИРОВАНИЯ ПОЛЕЙ (кто/что/когда изменил, значение до и после)
+// ═══════════════════════════════════════════════════════════════════════
+const EDIT_LOG_FIELD_LABELS = {
+  news:{title:'Заголовок',category:'Категория',excerpt:'Анонс',blocks:'Содержимое статьи',img:'Изображение',bg_img:'Фон',align:'Выравнивание',title_color:'Цвет заголовка',text_color:'Цвет текста',author_name:'Автор',created_at:'Дата публикации'},
+  service:{name:'Название',items:'Позиции'},
+  team_cat:{name:'Название категории',layout:'Расположение'},
+  team_member:{cat_id:'Категория',name:'Имя',role:'Должность',photo:'Фото',role_font:'Шрифт должности'},
+  employee:{name:'Имя',static_id:'Static ID',active:'Активен'},
+  contract_slot:{price:'Цена контракта',text:'Текст',accepted_id:'Принял',declined_id:'Откинул',payout:'К выплате',status:'Статус',transfer_time:'Время переноса'},
+  bonus:{amount:'Сумма',comment:'Комментарий',paid:'Выплачено'},
+  user_role:{role:'Роль'},
+};
+function truncForLog(v,len=300){
+  if(v===null||v===undefined)return '';
+  let s=typeof v==='string'?v:JSON.stringify(v);
+  if(s.length>len)s=s.slice(0,len)+'…';
+  return s;
+}
+const boolLbl=v=>v===true?'Да':v===false?'Нет':'';
+// Сравнивает before (строка из БД ДО изменения) с after (строка из БД
+// ПОСЛЕ изменения) по карте fieldLabels и, если есть хоть одно отличие,
+// пишет одну запись в edit_logs со списком изменений. Раз сравниваются
+// два реальных снимка из БД, а не то, что пришло в запросе — поля с
+// COALESCE-фолбэками (например «оставить как было, если не передано»)
+// не дадут ложных срабатываний. Молча ничего не делает при ошибке —
+// журнал не должен мешать сохранению.
+async function logFieldEdit(req,entity,entityId,entityLabel,before,after,fieldLabels){
+  try{
+    if(!fieldLabels||!before||!after)return;
+    const changes=[];
+    for(const key of Object.keys(fieldLabels)){
+      const bs=truncForLog(before[key]);
+      const as=truncForLog(after[key]);
+      if(bs!==as)changes.push({field:fieldLabels[key],before:bs,after:as});
+    }
+    if(!changes.length)return;
+    await query(
+      `INSERT INTO edit_logs (id,user_id,user_name,entity,entity_id,entity_label,changes) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [uuid(),req.user?.id||null,req.user?.name||'Система',entity,(entityId||'').toString(),(entityLabel||'').toString().slice(0,200),JSON.stringify(changes)]
+    );
+    await query(`DELETE FROM edit_logs WHERE id NOT IN (SELECT id FROM edit_logs ORDER BY created_at DESC LIMIT 2000)`);
+  }catch(e){ console.error('logFieldEdit error:',e.message); }
+}
+async function empNameMap(){
+  const r=await query('SELECT id,name FROM employees');
+  const m={}; r.rows.forEach(e=>{m[e.id]=e.name;}); return m;
+}
 function maskEmail(e) {
   if(!e)return'—'; const [l,d]=e.split('@'); if(!d)return e.slice(0,2)+'***';
   const ml=l.length>2?l.slice(0,2)+'*'.repeat(Math.min(l.length-2,4)):l;
@@ -308,17 +404,17 @@ async function requireAuth(req,res,next){
   if(!r.rows.length){req.session.destroy(()=>{});return res.status(401).json({error:'Сессия недействительна'});}
   req.user=r.rows[0];next();
 }
-async function requireEditor(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+async function requireEditor(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
 async function requireAdmin(req,res,next){  await requireAuth(req,res,()=>{ if(req.user.role!=='admin')return res.status(403).json({error:'Только для администратора'});next();}); }
-async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
-async function requireStaffMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','editor','admin'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+async function requireStaffMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
 // Файл принимаем в память (buffer), а не сразу на диск: так его можно
 // отправить в Cloudinary. Если Cloudinary не настроен — пишем этот же
 // buffer на диск сами (см. роут /api/upload ниже).
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15*1024*1024 },
+  limits: { fileSize: 25*1024*1024 },
   fileFilter: (req,f,cb) => { if(!f.mimetype.startsWith('image/'))return cb(new Error('Только изображения')); cb(null,true); }
 });
 app.use('/uploads', express.static(UPLOADS_DIR));
@@ -434,16 +530,20 @@ app.get('/api/users',requireStaffMgmt,async(req,res)=>{ const r=await query('SEL
 
 // Изменение роли — иерархия:
 //  • Администратор — может назначить любую роль любому пользователю.
+//  • Лидер (leader) — доступ как у Администратора почти везде (см.
+//    requireEditor/requireAdvertising/requireStaffMgmt выше), включая
+//    управление ролями; НЕ видит статистику посещений и журнал
+//    редактирования (эти два роута остались на requireAdmin).
 //  • Curator AD — эксклюзивное право выдавать/снимать ИМЕННО роль Advertising Department,
 //    и только пользователям, которые сейчас Guest либо уже Advertising (не может трогать более высокие роли).
 //  • Редактор — доступ к списку только на просмотр, менять роли не может (это зона ответственности Curator AD).
 app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
   const{role}=req.body;
-  const ROLES=['guest','advertising','curator_ad','editor','admin'];
+  const ROLES=['guest','advertising','curator_ad','editor','leader','admin'];
   if(!ROLES.includes(role))return res.status(400).json({error:'Неверная роль'});
   if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});
   if(req.user.role==='editor'){
-    return res.status(403).json({error:'Изменение ролей доступно только Curator AD или Администратору'});
+    return res.status(403).json({error:'Изменение ролей доступно только Curator AD, Лидеру или Администратору'});
   }
   if(req.user.role==='curator_ad'){
     if(!['guest','advertising'].includes(role))return res.status(403).json({error:'Curator AD может назначать только роль Advertising Department'});
@@ -451,7 +551,10 @@ app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
     if(!targetR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
     if(!['guest','advertising'].includes(targetR.rows[0].role))return res.status(403).json({error:'Недостаточно прав для изменения этой роли'});
   }
+  const beforeR=await query('SELECT name,role FROM users WHERE id=$1',[req.params.id]);
+  if(!beforeR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
   await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);
+  await logFieldEdit(req,'user_role',req.params.id,beforeR.rows[0].name,beforeR.rows[0],{role},EDIT_LOG_FIELD_LABELS.user_role);
   res.json({ok:true});
 });
 
@@ -478,8 +581,15 @@ app.post('/api/employees',requireStaffMgmt,async(req,res)=>{
 app.put('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
   try{
     const{name,static_id,active}=req.body;
+    const before=await query('SELECT * FROM employees WHERE id=$1',[req.params.id]);
     await query('UPDATE employees SET name=COALESCE($1,name), static_id=COALESCE($2,static_id), active=COALESCE($3,active) WHERE id=$4',
       [name===undefined?null:name.trim(), static_id===undefined?null:(static_id||'').toString().trim(), active===undefined?null:active, req.params.id]);
+    if(before.rows.length){
+      const after=await query('SELECT * FROM employees WHERE id=$1',[req.params.id]);
+      const b={...before.rows[0], active:boolLbl(before.rows[0].active)};
+      const a={...after.rows[0], active:boolLbl(after.rows[0].active)};
+      await logFieldEdit(req,'employee',req.params.id,after.rows[0].name,b,a,EDIT_LOG_FIELD_LABELS.employee);
+    }
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
@@ -550,6 +660,16 @@ app.put('/api/contracts/:id',requireAdvertising,async(req,res)=>{
       LEFT JOIN employees ea ON ea.id=cs.accepted_id
       LEFT JOIN employees ed ON ed.id=cs.declined_id
       WHERE cs.id=$1`,[req.params.id]);
+    // Для лога подменяем ID сотрудников на имена (сырой UUID в журнале
+    // редактирования бесполезен) — «после» уже есть из JOIN выше, «до»
+    // разрешаем через employees.
+    const empMap=await empNameMap();
+    const beforeResolved={...c, accepted_id:c.accepted_id?(empMap[c.accepted_id]||'—'):'—', declined_id:c.declined_id?(empMap[c.declined_id]||'—'):'—', status:boolLbl(c.status)};
+    const afterRow=r.rows[0];
+    const afterResolved={...afterRow, accepted_id:afterRow.accepted_name||'—', declined_id:afterRow.declined_name||'—', status:boolLbl(afterRow.status)};
+    const dateStr=c.slot_date instanceof Date?c.slot_date.toISOString().slice(0,10):String(c.slot_date).slice(0,10);
+    const label=`Контракт ${c.slot_time} (${c.color==='green'?'зел.':'красн.'}) ${dateStr}`;
+    await logFieldEdit(req,'contract_slot',req.params.id,label,beforeResolved,afterResolved,EDIT_LOG_FIELD_LABELS.contract_slot);
     res.json(r.rows[0]);
   }catch(e){res.status(500).json({error:e.message});}
 });
@@ -676,17 +796,16 @@ app.get('/api/stats/week',requireAdvertising,async(req,res)=>{
         const st=stats[s.accepted_id];
         if(s.color==='green')st.acceptedGreen++; else st.acceptedRed++;
       }
-      // «Отправлено» и «К выплате» начисляются тому, кто стоит в «Откинул»
-      // (а не «Принял») — именно этот сотрудник Advertising Department
-      // фактически обработал и отправил объявление в игре (отметил
-      // «Статус»), поэтому и счётчик отправки, и оплата (payout слота)
-      // идут ему. «Принял» — просто тот, кто изначально оформил контракт
-      // с клиентом, учитывается только в счётчиках «Принято ЗО/КО» выше.
-      if(s.declined_id && stats[s.declined_id]){
+      // «Отправлено», «К выплате» и сам факт участия сотрудника в «Откинул»
+      // начисляются ТОЛЬКО когда у слота отмечена галочка «Статус» (ад
+      // фактически отправлен) — просто вписанное имя в «Откинул» само по
+      // себе в статистику не идёт, иначе деньги/счётчик засчитывались бы
+      // ещё до реальной отправки объявления.
+      if(s.declined_id && stats[s.declined_id] && s.status){
         const st=stats[s.declined_id];
         st.declinedCount++;
         st.payout+=Number(s.payout)||0;
-        if(s.status){ if(s.color==='green')st.sentGreen++; else st.sentRed++; }
+        if(s.color==='green')st.sentGreen++; else st.sentRed++;
       }
     });
     const bonuses=await query(`SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.week_start=$1 ORDER BY b.created_at`,[range.start]);
@@ -708,8 +827,16 @@ app.post('/api/bonuses',requireStaffMgmt,async(req,res)=>{
 app.put('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
   try{
     const{amount,comment,paid}=req.body;
+    const before=await query('SELECT b.*, e.name AS emp_name FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.id=$1',[req.params.id]);
     await query('UPDATE bonuses SET amount=COALESCE($1,amount), comment=COALESCE($2,comment), paid=COALESCE($3,paid) WHERE id=$4',
       [amount===undefined?null:Number(amount), comment===undefined?null:comment.toString().slice(0,300), paid===undefined?null:paid, req.params.id]);
+    if(before.rows.length){
+      const after=await query('SELECT b.*, e.name AS emp_name FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.id=$1',[req.params.id]);
+      const label=`Премия: ${before.rows[0].emp_name||'—'}`;
+      const b={...before.rows[0], paid:boolLbl(before.rows[0].paid)};
+      const a={...after.rows[0], paid:boolLbl(after.rows[0].paid)};
+      await logFieldEdit(req,'bonus',req.params.id,label,b,a,EDIT_LOG_FIELD_LABELS.bonus);
+    }
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
@@ -728,7 +855,8 @@ app.post('/api/upload',requireEditor,upload.single('image'),async(req,res)=>{
   if(!req.file)return res.status(400).json({error:'Файл не загружен'});
   try{
     if(CLOUDINARY_ENABLED){
-      const result=await uploadBufferToCloudinary(req.file.buffer);
+      const buf=await shrinkImageIfNeeded(req.file.buffer,req.file.mimetype);
+      const result=await uploadBufferToCloudinary(buf);
       return res.json({url:result.secure_url});
     }
     const ext=path.extname(req.file.originalname||'').toLowerCase().replace(/[^.a-z0-9]/g,'')||'.jpg';
@@ -744,7 +872,7 @@ app.post('/api/upload',requireEditor,upload.single('image'),async(req,res)=>{
 // NEWS
 app.get('/api/news',async(req,res)=>{ try{const r=await query('SELECT * FROM news ORDER BY created_at DESC');res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const finalAuthor=(author_name&&author_name.trim())?author_name.trim().slice(0,100):req.user.name;await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,finalAuthor,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
-app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const authorVal=(author_name&&author_name.trim())?author_name.trim().slice(0,100):null;await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,author_name=COALESCE($10,author_name),created_at=COALESCE($11,created_at),updated_at=NOW() WHERE id=$12',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',authorVal,dateVal,req.params.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const authorVal=(author_name&&author_name.trim())?author_name.trim().slice(0,100):null;const before=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,author_name=COALESCE($10,author_name),created_at=COALESCE($11,created_at),updated_at=NOW() WHERE id=$12',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',authorVal,dateVal,req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await logFieldEdit(req,'news',req.params.id,title.trim(),before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.news);}res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 app.delete('/api/news/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM news WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // SERVICES
@@ -761,7 +889,7 @@ app.post('/api/services',requireEditor,async(req,res)=>{
   if(dup.rows.length)return res.json({id:dup.rows[0].id,name,items:items||[]});
   const id=uuid();await query('INSERT INTO services (id,name,items) VALUES ($1,$2,$3)',[id,name.trim(),JSON.stringify(items||[])]);res.json({id,name,items:items||[]});
 });
-app.put('/api/services/:id',requireEditor,async(req,res)=>{ const{name,items}=req.body;await query('UPDATE services SET name=$1,items=$2 WHERE id=$3',[name,JSON.stringify(items||[]),req.params.id]);res.json({ok:true});});
+app.put('/api/services/:id',requireEditor,async(req,res)=>{ const{name,items}=req.body;const before=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await query('UPDATE services SET name=$1,items=$2 WHERE id=$3',[name,JSON.stringify(items||[]),req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await logFieldEdit(req,'service',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.service);}res.json({ok:true});});
 app.delete('/api/services/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM services WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // TEAM
@@ -774,7 +902,7 @@ app.post('/api/team/cats',requireEditor,async(req,res)=>{
   await query('INSERT INTO team_cats (id,name,layout,sort_order) VALUES ($1,$2,$3,$4)',[id,name.trim(),layout||'pyramid',maxR.rows[0].n]);
   res.json({id,name,layout:layout||'pyramid'});
 });
-app.put('/api/team/cats/:id',requireEditor,async(req,res)=>{ const{name,layout}=req.body;await query('UPDATE team_cats SET name=$1,layout=$2 WHERE id=$3',[name,layout||'pyramid',req.params.id]);res.json({ok:true});});
+app.put('/api/team/cats/:id',requireEditor,async(req,res)=>{ const{name,layout}=req.body;const before=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await query('UPDATE team_cats SET name=$1,layout=$2 WHERE id=$3',[name,layout||'pyramid',req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await logFieldEdit(req,'team_cat',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.team_cat);}res.json({ok:true});});
 app.delete('/api/team/cats/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_cats WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // Переместить категорию вверх/вниз (меняет местами sort_order с соседней категорией)
@@ -803,8 +931,13 @@ app.post('/api/team/members',requireEditor,async(req,res)=>{
 });
 app.put('/api/team/members/:id',requireEditor,async(req,res)=>{
   const{cat_id,name,role,photo,role_font}=req.body;
+  const before=await query('SELECT * FROM team_members WHERE id=$1',[req.params.id]);
   await query('UPDATE team_members SET cat_id=$1,name=$2,role=$3,photo=$4,role_font=$5 WHERE id=$6',
     [cat_id,name,role||'',photo||'',role_font||'',req.params.id]);
+  if(before.rows.length){
+    const after=await query('SELECT * FROM team_members WHERE id=$1',[req.params.id]);
+    await logFieldEdit(req,'team_member',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.team_member);
+  }
   res.json({ok:true});
 });
 app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});});
@@ -828,7 +961,24 @@ app.put('/api/team/members/:id/move',requireEditor,async(req,res)=>{
 
 // SETTINGS
 app.get('/api/settings',async(req,res)=>{ const r=await query('SELECT key,value FROM site_settings');const s={};r.rows.forEach(row=>{try{s[row.key]=JSON.parse(row.value);}catch{s[row.key]=row.value;}});res.json(s);});
-app.put('/api/settings',requireEditor,async(req,res)=>{ try{for(const[k,v]of Object.entries(req.body)){await query('INSERT INTO site_settings (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2',[k,JSON.stringify(v)]);}res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+app.put('/api/settings',requireEditor,async(req,res)=>{
+  try{
+    const changes=[];
+    for(const[k,v]of Object.entries(req.body)){
+      const oldR=await query('SELECT value FROM site_settings WHERE key=$1',[k]);
+      const oldVal=oldR.rows.length?oldR.rows[0].value:'';
+      const newVal=JSON.stringify(v);
+      await query('INSERT INTO site_settings (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=$2',[k,newVal]);
+      if(oldVal!==newVal)changes.push({field:k,before:truncForLog(oldVal),after:truncForLog(newVal)});
+    }
+    if(changes.length){
+      await query(`INSERT INTO edit_logs (id,user_id,user_name,entity,entity_id,entity_label,changes) VALUES ($1,$2,$3,'settings','','Настройки сайта',$4)`,
+        [uuid(),req.user?.id||null,req.user?.name||'Система',JSON.stringify(changes)]);
+      await query(`DELETE FROM edit_logs WHERE id NOT IN (SELECT id FROM edit_logs ORDER BY created_at DESC LIMIT 2000)`);
+    }
+    res.json({ok:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 // VISITORS
 app.post('/api/visitors',async(req,res)=>{ try{const{page}=req.body;let name='Гость';if(req.session?.userId){const r=await query('SELECT name FROM users WHERE id=$1',[req.session.userId]);name=r.rows[0]?.name||'Гость';}await query('INSERT INTO visitors (user_name,page,ip_hash) VALUES ($1,$2,$3)',[name,page||'?',hashIP(req.ip)]);await query('DELETE FROM visitors WHERE id NOT IN (SELECT id FROM visitors ORDER BY id DESC LIMIT 500)');res.json({ok:true});}catch{res.json({ok:true});}});
@@ -873,6 +1023,15 @@ app.get('/api/site-visits/stats',requireAdmin,async(req,res)=>{
       last7:last7.rows[0].n, last30:last30.rows[0].n, allTime:allTime.rows[0].n,
       daily:daily.rows.map(r=>({date:r.d,count:r.n}))
     });
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+// Журнал редактирования полей — только Администратор (роль Leader сюда
+// доступа не имеет, см. requireAdmin выше по аналогии с /api/visitors).
+app.get('/api/edit-logs',requireAdmin,async(req,res)=>{
+  try{
+    const r=await query(`SELECT id,user_name,entity,entity_label,changes,created_at FROM edit_logs ORDER BY created_at DESC LIMIT 300`);
+    res.json(r.rows);
   }catch(e){res.status(500).json({error:e.message});}
 });
 

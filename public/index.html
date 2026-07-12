@@ -257,6 +257,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 /* BADGES */
 .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:3px}
 .b-admin{background:rgba(201,168,76,.15);color:var(--gold)}
+.b-leader{background:rgba(46,213,115,.15);color:#2ed573}
 .b-editor{background:rgba(232,25,44,.15);color:var(--red)}
 .b-advertising{background:rgba(88,101,242,.15);color:#5865F2}
 .b-guest{background:rgba(255,255,255,.07);color:var(--gray)}
@@ -497,6 +498,19 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .visits-daily-bar-track{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
 .visits-daily-bar-fill{height:100%;background:var(--red);border-radius:3px}
 .visits-sub-title{font-size:14px;color:var(--white);margin:22px 0 10px;font-family:var(--font-d);letter-spacing:1px}
+
+/* ЛОГИ РЕДАКТИРОВАНИЯ ПОЛЕЙ (вкладка «Логи» в Панели, только Администратор) */
+.elog-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.elog-hdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px;font-size:12px}
+.elog-who{color:var(--white);font-weight:600}
+.elog-entity{color:var(--gray)}
+.elog-time{margin-left:auto;color:var(--gray);font-size:11px;white-space:nowrap}
+.elog-changes{display:flex;flex-direction:column;gap:6px}
+.elog-change{font-size:12.5px;color:var(--white);background:rgba(255,255,255,.02);border-radius:4px;padding:7px 9px;word-break:break-word}
+.elog-field{color:var(--gold);font-weight:600;margin-right:6px}
+.elog-before{color:#ff6b6b;opacity:.85}
+.elog-arrow{color:var(--gray);margin:0 6px}
+.elog-after{color:#2ed573}
 
 /* ЕДИНАЯ ПАНЕЛЬ РЕКЛАМЫ (Объявления/Калькулятор/Контракты/Статистика) */
 .adhub-tab{display:none}
@@ -743,6 +757,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
     <aside class="admin-sb">
       <div class="admin-sb-lbl">Управление</div>
       <div class="ani active" data-tab="visitors" onclick="switchAdminTab('visitors',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Посетители</div>
+      <div class="ani" data-tab="edit-logs" onclick="switchAdminTab('edit-logs',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Логи</div>
       <div class="ani" data-tab="users" onclick="switchAdminTab('users',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Пользователи</div>
       <div class="ani" data-tab="employees" onclick="switchAdminTab('employees',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Сотрудники</div>
       <div class="ani" data-tab="news-mgmt" onclick="switchAdminTab('news-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Новости</div>
@@ -779,6 +794,12 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <thead><tr><th>Никнейм</th><th>Страница</th><th>Дата и время</th></tr></thead>
           <tbody id="visitors-tbody"></tbody>
         </table></div>
+      </div>
+
+      <div class="asec" id="admin-edit-logs">
+        <div class="asec-title">Логи редактирования</div>
+        <div class="fhint" style="margin-bottom:14px">Кто и когда изменил какое-либо поле на сайте — со значением до и после. Только для Администратора.</div>
+        <div id="edit-logs-list"><div style="text-align:center;color:var(--gray);padding:1.5rem">Загрузка...</div></div>
       </div>
 
       <div class="asec" id="admin-users">
@@ -1345,6 +1366,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <option value="advertising">Advertising Department</option>
           <option value="curator_ad">Curator AD</option>
           <option value="editor">Редактор</option>
+          <option value="leader">Лидер</option>
           <option value="admin">Администратор</option>
         </select>
         <div class="fhint" id="role-hint"></div>
@@ -1467,15 +1489,15 @@ let SERVICES = [];
 let TEAM = {cats:[], members:[]};
 let SETTINGS = {};
 
-const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin');
-const canAds = () => CU && ['advertising','curator_ad','editor','admin'].includes(CU.role);
-const isCuratorPlus = () => CU && ['curator_ad','editor','admin'].includes(CU.role);
+const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin'||CU.role==='leader');
+const canAds = () => CU && ['advertising','curator_ad','editor','admin','leader'].includes(CU.role);
+const isCuratorPlus = () => CU && ['curator_ad','editor','admin','leader'].includes(CU.role);
 const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
-const rlbl = r => r==='admin'?'Администратор':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
 function canChangeUserRole(targetRole){
   if(!CU)return false;
-  if(CU.role==='admin')return true;
+  if(CU.role==='admin'||CU.role==='leader')return true;
   if(CU.role==='curator_ad')return['guest','advertising'].includes(targetRole);
   return false;
 }
@@ -3393,18 +3415,28 @@ function renderTickerList(){
 // ══════════════════════════════════════════════
 async function renderAdmin(){
   applyAdminSidebarForRole();
-  renderVisitors();renderVisitsStats();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
+  renderVisitors();renderVisitsStats();renderEditLogs();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
 }
 
 // Curator AD видит в Панели только «Пользователи» и «Сотрудники» — остальные разделы
 // (Посетители, Новости, Услуги, Состав, Тексты, Настройки) остаются зоной Редактора/Администратора.
+// Leader видит всё как Администратор, КРОМЕ «Посетители» (статистика посещений
+// и сырой журнал переходов) и «Логи» (журнал редактирования полей) — это
+// зона видимости исключительно Администратора.
 function applyAdminSidebarForRole(){
   const limited=CU&&CU.role==='curator_ad';
   const allowedForCurator=['users','employees'];
+  const isLeader=CU&&CU.role==='leader';
+  const hiddenForLeader=['visitors','edit-logs'];
   document.querySelectorAll('.admin-sb .ani[data-tab]').forEach(ani=>{
-    ani.style.display=(limited&&!allowedForCurator.includes(ani.dataset.tab))?'none':'flex';
+    const tab=ani.dataset.tab;
+    const hide=(limited&&!allowedForCurator.includes(tab))||(isLeader&&hiddenForLeader.includes(tab));
+    ani.style.display=hide?'none':'flex';
   });
   if(limited&&!document.getElementById('admin-users').classList.contains('active')){
+    switchAdminTab('users',document.querySelector('.admin-sb .ani[data-tab="users"]'));
+  }
+  if(isLeader&&hiddenForLeader.some(t=>document.getElementById('admin-'+t)?.classList.contains('active'))){
     switchAdminTab('users',document.querySelector('.admin-sb .ani[data-tab="users"]'));
   }
 }
@@ -3425,7 +3457,30 @@ async function renderVisitors(){
   }catch{el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
 }
 
-// Дедуплицированная статистика посещений — см. /api/site-visits/stats.
+// Журнал редактирования полей — см. /api/edit-logs (только Администратор).
+const ELOG_ENTITY_LBL={news:'Новость',service:'Услуга',team_cat:'Категория состава',team_member:'Участник состава',employee:'Сотрудник',contract_slot:'Контракт',bonus:'Премия',user_role:'Роль пользователя',settings:'Настройки сайта'};
+async function renderEditLogs(){
+  const el=document.getElementById('edit-logs-list');if(!el)return;
+  try{
+    const logs=await API.get('/edit-logs');
+    if(!logs.length){el.innerHTML=`<div style="text-align:center;color:var(--gray);padding:1.5rem">Изменений пока нет</div>`;return;}
+    el.innerHTML=logs.map(l=>{
+      const changes=(Array.isArray(l.changes)?l.changes:[]).map(c=>`
+        <div class="elog-change"><span class="elog-field">${xe(c.field)}:</span><span class="elog-before">${xe(c.before||'(пусто)')}</span><span class="elog-arrow">→</span><span class="elog-after">${xe(c.after||'(пусто)')}</span></div>
+      `).join('');
+      return `<div class="elog-item">
+        <div class="elog-hdr">
+          <span class="elog-who">${xe(l.user_name||'Система')}</span>
+          <span class="elog-entity">изменил(а) ${xe(ELOG_ENTITY_LBL[l.entity]||l.entity)}${l.entity_label?': '+xe(l.entity_label):''}</span>
+          <span class="elog-time">${fdt(l.created_at)}</span>
+        </div>
+        <div class="elog-changes">${changes}</div>
+      </div>`;
+    }).join('');
+  }catch{el.innerHTML=`<div style="text-align:center;color:var(--gray);padding:1.5rem">Нет доступа</div>`;}
+}
+
+
 async function renderVisitsStats(){
   const tb=document.getElementById('visits-daily-tbody');if(!tb)return;
   try{
