@@ -2093,7 +2093,12 @@ function fmtUpcomingDT(dt){
 async function loadUpcomingAds(){
   const box=document.getElementById('ct-upcoming-list');
   if(!box)return;
-  box.innerHTML=`<div class="ct-upcoming-empty">Загрузка...</div>`;
+  // Намеренно НЕ очищаем box перед запросом: если постоянно ставить сюда
+  // "Загрузка..." на каждое обновление (а оно дёргается после каждого
+  // сохранения поля в таблице), блок на миг схлопывается в одну строку и
+  // тут же разворачивается обратно — мышкой в этот момент сложно попасть
+  // по кнопкам. Вместо этого старые карточки остаются на экране без
+  // изменения высоты, пока не придут свежие данные, и подменяются разом.
   try{
     const today=todayISO(), tomorrow=shiftISO(today,1);
     const [g0,g1,r0,r1]=await Promise.all([
