@@ -764,11 +764,12 @@ app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
     const toEmployee = orderSum * 0.1;
     const perAd = totalAds > 0 ? toEmployee / totalAds : 0;
 
-    // В саму таблицу «Контракты» текст сохраняется с префиксом команды /wnews —
-    // так его можно сразу скопировать и вставить в игровой чат. Цена и выплата
+    // В саму таблицу «Контракты» текст сохраняется с префиксом команды —
+    // так его можно сразу скопировать и вставить в игровой чат. Зелёные
+    // объявления получают префикс /wnews, красные — /adv. Цена и выплата
     // при этом считаются по исходному тексту БЕЗ префикса (см. chars/orderSum выше),
     // чтобы префикс не влиял на стоимость объявления.
-    const wnewsText = `/wnews ${text}`;
+    const wnewsText = `${color === 'red' ? '/adv' : '/wnews'} ${text}`;
     for (const { d, t } of pairs) {
       await query(
         `UPDATE contract_slots SET text=$1, accepted_id=$2, price=$3, payout=$4, updated_at=NOW() WHERE color=$5 AND slot_date=$6 AND slot_time=$7`,
