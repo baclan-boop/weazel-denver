@@ -1007,8 +1007,11 @@ app.post('/api/site-visits',async(req,res)=>{
   try{
     const visitor_id=(req.body?.visitor_id||'').toString().trim().slice(0,128);
     if(!visitor_id)return res.json({ok:true});
+    // Дата визита считается по московскому времени (MSK, UTC+3), а не по
+    // локальной дате сервера БД (обычно UTC) — иначе сутки переключаются
+    // в 3 часа ночи по Москве вместо полуночи.
     await query(
-      `INSERT INTO site_visits (id,visitor_id,visit_date,ip_hash) VALUES ($1,$2,CURRENT_DATE,$3)
+      `INSERT INTO site_visits (id,visitor_id,visit_date,ip_hash) VALUES ($1,$2,(NOW() AT TIME ZONE 'Europe/Moscow')::date,$3)
        ON CONFLICT (visitor_id,visit_date) DO NOTHING`,
       [uuid(),visitor_id,hashIP(req.ip)]
     );
@@ -1017,14 +1020,15 @@ app.post('/api/site-visits',async(req,res)=>{
 });
 app.get('/api/site-visits/stats',requireAdmin,async(req,res)=>{
   try{
+    // Везде ниже — те же соображения по MSK, что и при записи визита выше.
     const [today,yesterday,last7,last30,allTime,daily]=await Promise.all([
-      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=CURRENT_DATE`),
-      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=CURRENT_DATE-1`),
-      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=CURRENT_DATE-6`),
-      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=CURRENT_DATE-29`),
+      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=(NOW() AT TIME ZONE 'Europe/Moscow')::date`),
+      query(`SELECT COUNT(*)::int AS n FROM site_visits WHERE visit_date=(NOW() AT TIME ZONE 'Europe/Moscow')::date-1`),
+      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=(NOW() AT TIME ZONE 'Europe/Moscow')::date-6`),
+      query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits WHERE visit_date>=(NOW() AT TIME ZONE 'Europe/Moscow')::date-29`),
       query(`SELECT COUNT(DISTINCT visitor_id)::int AS n FROM site_visits`),
       query(`SELECT to_char(visit_date,'YYYY-MM-DD') AS d, COUNT(*)::int AS n FROM site_visits
-             WHERE visit_date>=CURRENT_DATE-13 GROUP BY visit_date ORDER BY visit_date`)
+             WHERE visit_date>=(NOW() AT TIME ZONE 'Europe/Moscow')::date-13 GROUP BY visit_date ORDER BY visit_date`)
     ]);
     res.json({
       today:today.rows[0].n, yesterday:yesterday.rows[0].n,
