@@ -1051,7 +1051,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <div id="ct-view-add" style="display:none">
           <div class="acard" style="max-width:640px;padding:22px">
             <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
-            <div class="acard-sub" style="margin-bottom:16px">Заполняется автоматически, начиная со следующего дня. Если хотя бы один нужный слот занят — контракт не создастся, будет показано, что именно занято.</div>
+            <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — контракт не создастся, будет показано, что именно занято.</div>
 
             <div class="fg">
               <label class="fl">Тип объявлений</label>
@@ -1067,11 +1067,17 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               <button type="button" class="btn btn-o btn-sm" style="margin-top:4px" onclick="ctAddAddTimeRow()">+ Ещё время</button>
             </div>
 
-            <div class="fg">
-              <label class="fl">Срок контракта (дней)</label>
-              <input type="number" class="fi" id="ctadd-days" min="1" max="30" value="2" oninput="ctAddRun()">
-              <div class="fhint" id="ctadd-daterange">—</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="fg">
+                <label class="fl">Дата начала</label>
+                <input type="date" class="fi" id="ctadd-startdate" oninput="ctAddRun()">
+              </div>
+              <div class="fg">
+                <label class="fl">Срок контракта (дней)</label>
+                <input type="number" class="fi" id="ctadd-days" min="1" max="30" value="2" oninput="ctAddRun()">
+              </div>
             </div>
+            <div class="fhint" id="ctadd-daterange" style="margin:-6px 0 14px">—</div>
 
             <div class="fg">
               <label class="fl">Текст объявления</label>
@@ -2296,10 +2302,15 @@ function ctAddRemoveTimeRow(idx){
   ctAddRun();
 }
 
-// Даты контракта: всегда начиная со следующего дня после сегодняшнего
-function ctAddComputeDates(days){
+// Даты контракта: начиная с выбранной пользователем даты (поле «Дата начала»),
+// по умолчанию — со следующего дня после сегодняшнего, если дата не указана.
+function ctAddGetStartDate(){
+  const v=document.getElementById('ctadd-startdate')?.value;
+  return v||shiftISO(todayISO(),1);
+}
+function ctAddComputeDates(days,startDate){
   const dates=[];
-  let d=shiftISO(todayISO(),1);
+  let d=startDate||ctAddGetStartDate();
   for(let i=0;i<days;i++){ dates.push(d); d=shiftISO(d,1); }
   return dates;
 }
@@ -2340,6 +2351,8 @@ async function initCTAddForm(){
     if(times.length)CTADD_SELECTED_TIMES=[times[0]];
   }
   renderCTAddTimeRows();
+  const dateInput=document.getElementById('ctadd-startdate');
+  if(dateInput&&!dateInput.value)dateInput.value=shiftISO(todayISO(),1); // по умолчанию завтра, только при первом открытии формы
   await ensureEmployeesLoaded();
   const sel=document.getElementById('ctadd-employee');
   const activeEmps=EMPLOYEES.filter(e=>e.active);
