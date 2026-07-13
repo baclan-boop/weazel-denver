@@ -1199,6 +1199,8 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           </div>
         </div>
         <input type="hidden" id="news-img-input">
+        <div class="fhint" style="margin:6px 0 4px">или вставьте прямую ссылку на картинку (imgur и т.п.)</div>
+        <input type="text" class="fi" id="news-img-url" placeholder="https://i.imgur.com/xxxxx.png" onchange="setImgFromUrl(this.value,'news-img')">
       </div>
       <div class="fg">
         <label class="fl">🌅 Фоновое фото новости (задний фон страницы статьи)</label>
@@ -2633,18 +2635,26 @@ async function uploadFile(file){
 async function handleImgFile(event,key){
   const file=event.target.files[0];if(!file)return;
   const url=await uploadFile(file);
-  if(url)setUploadedImg(key,url);
+  if(url){setUploadedImg(key,url);const ui=document.getElementById(key+'-url');if(ui)ui.value='';}
 }
 async function handleImgDrop(event,key){
   event.preventDefault();event.currentTarget.classList.remove('drag');
   const file=event.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;
   const url=await uploadFile(file);
-  if(url)setUploadedImg(key,url);
+  if(url){setUploadedImg(key,url);const ui=document.getElementById(key+'-url');if(ui)ui.value='';}
 }
 async function handleNBImgFile(event,idx){
   const file=event.target.files[0];if(!file)return;
   const url=await uploadFile(file);
   if(url){newsBlocks[idx].value=url;renderNewsBlocks();}
+}
+// Вставка прямой ссылки на картинку (imgur и т.п.) как альтернатива загрузке файла —
+// использует ту же функцию предпросмотра setUploadedImg(), что и обычная загрузка.
+function setImgFromUrl(url,key){
+  url=(url||'').trim();
+  if(!url)return;
+  if(!/^https?:\/\//i.test(url)){toast('Ссылка должна начинаться с http:// или https://','e');return;}
+  setUploadedImg(key,url);
 }
 
 function setUploadedImg(key,url){
@@ -2664,6 +2674,7 @@ function clearUploadedImg(key){
   const hi=document.getElementById(key+'-input')||document.getElementById(key);if(hi)hi.value='';
   const zone=document.getElementById(key+'-zone');const preview=document.getElementById(key+'-preview');const fi=document.getElementById(key+'-file');
   if(zone)zone.classList.remove('has-img');if(fi)fi.value='';
+  const ui=document.getElementById(key+'-url');if(ui)ui.value='';
   const icons={'news-img':'🖼','news-bg':'🌅','member-photo':'👤'};
   const txts={'news-img':'Перетащите или нажмите','news-bg':'Фон статьи','member-photo':'Фото участника'};
   const iconSize=key==='member-photo'?36:28;
@@ -2869,7 +2880,13 @@ function openNews(id){
       if(src.includes('youtube.com/watch')){try{const vid=new URL(src).searchParams.get('v');if(vid)src=`https://www.youtube.com/embed/${vid}`;}catch{}}
       else if(src.includes('youtu.be/')){const vid=src.split('youtu.be/')[1]?.split('?')[0];if(vid)src=`https://www.youtube.com/embed/${vid}`;}
       else if(src.includes('vimeo.com/')){const vid=src.split('vimeo.com/')[1]?.split('?')[0];if(vid)src=`https://player.vimeo.com/video/${vid}`;}
-      html+=`<div class="nf-iframe"><iframe src="${xe(src)}" allowfullscreen allow="autoplay; fullscreen; clipboard-write" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
+      // Прямая ссылка на картинку (radikal.cloud, imgur/i.imgur.com и т.п., .../xxx.png) —
+      // показываем как обычное фото, а не запихиваем в iframe (там она не откроется корректно).
+      if(/\.(png|jpe?g|gif|webp|bmp)(\?.*)?$/i.test(src)){
+        html+=`<div style="margin-bottom:1.5rem;text-align:${ba}"><img src="${xe(src)}" style="max-width:100%;border-radius:8px;display:inline-block" onerror="this.parentNode.remove()"></div>`;
+      } else {
+        html+=`<div class="nf-iframe"><iframe src="${xe(src)}" allowfullscreen allow="autoplay; fullscreen; clipboard-write" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
+      }
     }
   });
   ce.innerHTML=html;
@@ -2961,7 +2978,7 @@ function renderNewsBlocks(){
         <input type="text" class="fi" style="font-size:13px" placeholder="URL (https://forms.gle/...)" value="${xe(lurl)}" onchange="setLinkBlock(${idx},'url',this.value)" oninput="setLinkBlock(${idx},'url',this.value)">
       </div>`;
     } else {
-      input=`<input type="text" class="fi" style="font-size:13px;margin-bottom:4px" value="${xe(b.value)}" onchange="newsBlocks[${idx}].value=this.value" oninput="newsBlocks[${idx}].value=this.value" placeholder="https://online.fliphtml5.com/...">`;
+      input=`<input type="text" class="fi" style="font-size:13px;margin-bottom:4px" value="${xe(b.value)}" onchange="newsBlocks[${idx}].value=this.value" oninput="newsBlocks[${idx}].value=this.value" placeholder="https://online.fliphtml5.com/... или прямая ссылка на картинку">`;
     }
     const extraBtns=b.type==='text'?`
       <input type="color" id="nb-color-${idx}" style="display:none" onchange="applyBlockColor(${idx},this.value)">
