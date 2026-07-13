@@ -171,6 +171,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .svc-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}
 .svc-name{font-size:14px;font-weight:600;color:var(--white);flex:1 1 55%;min-width:120px}
 .svc-price{font-family:var(--font-d);font-size:15px;letter-spacing:1px;color:var(--gold);flex:0 1 auto;max-width:45%;text-align:right}
+.svc-price-block{display:block;max-width:100%;text-align:left;margin-top:3px;white-space:pre-wrap}
 .svc-desc{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5;white-space:pre-wrap}
 
 /* TEAM */
@@ -3096,10 +3097,19 @@ async function renderServices(){
           <div class="svc-cat-ttl">${xe(cat.name)}</div>
           ${canEdit()?`<div class="bg-group"><button class="btn btn-o btn-sm" onclick="openServiceModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delSvcCat('${cat.id}')">✕</button></div>`:''}
         </div>
-        ${(cat.items||[]).map(it=>`<div class="svc-item">
-          <div class="svc-row"><span class="svc-name">${xe(it.name)}</span>${it.price?`<span class="svc-price">${xe(it.price)}</span>`:''}</div>
+        ${(cat.items||[]).map(it=>{
+          const priceText=it.price||'';
+          // Короткий ценник ("150.000$", "10 штук - 150.000$") — как раньше, справа от названия.
+          // Длинную "цену"-описание ("100.000$ за каждую роль или бесплатно (обговаривается...)")
+          // в узкую колонку справа не втискиваем — она там ломается на кривые короткие строки —
+          // а выводим отдельной строкой на всю ширину под названием.
+          const priceLong=priceText.length>22;
+          return`<div class="svc-item">
+          <div class="svc-row"><span class="svc-name">${xe(it.name)}</span>${priceText&&!priceLong?`<span class="svc-price">${xe(priceText)}</span>`:''}</div>
+          ${priceText&&priceLong?`<div class="svc-price svc-price-block">${xe(priceText)}</div>`:''}
           ${it.desc?`<div class="svc-desc">${renderText(it.desc)}</div>`:''}
-        </div>`).join('')}
+        </div>`;
+        }).join('')}
       </div>`).join('')}</div>`;
   }catch{el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-tx">Ошибка загрузки</div></div>`;return;}
   setTimeout(initReveal,50); // см. комментарий в renderHomeNews() выше — те же карточки reveal
