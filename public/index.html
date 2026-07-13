@@ -168,9 +168,9 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .svc-cat-ttl{font-family:var(--font-d);font-size:20px;letter-spacing:2px;color:var(--red)}
 .svc-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .svc-item:last-child{border:none}
-.svc-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.svc-name{font-size:14px;font-weight:600;color:var(--white)}
-.svc-price{font-family:var(--font-d);font-size:15px;letter-spacing:1px;color:var(--gold);white-space:nowrap}
+.svc-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}
+.svc-name{font-size:14px;font-weight:600;color:var(--white);flex:1 1 55%;min-width:120px}
+.svc-price{font-family:var(--font-d);font-size:15px;letter-spacing:1px;color:var(--gold);flex:0 1 auto;max-width:45%;text-align:right}
 .svc-desc{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5;white-space:pre-wrap}
 
 /* TEAM */
