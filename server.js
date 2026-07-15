@@ -532,6 +532,20 @@ app.post('/api/auth/register', loginLimiter, async (req,res) => {
 app.post('/api/auth/logout',(req,res)=>{ req.session.destroy(()=>res.json({ok:true})); });
 app.get('/api/auth/me', async (req,res)=>{ if(!req.session?.userId)return res.json({user:null}); try{const r=await query('SELECT * FROM users WHERE id=$1',[req.session.userId]);res.json({user:safeUser(r.rows[0])||null});}catch{res.json({user:null});} });
 
+// Изменить собственный ник (имя/фамилию персонажа) — доступно любому
+// авторизованному пользователю, только для своего же аккаунта.
+app.put('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    let { name } = req.body;
+    name = (name || '').trim().replace(/\s+/g, ' ');
+    if (!name) return res.status(400).json({ error: 'Введите имя' });
+    if (name.length < 2 || name.length > 40) return res.status(400).json({ error: 'Имя должно быть от 2 до 40 символов' });
+    await query('UPDATE users SET name=$1 WHERE id=$2', [name, req.user.id]);
+    const r = await query('SELECT * FROM users WHERE id=$1', [req.user.id]);
+    res.json({ user: safeUser(r.rows[0]) });
+  } catch (e) { console.error(e.message); res.status(500).json({ error: 'Ошибка сервера' }); }
+});
+
 // USERS
 // Просмотр списка пользователей — доступен Curator AD и выше (Редактор, Администратор).
 app.get('/api/users',requireStaffMgmt,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
@@ -685,15 +699,17 @@ app.put('/api/contracts/:id',requireAdvertising,async(req,res)=>{
 // ═══════════════════════════════════════════════════════════════════════
 // ДОБАВИТЬ КОНТРАКТ (массовое заполнение слотов из вкладки «Добавить контракт»)
 // Принимает: color, times (список ЧЧ:ММ — если объявлений в день несколько),
-// dates (список дат — всегда начиная со следующего дня, считает фронтенд),
+// dates (список дат, любых — см. ниже про снятое ограничение "со следующего дня"),
 // text, accepted_id, discount. Проверяет, что КАЖДАЯ пара время×дата свободна
 // (текст пуст и сотрудник не назначен); если занято хоть одно — ничего не
 // меняет и возвращает список занятых слотов. Если всё свободно — одним
 // действием проставляет текст/принявшего сотрудника; цена контракта (price)
 // это полная сумма заказа за весь контракт, а payout — выплата за 1 объявление,
 // считаются по той же формуле, что в Калькуляторе.
+// Доступ: любой сотрудник с доступом к разделу «Реклама» (Advertising Dept.
+// и выше) — раньше эта возможность была только у Curator AD и выше.
 // ═══════════════════════════════════════════════════════════════════════
-app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
+app.post('/api/contracts/bulk', requireAdvertising, async (req, res) => {
   try {
     let { color, times, dates, text, accepted_id, discount } = req.body;
     color = color === 'red' ? 'red' : 'green';
@@ -713,12 +729,13 @@ app.post('/api/contracts/bulk', requireStaffMgmt, async (req, res) => {
     dates = [...new Set(dates)];
     if (dates.some(d => isNaN(Date.parse(d)))) return res.status(400).json({ error: 'Некорректная дата' });
 
-    // Контракт обязательно заполняется начиная не раньше чем с завтрашнего дня
-    const tomorrow = new Date(); tomorrow.setUTCHours(0, 0, 0, 0); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-    if (dates.some(d => d < tomorrowStr)) {
-      return res.status(400).json({ error: 'Контракт можно заполнять только начиная со следующего дня' });
-    }
+    // ПРИМЕЧАНИЕ: раньше здесь было жёсткое ограничение "только начиная со
+    // следующего дня" — убрано по просьбе: если сотрудник принял контракт
+    // поздно вечером (например в 23:50) и не успел занести его до полуночи,
+    // после 00:00 серверное "завтра" уже сдвигалось на день вперёд и заносить
+    // контракт на нужную (уже наступившую) дату становилось невозможно.
+    // Теперь можно указывать любую дату начала — как сегодняшнюю/прошедшую
+    // (чтобы закрыть такие пограничные случаи), так и будущую.
 
     discount = parseFloat(discount); if (isNaN(discount) || discount < 0) discount = 0; if (discount > 100) discount = 100;
 

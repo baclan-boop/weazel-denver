@@ -18,9 +18,46 @@
   --font-s:'Playfair Display',serif;
   --font-b:'Inter',sans-serif;
   --tr:0.3s ease;--r:8px;--rl:12px;
+  /* ── СВЕТЛАЯ ТЕМА: переменные ниже по умолчанию равны тёмной теме и
+     переопределяются только внутри «плоских» (без фонового фото) страниц —
+     Панель управления, Реклама, Вход — когда включена светлая тема (см.
+     [data-theme="light"] #page-admin/#page-adhub/#page-auth ниже). Публичные
+     страницы (Главная/Новости/Услуги/Состав/О нас) всегда поверх фото с тёмной
+     дымкой — они не участвуют в переключении темы и остаются как есть. */
+  --ink:#FFF;                 /* основной текст на нейтральных поверхностях */
+  --flat-bg:#0A0A0A;          /* фон «плоских» страниц (Панель/Реклама/Вход) */
+  --ovl:255,255,255;         /* RGB-триплет для полупрозрачных подложек/рамок */
 }
+[data-theme="light"] #page-admin,
+[data-theme="light"] #page-adhub,
+[data-theme="light"] #page-auth{
+  --dark:#FFFFFF;--dark2:#FBFAF8;--dark3:#F0EEEA;
+  --gray:#6B6660;--off-white:#2A2723;
+  --ink:#18140F;--flat-bg:#F4F2EE;--ovl:15,15,15;
+  color-scheme:light;
+}
+#page-admin.active,#page-adhub.active,#page-auth.active{background:var(--flat-bg);min-height:calc(100vh - 92px)}
+[data-theme="light"] #page-admin ::-webkit-scrollbar-track,
+[data-theme="light"] #page-adhub ::-webkit-scrollbar-track,
+[data-theme="light"] #page-auth ::-webkit-scrollbar-track{background:#EAE7E1}
+/* .btn-o используется и в тёмной шапке/герое (там всегда должен остаться
+   белым), и внутри «плоских» страниц (где сам .btn-o теперь берёт --ink) —
+   явно возвращаем белый цвет в местах, которые всегда тёмные. */
+#hdr .btn-o,#mob-nav .btn-o,.hero-btns .btn-o{color:#fff}
+#hdr .btn-o:hover,#mob-nav .btn-o:hover,.hero-btns .btn-o:hover{background:rgba(var(--ovl),.08)}
+/* .fi/.fta/.fsel задают color-scheme:dark напрямую на себе (это выигрывает
+   у унаследованного значения) — переопределяем явно для нативного вида
+   инпутов (календарик у type=date, стрелочки у number) внутри плоских
+   светлых страниц. */
+[data-theme="light"] #page-admin .fi,[data-theme="light"] #page-admin .fta,[data-theme="light"] #page-admin .fsel,
+[data-theme="light"] #page-adhub .fi,[data-theme="light"] #page-adhub .fta,[data-theme="light"] #page-adhub .fsel,
+[data-theme="light"] #page-auth .fi,[data-theme="light"] #page-auth .fta,[data-theme="light"] #page-auth .fsel{color-scheme:light}
+/* .auth-card и .admin-sb используют не переменные, а готовые тёмные rgba —
+   переопределяем их отдельно под светлую тему. */
+[data-theme="light"] #page-auth .auth-card{background:#FEFDFB;border-color:rgba(232,25,44,.25)}
+[data-theme="light"] #page-admin .admin-sb{background:rgba(250,249,246,.95);border-right-color:rgba(0,0,0,.06)}
 html{scroll-behavior:smooth}
-body{background:var(--black);color:var(--white);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
+body{background:var(--black);color:var(--ink);font-family:var(--font-b);min-height:100vh;overflow-x:hidden}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--dark)}
 ::-webkit-scrollbar-thumb{background:var(--red);border-radius:3px}
@@ -40,7 +77,7 @@ body{background:var(--black);color:var(--white);font-family:var(--font-b);min-he
 .logo-n{font-family:var(--font-d);font-size:16px;letter-spacing:3px;color:var(--white)}
 .logo-s{font-size:10px;color:var(--gray);letter-spacing:2px;text-transform:uppercase}
 nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
-.nl{background:none;border:none;color:rgba(255,255,255,0.75);font-family:var(--font-b);font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:var(--r);cursor:pointer;transition:var(--tr);position:relative}
+.nl{background:none;border:none;color:rgba(var(--ovl),0.75);font-family:var(--font-b);font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:var(--r);cursor:pointer;transition:var(--tr);position:relative}
 .nl:hover,.nl.active{color:var(--red)}
 .nl.active::after{content:'';position:absolute;bottom:-1px;left:12px;right:12px;height:2px;background:var(--red);border-radius:1px}
 .hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -83,8 +120,8 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .btn{padding:10px 24px;border-radius:var(--r);font-family:var(--font-b);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;transition:var(--tr);display:inline-flex;align-items:center;gap:7px}
 .btn-p{background:var(--red);color:var(--white)}
 .btn-p:hover{background:var(--red-dark);transform:translateY(-1px)}
-.btn-o{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,.25)}
-.btn-o:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.5)}
+.btn-o{background:transparent;color:var(--ink);border:1px solid rgba(var(--ovl),.25)}
+.btn-o:hover{background:rgba(var(--ovl),.07);border-color:rgba(var(--ovl),.5)}
 .btn-sm{padding:6px 12px;font-size:11px}
 .btn-d{background:rgba(232,25,44,.12);color:var(--red);border:1px solid rgba(232,25,44,.28)}
 .btn-d:hover{background:rgba(232,25,44,.22)}
@@ -95,16 +132,16 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .sec{padding:2.5rem 1.5rem}
 .sec-inner{max-width:1120px;margin:0 auto}
 .sec-div{display:flex;align-items:baseline;gap:14px;margin-bottom:1.75rem;flex-wrap:wrap;width:100%}
-.sec-title{font-family:var(--font-d);font-size:clamp(28px,5vw,50px);letter-spacing:2px;color:var(--white);display:block;width:100%}
+.sec-title{font-family:var(--font-d);font-size:clamp(28px,5vw,50px);letter-spacing:2px;color:var(--ink);display:block;width:100%}
 .sec-title span{color:var(--red)}
 .sec-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(232,25,44,.4),transparent);align-self:center;min-width:30px}
 .sec-tag{font-size:10px;color:var(--red);letter-spacing:3px;text-transform:uppercase}
 
 /* INFO BLOCK */
 .info-block{display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center;padding:20px 26px;background:rgba(232,25,44,.07);border:1px solid rgba(232,25,44,.2);border-radius:var(--rl);margin:1.25rem 0}
-.ibdiv{width:1px;height:40px;background:rgba(255,255,255,.1)}
+.ibdiv{width:1px;height:40px;background:rgba(var(--ovl),.1)}
 .h-lbl{font-size:10px;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
-.h-val{display:flex;align-items:center;gap:8px;font-family:var(--font-d);font-size:26px;letter-spacing:2px;color:var(--white)}
+.h-val{display:flex;align-items:center;gap:8px;font-family:var(--font-d);font-size:26px;letter-spacing:2px;color:var(--ink)}
 
 /* NEWS CARDS */
 .news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
@@ -119,9 +156,9 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .nc-meta{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .nc-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--red);background:rgba(232,25,44,.1);padding:3px 7px;border-radius:3px;font-weight:700}
 .nc-date{font-size:11px;color:var(--gray)}
-.nc-title{font-family:var(--font-s);font-size:17px;font-weight:700;color:var(--white);line-height:1.3;margin-bottom:8px}
+.nc-title{font-family:var(--font-s);font-size:17px;font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:8px}
 .nc-exc{font-size:12px;color:var(--gray);line-height:1.6;flex:1}
-.nc-foot{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center}
+.nc-foot{margin-top:12px;padding-top:12px;border-top:1px solid rgba(var(--ovl),.05);display:flex;justify-content:space-between;align-items:center}
 /* Featured (latest) news card */
 .nc-featured{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;min-height:280px}
 .nc-featured .nc-img{height:100%;min-height:280px}
@@ -138,8 +175,8 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 #page-news-full{position:relative}
 #page-news-full::before{content:'';position:fixed;inset:0;z-index:0;background:inherit;background-size:cover;background-position:center;pointer-events:none}
 #page-news-full::after{content:'';position:fixed;inset:0;z-index:0;background:rgba(10,10,10,0.72);pointer-events:none}
-.nf-content{font-size:15px;line-height:1.85;color:rgba(255,255,255,.83)}
-.nf-content h2,.nf-content h3{font-family:var(--font-s);color:var(--white);margin:1.5rem 0 .75rem}
+.nf-content{font-size:15px;line-height:1.85;color:rgba(var(--ovl),.83)}
+.nf-content h2,.nf-content h3{font-family:var(--font-s);color:var(--ink);margin:1.5rem 0 .75rem}
 .nf-content p{margin-bottom:1rem}
 .nf-content img{max-width:100%;border-radius:var(--r);margin:1.25rem 0;display:block}
 .nf-content a{color:var(--red)}
@@ -149,27 +186,27 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .nf-bg-img{width:100%;min-height:320px;background-size:cover;background-position:center;border-radius:var(--r);margin-bottom:1.5rem;position:relative}
 .nf-bg-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6));border-radius:var(--r)}
 /* News block editor */
-.nb-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:10px}
+.nb-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.07);border-radius:var(--r);padding:10px}
 .nb-type{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(232,25,44,.1);padding:3px 7px;border-radius:3px;white-space:nowrap;margin-top:2px}
 .nb-align-btns{display:flex;gap:3px;margin-top:4px}
-.nb-align-btn{width:26px;height:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:3px;color:var(--gray);font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
-.nb-align-btn.active,.nb-align-btn:hover{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
-.nb-expand-btn{width:26px;height:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:3px;color:var(--gray);font-size:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;margin-left:auto}
-.nb-expand-btn:hover,.nb-expand-btn.active{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
+.nb-align-btn{width:26px;height:22px;background:rgba(var(--ovl),.06);border:1px solid rgba(var(--ovl),.08);border-radius:3px;color:var(--gray);font-size:11px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center}
+.nb-align-btn.active,.nb-align-btn:hover{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--ink)}
+.nb-expand-btn{width:26px;height:22px;background:rgba(var(--ovl),.06);border:1px solid rgba(var(--ovl),.08);border-radius:3px;color:var(--gray);font-size:12px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;margin-left:auto}
+.nb-expand-btn:hover,.nb-expand-btn.active{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--ink)}
 .nb-text-expanded{min-height:360px!important}
 
 /* SERVICES */
 .svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
-.svc-card{background:rgba(22,22,22,.82);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:22px;transition:var(--tr);position:relative;overflow:hidden}
+.svc-card{background:rgba(22,22,22,.82);border:1px solid rgba(var(--ovl),.06);border-radius:var(--rl);padding:22px;transition:var(--tr);position:relative;overflow:hidden}
 .svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:.3s}
 .svc-card:hover::before{transform:scaleX(1)}
 .svc-card:hover{border-color:rgba(232,25,44,.25);transform:translateY(-2px)}
 .svc-cat-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:14px}
 .svc-cat-ttl{font-family:var(--font-d);font-size:20px;letter-spacing:2px;color:var(--red)}
-.svc-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.svc-item{padding:10px 0;border-bottom:1px solid rgba(var(--ovl),.05)}
 .svc-item:last-child{border:none}
 .svc-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px}
-.svc-name{font-size:14px;font-weight:600;color:var(--white);flex:1 1 55%;min-width:120px}
+.svc-name{font-size:14px;font-weight:600;color:var(--ink);flex:1 1 55%;min-width:120px}
 .svc-price{font-family:var(--font-d);font-size:15px;letter-spacing:1px;color:var(--gold);flex:0 1 auto;max-width:45%;text-align:right}
 .svc-price-block{display:block;max-width:100%;text-align:left;margin-top:3px;white-space:pre-wrap}
 .svc-desc{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5;white-space:pre-wrap}
@@ -177,20 +214,20 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 /* TEAM */
 .team-cat{margin-bottom:2.5rem}
 .team-cat-hdr{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap}
-.team-cat-name{font-family:var(--font-d);font-size:26px;letter-spacing:3px;color:var(--white)}
+.team-cat-name{font-family:var(--font-d);font-size:26px;letter-spacing:3px;color:var(--ink)}
 .team-cat-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(232,25,44,.35),transparent);min-width:30px}
 .team-pyramid-top{display:flex;justify-content:center;margin-bottom:16px}
 .team-pyramid-top .team-card{width:190px}
 .team-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
 .team-grid .team-card{width:160px;flex-shrink:0}
 .team-grid .team-add-card{width:160px;flex-shrink:0}
-.team-card{background:rgba(22,22,22,.75);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:18px;text-align:center;transition:var(--tr);position:relative}
+.team-card{background:rgba(22,22,22,.75);border:1px solid rgba(var(--ovl),.06);border-radius:var(--rl);padding:18px;text-align:center;transition:var(--tr);position:relative}
 .team-card:hover{border-color:rgba(232,25,44,.3);transform:translateY(-2px)}
 .team-av{width:108px;height:108px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,var(--red-deeper),var(--red-dark));display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:var(--white);overflow:hidden;border:2px solid rgba(232,25,44,.25)}
 .team-av img{width:100%;height:100%;object-fit:cover}
-.team-name{font-size:17px;font-weight:600;color:var(--white);margin-bottom:4px}
+.team-name{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:4px}
 .team-role{font-size:14px;color:var(--red);letter-spacing:1.5px;text-transform:uppercase}
-.team-add-card{cursor:pointer;border:1px dashed rgba(255,255,255,.12);border-radius:var(--rl);padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:154px;color:var(--gray);font-size:12px;transition:var(--tr)}
+.team-add-card{cursor:pointer;border:1px dashed rgba(var(--ovl),.12);border-radius:var(--rl);padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:154px;color:var(--gray);font-size:12px;transition:var(--tr)}
 .team-add-card:hover{border-color:rgba(232,25,44,.4);color:var(--red)}
 /* Team row layout (со скроллом) */
 .team-row-grid{display:flex;flex-wrap:nowrap;gap:14px;justify-content:center;justify-content:safe center;overflow-x:auto;padding-bottom:6px}
@@ -200,35 +237,35 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .team-fixed-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
 @media(max-width:900px){.team-fixed-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:600px){.team-fixed-grid{grid-template-columns:repeat(2,1fr)}}
-.layout-toggle-btn{background:none;border:1px solid rgba(255,255,255,.15);color:var(--gray);border-radius:var(--r);padding:4px 10px;font-size:10px;cursor:pointer;transition:var(--tr);letter-spacing:1px;text-transform:uppercase}
+.layout-toggle-btn{background:none;border:1px solid rgba(var(--ovl),.15);color:var(--gray);border-radius:var(--r);padding:4px 10px;font-size:10px;cursor:pointer;transition:var(--tr);letter-spacing:1px;text-transform:uppercase}
 .layout-toggle-btn.active{background:rgba(232,25,44,.15);border-color:var(--red);color:var(--red)}
 /* Кнопки перемещения (вверх/вниз) — видны только в режиме редактирования */
 .move-btns{display:flex;flex-direction:column;gap:2px;position:absolute;top:6px;right:6px}
-.move-btn{width:22px;height:18px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:3px;color:var(--gray);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:var(--tr)}
+.move-btn{width:22px;height:18px;background:rgba(0,0,0,.5);border:1px solid rgba(var(--ovl),.15);border-radius:3px;color:var(--gray);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:var(--tr)}
 .move-btn:hover{background:rgba(232,25,44,.3);border-color:var(--red);color:var(--white)}
 .move-btn:disabled{opacity:.25;cursor:default;pointer-events:none}
 .cat-move-btns{display:flex;gap:3px}
 
 
 /* ABOUT */
-.about-content{font-size:15px;line-height:1.9;color:rgba(255,255,255,.82)}
-.about-content h2{font-family:var(--font-s);font-size:26px;color:var(--white);margin:1.75rem 0 .75rem}
+.about-content{font-size:15px;line-height:1.9;color:rgba(var(--ovl),.82)}
+.about-content h2{font-family:var(--font-s);font-size:26px;color:var(--ink);margin:1.75rem 0 .75rem}
 .about-content p{margin-bottom:1rem}
-.about-content strong{color:var(--white)}
+.about-content strong{color:var(--ink)}
 
 /* AUTH */
 .auth-wrap{min-height:calc(100vh - 92px);display:flex;align-items:center;justify-content:center;padding:2rem}
 .auth-card{background:rgba(17,17,17,.97);border:1px solid rgba(232,25,44,.3);border-radius:var(--rl);padding:36px;width:100%;max-width:400px;text-align:center}
 .auth-logo{font-family:var(--font-d);font-size:38px;letter-spacing:4px;color:var(--red);margin-bottom:6px}
 .auth-sub{font-size:10px;color:var(--gray);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px}
-.auth-tabs{display:flex;border:1px solid rgba(255,255,255,.1);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.auth-tabs{display:flex;border:1px solid rgba(var(--ovl),.1);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
 .auth-tab{flex:1;padding:9px;background:none;border:none;color:var(--gray);font-size:13px;font-weight:500;cursor:pointer;transition:var(--tr)}
 .auth-tab.active{background:var(--red);color:var(--white)}
 
 /* FORMS */
 .fg{margin-bottom:14px}
 .fl{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px;font-weight:600}
-.fi,.fta,.fsel{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:9px 13px;transition:var(--tr);color-scheme:dark}
+.fi,.fta,.fsel{width:100%;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.1);border-radius:var(--r);color:var(--ink);font-family:var(--font-b);font-size:13px;padding:9px 13px;transition:var(--tr);color-scheme:dark}
 .fi:focus,.fta:focus,.fsel:focus{outline:none;border-color:var(--red);background:rgba(232,25,44,.04)}
 .fta{resize:vertical;min-height:90px;line-height:1.6}
 .fsel option{background:var(--dark2)}
@@ -237,22 +274,22 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 
 /* ADMIN */
 .admin-layout{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 92px)}
-.admin-sb{background:rgba(14,14,14,.92);border-right:1px solid rgba(255,255,255,.05);padding:1.25rem 0;display:flex;flex-direction:column}
+.admin-sb{background:rgba(14,14,14,.92);border-right:1px solid rgba(var(--ovl),.05);padding:1.25rem 0;display:flex;flex-direction:column}
 .admin-sb-lbl{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gray);padding:0 14px;margin-bottom:6px;margin-top:8px}
-.ani{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.6);font-size:12px;font-weight:500;cursor:pointer;transition:var(--tr);border-left:2px solid transparent}
-.ani:hover{color:var(--white);background:rgba(255,255,255,.03)}
+.ani{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(var(--ovl),.6);font-size:12px;font-weight:500;cursor:pointer;transition:var(--tr);border-left:2px solid transparent}
+.ani:hover{color:var(--ink);background:rgba(var(--ovl),.03)}
 .ani.active{color:var(--red);border-left-color:var(--red);background:rgba(232,25,44,.07)}
 .ani svg{width:15px;height:15px;flex-shrink:0;opacity:.8}
 .admin-content{padding:1.75rem}
 .asec{display:none}
 .asec.active{display:block}
-.asec-title{font-family:var(--font-d);font-size:26px;letter-spacing:2px;margin-bottom:1.25rem;color:var(--white)}
+.asec-title{font-family:var(--font-d);font-size:26px;letter-spacing:2px;margin-bottom:1.25rem;color:var(--ink)}
 
 /* TABLE */
 .dt{width:100%;border-collapse:collapse}
-.dt th{text-align:left;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
-.dt td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:rgba(255,255,255,.8);vertical-align:middle}
-.dt tr:hover td{background:rgba(255,255,255,.015)}
+.dt th{text-align:left;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);padding:9px 12px;border-bottom:1px solid rgba(var(--ovl),.07)}
+.dt td{padding:11px 12px;border-bottom:1px solid rgba(var(--ovl),.04);font-size:12px;color:rgba(var(--ovl),.8);vertical-align:middle}
+.dt tr:hover td{background:rgba(var(--ovl),.015)}
 .tw{overflow-x:auto}
 
 /* BADGES */
@@ -261,14 +298,14 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .b-leader{background:rgba(46,213,115,.15);color:#2ed573}
 .b-editor{background:rgba(232,25,44,.15);color:var(--red)}
 .b-advertising{background:rgba(88,101,242,.15);color:#5865F2}
-.b-guest{background:rgba(255,255,255,.07);color:var(--gray)}
+.b-guest{background:rgba(var(--ovl),.07);color:var(--gray)}
 
 /* MODALS */
 .mo{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:1rem}
 .mo.open{display:flex}
 .modal{background:var(--dark2);border:1px solid rgba(232,25,44,.25);border-radius:var(--rl);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
 .modal-wide{max-width:680px}
-.mhdr{padding:18px 22px 14px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.mhdr{padding:18px 22px 14px;border-bottom:1px solid rgba(var(--ovl),.06);display:flex;align-items:center;justify-content:space-between}
 .mttl{font-family:var(--font-d);font-size:22px;letter-spacing:2px;color:var(--white)}
 .mclose{background:none;border:none;color:var(--gray);font-size:18px;cursor:pointer;padding:4px;transition:var(--tr);line-height:1}
 .mclose:hover{color:var(--white)}
@@ -277,7 +314,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 
 /* TOAST */
 .toast-c{position:fixed;top:98px;right:16px;z-index:3000;display:flex;flex-direction:column;gap:7px}
-.toast{background:var(--dark2);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:10px 14px;min-width:240px;display:flex;align-items:center;gap:9px;font-size:12px;animation:slideR .28s ease;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:opacity .3s}
+.toast{background:var(--dark2);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:10px 14px;min-width:240px;display:flex;align-items:center;gap:9px;font-size:12px;animation:slideR .28s ease;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:opacity .3s}
 .ts{border-left:3px solid #2ed573}
 .te{border-left:3px solid var(--red)}
 .ti{border-left:3px solid #5865F2}
@@ -288,9 +325,9 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .empty-tx{font-size:14px}
 
 /* ADMIN CARD */
-.acard{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:var(--rl);padding:16px;margin-bottom:12px}
+.acard{background:rgba(var(--ovl),.025);border:1px solid rgba(var(--ovl),.06);border-radius:var(--rl);padding:16px;margin-bottom:12px}
 .acard-hdr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-.acard-title{font-weight:600;font-size:14px;color:var(--white)}
+.acard-title{font-weight:600;font-size:14px;color:var(--ink)}
 .acard-sub{font-size:11px;color:var(--gray);margin-top:2px}
 .bg-group{display:flex;gap:6px;flex-wrap:wrap}
 
@@ -325,32 +362,32 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
 }
 #ite-popup.open{display:block}
 .ite-pop-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;font-weight:600}
-.ite-text-input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:8px 12px;margin-bottom:10px;resize:vertical;min-height:60px;transition:.2s}
+.ite-text-input{width:100%;background:rgba(var(--ovl),.05);border:1px solid rgba(var(--ovl),.1);border-radius:var(--r);color:var(--white);font-family:var(--font-b);font-size:13px;padding:8px 12px;margin-bottom:10px;resize:vertical;min-height:60px;transition:.2s}
 .ite-text-input:focus{outline:none;border-color:var(--red)}
 .ite-controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
 .ite-control-group{display:flex;flex-direction:column;gap:4px}
 .ite-control-label{font-size:9px;color:var(--gray);letter-spacing:1px;text-transform:uppercase}
-.ite-size-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:5px;color:var(--white);font-size:12px;padding:5px 8px;width:100%}
+.ite-size-input{background:rgba(var(--ovl),.05);border:1px solid rgba(var(--ovl),.1);border-radius:5px;color:var(--white);font-size:12px;padding:5px 8px;width:100%}
 .ite-size-input:focus{outline:none;border-color:var(--red)}
-.ite-color-input{width:100%;height:30px;border:1px solid rgba(255,255,255,.1);border-radius:5px;cursor:pointer;background:rgba(255,255,255,.05);padding:2px}
+.ite-color-input{width:100%;height:30px;border:1px solid rgba(var(--ovl),.1);border-radius:5px;cursor:pointer;background:rgba(var(--ovl),.05);padding:2px}
 .ite-align-btns{display:flex;gap:3px}
-.ite-align-btn{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:4px;color:var(--gray);font-size:12px;padding:5px 0;cursor:pointer;transition:.15s;text-align:center}
+.ite-align-btn{flex:1;background:rgba(var(--ovl),.06);border:1px solid rgba(var(--ovl),.08);border-radius:4px;color:var(--gray);font-size:12px;padding:5px 0;cursor:pointer;transition:.15s;text-align:center}
 .ite-align-btn.active,.ite-align-btn:hover{background:rgba(232,25,44,.2);border-color:var(--red);color:var(--white)}
 .ite-pop-footer{display:flex;gap:7px;justify-content:flex-end;margin-top:4px}
 
 /* BG UPLOAD ZONE */
-.bg-zone{border:2px dashed rgba(255,255,255,.1);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:var(--tr);position:relative}
+.bg-zone{border:2px dashed rgba(var(--ovl),.1);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:var(--tr);position:relative}
 .bg-zone:hover,.bg-zone.drag{border-color:var(--red);background:rgba(232,25,44,.04)}
 .bg-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .bg-zone-txt{font-size:13px;color:var(--gray);pointer-events:none}
 .bg-zone-ic{font-size:28px;margin-bottom:8px;opacity:.4;pointer-events:none}
 
 /* IMAGE UPLOAD ZONE (news, members) */
-.img-upload-zone{border:2px dashed rgba(255,255,255,.1);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:var(--tr);position:relative;background:rgba(255,255,255,.02)}
+.img-upload-zone{border:2px dashed rgba(var(--ovl),.1);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:var(--tr);position:relative;background:rgba(var(--ovl),.02)}
 .img-upload-zone:hover,.img-upload-zone.drag{border-color:var(--red);background:rgba(232,25,44,.04)}
 .img-upload-inner{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 .img-upload-txt{font-size:12px;color:var(--gray)}
-.img-upload-sub{font-size:10px;color:rgba(255,255,255,.25)}
+.img-upload-sub{font-size:10px;color:rgba(var(--ovl),.25)}
 .img-upload-zone.has-img{border-style:solid;border-color:rgba(232,25,44,.3)}
 .nb-img-zone{padding:8px!important}
 
@@ -382,80 +419,81 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
 #mob-menu-btn.open span:nth-child(2){opacity:0}
 #mob-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 #mob-nav{display:none;position:fixed;top:92px;left:0;right:0;z-index:998;background:rgba(10,10,10,0.98);backdrop-filter:blur(16px);border-bottom:1px solid var(--red-dark);padding:12px 0}
-#mob-nav .mnl{display:block;width:100%;background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:12px 1.5rem;text-align:left;cursor:pointer;transition:.2s;border-left:2px solid transparent}
+#mob-nav .mnl{display:block;width:100%;background:none;border:none;color:rgba(var(--ovl),.8);font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:12px 1.5rem;text-align:left;cursor:pointer;transition:.2s;border-left:2px solid transparent}
 #mob-nav .mnl:hover,#mob-nav .mnl.active{color:var(--red);border-left-color:var(--red);background:rgba(232,25,44,.06)}
 #mob-nav .mnl-admin{background:var(--red)!important;color:var(--white)!important;margin:10px 1.5rem;border-radius:var(--r);border-left:none!important;width:calc(100% - 3rem)!important;text-align:center!important;font-weight:700}
 #mob-nav .mnl-admin:hover{background:var(--red-dark)!important}
-#mob-nav .mob-divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
+#mob-nav .mob-divider{height:1px;background:rgba(var(--ovl),.06);margin:8px 0}
 
 /* ═══ CONTRACTS MODULE: roles badge, calculator, contracts table, stats ═══ */
 .b-curator_ad{background:rgba(201,168,76,.13);color:#d8bd6e}
 
 /* Sub-tabs shared by Contracts / Calculator / Stats pages */
 .subtabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
-.subtab{background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--white);font-size:12px;font-weight:700;letter-spacing:.5px;padding:9px 18px;border-radius:var(--r);cursor:pointer;transition:var(--tr)}
-.subtab:hover{border-color:rgba(255,255,255,.4)}
+.subtab{background:transparent;border:1px solid rgba(var(--ovl),.14);color:var(--ink);font-size:12px;font-weight:700;letter-spacing:.5px;padding:9px 18px;border-radius:var(--r);cursor:pointer;transition:var(--tr)}
+.subtab:hover{border-color:rgba(var(--ovl),.4)}
 .subtab.active.green{background:#1f9d55;border-color:#1f9d55}
 .subtab.active.red{background:var(--red);border-color:var(--red)}
-.subtab.active.plain{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+.subtab.active.plain{background:rgba(var(--ovl),.12);border-color:rgba(var(--ovl),.3)}
 
 /* CALCULATOR */
 .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:900px){.calc-grid{grid-template-columns:1fr}}
-.calc-panel{border-radius:var(--rl);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.calc-panel{border-radius:var(--rl);overflow:hidden;border:1px solid rgba(var(--ovl),.08)}
 .calc-panel-hdr{padding:14px 18px;font-family:var(--font-d);font-size:18px;letter-spacing:2px;color:var(--white)}
 .calc-panel.green .calc-panel-hdr{background:#1f9d55}
 .calc-panel.red .calc-panel-hdr{background:var(--red)}
-.calc-panel-body{padding:18px;background:rgba(255,255,255,.02)}
+.calc-panel-body{padding:18px;background:rgba(var(--ovl),.02)}
 .calc-results{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.calc-res-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:12px 14px}
+.calc-res-box{background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.07);border-radius:var(--r);padding:12px 14px}
 .calc-res-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:5px}
-.calc-res-val{font-family:var(--font-d);font-size:19px;letter-spacing:1px;color:var(--white)}
+.calc-res-val{font-family:var(--font-d);font-size:19px;letter-spacing:1px;color:var(--ink)}
 .calc-res-box.hi .calc-res-val{color:var(--gold)}
 .calc-chars{font-size:11px;color:var(--gray);margin-top:6px;text-align:right}
 .calc-panel textarea.fta{min-height:70px}
 
 /* CONTRACTS TABLE */
 .ct-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.ct-datebtn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--white);width:34px;height:34px;border-radius:var(--r);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.ct-datebtn{background:rgba(var(--ovl),.05);border:1px solid rgba(var(--ovl),.12);color:var(--ink);width:34px;height:34px;border-radius:var(--r);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
 .ct-datebtn:hover{border-color:var(--red);color:var(--red)}
-.ct-date-lbl{font-family:var(--font-d);font-size:18px;letter-spacing:1px;color:var(--white);min-width:150px;text-align:center}
+.ct-date-lbl{font-family:var(--font-d);font-size:18px;letter-spacing:1px;color:var(--ink);min-width:150px;text-align:center}
 .ct-save-ind{font-size:11px;color:var(--gray);margin-left:auto;opacity:0;transition:opacity .25s}
 .ct-save-ind.show{opacity:1}
 .ct-save-ind.ok{color:#2ed573}
 .ct-save-ind.err{color:var(--red)}
-.ct-wrap{overflow-x:auto;border-radius:var(--rl);border:1px solid rgba(255,255,255,.08)}
+.ct-wrap{overflow-x:auto;border-radius:var(--rl);border:1px solid rgba(var(--ovl),.08)}
 table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
-.ct-table th{position:sticky;top:0;background:var(--dark2);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left;white-space:nowrap}
-.ct-table td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.ct-table th{position:sticky;top:0;background:var(--dark2);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);padding:9px 8px;border-bottom:1px solid rgba(var(--ovl),.1);text-align:left;white-space:nowrap}
+.ct-table td{padding:5px 6px;border-bottom:1px solid rgba(var(--ovl),.05);vertical-align:middle}
 .ct-table.green tr:hover td{background:rgba(46,213,115,.05)}
 .ct-table.red tr:hover td{background:rgba(232,25,44,.05)}
 .ct-table tr.ct-empty td{opacity:.45}
-.ct-table input[type=text],.ct-table input[type=number]{width:100%;min-width:70px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:var(--white);font-size:12px;padding:6px 7px;font-family:var(--font-b)}
+.ct-table input[type=text],.ct-table input[type=number]{width:100%;min-width:70px;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.08);border-radius:5px;color:var(--ink);font-size:12px;padding:6px 7px;font-family:var(--font-b)}
+.ct-table .emp-combo-input{min-width:130px}
 .ct-table input.ct-text{min-width:220px}
 .ct-table input.ct-time-transfer{min-width:64px;text-align:center}
-.ct-table select{width:100%;min-width:130px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:5px;color:var(--white);font-size:12px;padding:6px 7px}
+.ct-table select{width:100%;min-width:130px;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.08);border-radius:5px;color:var(--ink);font-size:12px;padding:6px 7px}
 .ct-table select option{background:var(--dark2)}
 .ct-table input:disabled,.ct-table select:disabled{opacity:.4;cursor:not-allowed}
-.ct-time-cell{font-family:var(--font-d);font-size:13px;letter-spacing:1px;color:rgba(255,255,255,.75);white-space:nowrap;padding-left:12px!important}
+.ct-time-cell{font-family:var(--font-d);font-size:13px;letter-spacing:1px;color:rgba(var(--ovl),.75);white-space:nowrap;padding-left:12px!important}
 .ct-status-chk{width:17px;height:17px;cursor:pointer;accent-color:#2ed573}
 .ct-table.red .ct-status-chk{accent-color:var(--red)}
-.ct-readonly-banner{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gray);margin-bottom:14px}
+.ct-readonly-banner{background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.1);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--gray);margin-bottom:14px}
 
 /* COPY BUTTONS (текст контракта — доступно для копирования всем ролям, включая Advertising Dept., даже когда поле заблокировано) */
-.ct-copy-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--white);border-radius:5px;cursor:pointer;font-size:11px;line-height:1;padding:7px 8px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:var(--tr);flex-shrink:0}
+.ct-copy-btn{background:rgba(var(--ovl),.06);border:1px solid rgba(var(--ovl),.14);color:var(--ink);border-radius:5px;cursor:pointer;font-size:11px;line-height:1;padding:7px 8px;display:inline-flex;align-items:center;justify-content:center;gap:4px;transition:var(--tr);flex-shrink:0}
 .ct-copy-btn:hover{border-color:var(--red);color:var(--red)}
 .ct-copy-btn.copied{border-color:#2ed573;color:#2ed573}
 .ct-text-cell{display:flex;align-items:center;gap:6px}
 .ct-text-cell input.ct-text{flex:1;min-width:160px}
 
 /* БЛИЖАЙШИЕ ОБЪЯВЛЕНИЯ К ОТПРАВКЕ (сверху вкладки «Контракты») */
-.ct-upcoming{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:var(--rl);padding:16px;margin-bottom:18px}
+.ct-upcoming{background:rgba(var(--ovl),.02);border:1px solid rgba(var(--ovl),.08);border-radius:var(--rl);padding:16px;margin-bottom:18px}
 .ct-upcoming-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.ct-upcoming-title{font-family:var(--font-d);font-size:16px;letter-spacing:1px;color:var(--white)}
+.ct-upcoming-title{font-family:var(--font-d);font-size:16px;letter-spacing:1px;color:var(--ink)}
 .ct-upcoming-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .ct-upcoming-empty{color:var(--gray);font-size:12px;padding:6px 2px;grid-column:1/-1}
-.ct-upcoming-item{border-radius:var(--r);padding:11px 12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-left:3px solid #2ed573}
+.ct-upcoming-item{border-radius:var(--r);padding:11px 12px;border:1px solid rgba(var(--ovl),.08);background:rgba(var(--ovl),.03);border-left:3px solid #2ed573}
 .ct-upcoming-item.red{border-left-color:var(--red)}
 .ct-upcoming-item.overdue{border-left-color:#ffb020;background:rgba(255,176,32,.06)}
 .ct-upcoming-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -463,7 +501,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .ct-upcoming-dot.red{background:var(--red)}
 .ct-upcoming-when{font-size:11.5px;color:var(--gray);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ct-upcoming-item.overdue .ct-upcoming-when{color:#ffb020;font-weight:600}
-.ct-upcoming-text{font-size:13px;color:var(--white);line-height:1.5;margin-bottom:9px;word-break:break-word;white-space:pre-wrap}
+.ct-upcoming-text{font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:9px;word-break:break-word;white-space:pre-wrap}
 .ct-copy-full{width:100%;justify-content:center}
 
 /* WEEKLY STATS */
@@ -475,15 +513,15 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .kpi-row-bad .stats-payout{color:#ff6b6b;font-weight:700}
 .stats-payout{font-family:var(--font-d);font-size:14px;letter-spacing:1px}
 .bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:8px}
-.bonus-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:12px 14px}
+.bonus-card{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:12px 14px}
 .bonus-card.paid{opacity:.45}
 .bonus-card.paid .bonus-amount,.bonus-card.paid .bonus-comment{text-decoration:line-through}
-.bonus-name{font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px}
+.bonus-name{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
 .bonus-static{font-size:10px;color:var(--gray);margin-bottom:8px}
 .bonus-amount{font-family:var(--font-d);font-size:17px;color:var(--gold);letter-spacing:1px}
 .bonus-comment{font-size:11px;color:var(--gray);margin-top:4px;line-height:1.4}
 .bonus-actions{display:flex;gap:6px;margin-top:8px}
-.emp-roster-row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:8px 10px;margin-bottom:6px}
+.emp-roster-row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:center;background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.07);border-radius:var(--r);padding:8px 10px;margin-bottom:6px}
 .emp-roster-row.inactive{opacity:.4}
 @media(max-width:600px){
   .stats-hdr-row{flex-direction:column;align-items:flex-start}
@@ -492,22 +530,22 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
 /* СТАТИСТИКА ПОСЕЩЕНИЙ САЙТА (вкладка «Посетители» в Панели) */
 .visits-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:8px}
-.visits-kpi{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:14px 10px;text-align:center}
-.visits-kpi-val{font-family:var(--font-d);font-size:24px;color:var(--white);letter-spacing:1px}
+.visits-kpi{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:14px 10px;text-align:center}
+.visits-kpi-val{font-family:var(--font-d);font-size:24px;color:var(--ink);letter-spacing:1px}
 .visits-kpi-lbl{font-size:10.5px;color:var(--gray);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
 .visits-daily-bar-wrap{display:flex;align-items:center;gap:8px}
-.visits-daily-bar-track{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
+.visits-daily-bar-track{flex:1;height:6px;border-radius:3px;background:rgba(var(--ovl),.06);overflow:hidden}
 .visits-daily-bar-fill{height:100%;background:var(--red);border-radius:3px}
-.visits-sub-title{font-size:14px;color:var(--white);margin:22px 0 10px;font-family:var(--font-d);letter-spacing:1px}
+.visits-sub-title{font-size:14px;color:var(--ink);margin:22px 0 10px;font-family:var(--font-d);letter-spacing:1px}
 
 /* ЛОГИ РЕДАКТИРОВАНИЯ ПОЛЕЙ (вкладка «Логи» в Панели, только Администратор) */
-.elog-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
+.elog-item{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
 .elog-hdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px;font-size:12px}
-.elog-who{color:var(--white);font-weight:600}
+.elog-who{color:var(--ink);font-weight:600}
 .elog-entity{color:var(--gray)}
 .elog-time{margin-left:auto;color:var(--gray);font-size:11px;white-space:nowrap}
 .elog-changes{display:flex;flex-direction:column;gap:6px}
-.elog-change{font-size:12.5px;color:var(--white);background:rgba(255,255,255,.02);border-radius:4px;padding:7px 9px;word-break:break-word}
+.elog-change{font-size:12.5px;color:var(--ink);background:rgba(var(--ovl),.02);border-radius:4px;padding:7px 9px;word-break:break-word}
 .elog-field{color:var(--gold);font-weight:600;margin-right:6px}
 .elog-before{color:#ff6b6b;opacity:.85}
 .elog-arrow{color:var(--gray);margin:0 6px}
@@ -519,7 +557,44 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
 /* Строки времени в форме «Добавить контракт» */
 .ct-add-time-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
-.ct-add-time-row select{flex:1}
+.ct-add-time-row input{flex:1}
+
+/* ПОИСК СОТРУДНИКА ПО БУКВАМ (комбобокс вместо select) — колонки «Принял»/
+   «Откинул» в таблице «Контракты», поле «Кто принял контракт» в форме
+   «Добавить контракт», выбор сотрудника при назначении премии. */
+.emp-combo{position:relative}
+.emp-combo-input{width:100%}
+.emp-combo-drop{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--dark2);border:1px solid rgba(var(--ovl),.14);border-radius:var(--r);max-height:230px;overflow-y:auto;z-index:80;display:none;box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.emp-combo-drop.open{display:block}
+.emp-combo-opt{padding:8px 11px;font-size:12.5px;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap}
+.emp-combo-opt:hover,.emp-combo-opt.hl{background:rgba(232,25,44,.14)}
+.emp-combo-opt.none{color:var(--gray);font-style:italic}
+.emp-combo-empty{padding:8px 11px;font-size:12px;color:var(--gray)}
+.emp-combo-sid{color:var(--gray);font-size:10px;margin-left:8px}
+
+/* Копирование сумм в форме «Добавить контракт» без пробелов (для казны и т.п.) */
+.calc-res-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calc-res-row .calc-res-val{flex:1}
+.calc-res-row .ct-copy-btn{flex-shrink:0}
+
+/* «Добавить контракт»: форма слева + сводка для клиента справа (на узких экранах — друг под другом) */
+.ctadd-layout{display:grid;grid-template-columns:minmax(0,640px) minmax(260px,320px);gap:20px;align-items:start}
+@media (max-width:900px){ .ctadd-layout{grid-template-columns:1fr} }
+.ctadd-summary{position:sticky;top:108px}
+.ctadd-summary-box{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.09);border-radius:var(--r);padding:12px 14px;font-size:12.5px;line-height:1.85;color:var(--ink);white-space:pre-wrap;word-break:break-word;min-height:90px}
+
+/* Разделитель на каждый час в таблице «Контракты» — как в исходной Google Таблице */
+.ct-table tr.ct-hour-sep td{border-top:2px solid rgba(var(--ovl),.22)}
+
+/* Подсветка строки, когда объявление отправлено (статус — галочка) — видна всем ролям */
+.ct-table tr.ct-done td{background:rgba(46,213,115,.09)}
+.ct-table tr.ct-done.ct-empty td{opacity:1}
+
+/* «Ближайшие объявления к отправке» закреплены вверху при прокрутке страницы вниз */
+.ct-upcoming{position:sticky;top:92px;z-index:40;background:var(--dark2);backdrop-filter:blur(10px)}
+
+/* Переключатель темы */
+#theme-toggle-btn{padding:8px 10px;font-size:14px;line-height:1}
 </style>
 </head>
 <body>
@@ -547,6 +622,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   </nav>
   <div class="hdr-right">
     <button id="btn-add-news" onclick="openNewsModal()">+ Новость</button>
+    <button id="theme-toggle-btn" class="btn btn-o btn-sm" onclick="toggleTheme()" title="Светлая/тёмная тема (Панель управления и Реклама)" aria-label="Переключить тему">🌙</button>
     <div id="auth-ctrl"></div>
     <button id="mob-menu-btn" onclick="toggleMobMenu()" aria-label="Меню">
       <span></span><span></span><span></span>
@@ -555,6 +631,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 </header>
 <!-- MOBILE NAV -->
 <div id="mob-nav">
+  <button class="mnl" onclick="toggleTheme()" id="theme-toggle-btn-mob">🌙 Светлая тема</button>
   <button class="mnl" onclick="showPage('home');closeMobMenu()" data-mob-page="home">Главная</button>
   <button class="mnl" onclick="showPage('news');closeMobMenu()" data-mob-page="news">Новости</button>
   <button class="mnl" onclick="showPage('services');closeMobMenu()" data-mob-page="services">Услуги</button>
@@ -637,10 +714,10 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   <div class="nf-wrap">
     <button class="btn btn-o btn-sm" onclick="showPage('news')" style="margin-bottom:1.5rem">← Назад к новостям</button>
     <div id="nf-meta" style="display:flex;align-items:center;gap:8px;margin-bottom:10px"></div>
-    <h1 id="nf-title" style="font-family:var(--font-s);font-size:clamp(22px,4vw,38px);line-height:1.2;color:var(--white);margin-bottom:12px;display:block;width:100%"></h1>
-    <p id="nf-author" style="font-size:12px;color:var(--gray);margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(255,255,255,.07)"></p>
+    <h1 id="nf-title" style="font-family:var(--font-s);font-size:clamp(22px,4vw,38px);line-height:1.2;color:var(--ink);margin-bottom:12px;display:block;width:100%"></h1>
+    <p id="nf-author" style="font-size:12px;color:var(--gray);margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(var(--ovl),.07)"></p>
     <div id="nf-content" class="nf-content"></div>
-    <div id="nf-edit-btns" style="margin-top:2rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:8px"></div>
+    <div id="nf-edit-btns" style="margin-top:2rem;padding-top:1.25rem;border-top:1px solid rgba(var(--ovl),.07);display:flex;gap:8px"></div>
   </div>
 </div>
 
@@ -767,7 +844,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
       <div class="ani" data-tab="team-mgmt" onclick="switchAdminTab('team-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> Состав</div>
       <div class="ani" data-tab="texts-mgmt" onclick="switchAdminTab('texts-mgmt',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Все тексты</div>
       <div class="ani" data-tab="site-settings" onclick="switchAdminTab('site-settings',this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Настройки</div>
-      <div style="margin-top:auto;padding:1rem 14px 0;border-top:1px solid rgba(255,255,255,.05)">
+      <div style="margin-top:auto;padding:1rem 14px 0;border-top:1px solid rgba(var(--ovl),.05)">
         <button class="btn btn-o btn-sm" style="width:100%;justify-content:center" onclick="showPage('home')">← На сайт</button>
       </div>
     </aside>
@@ -1051,6 +1128,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         </div>
 
         <div id="ct-view-add" style="display:none">
+        <div class="ctadd-layout">
           <div class="acard" style="max-width:640px;padding:22px">
             <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
             <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — контракт не создастся, будет показано, что именно занято.</div>
@@ -1094,22 +1172,30 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               </div>
               <div class="fg">
                 <label class="fl">Кто принял контракт</label>
-                <select class="fsel" id="ctadd-employee"></select>
+                <div id="ctadd-employee"></div>
               </div>
             </div>
 
             <div class="calc-results">
               <div class="calc-res-box"><div class="calc-res-lbl">Всего объявлений</div><div class="calc-res-val" id="ctadd-total">0</div></div>
-              <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="ctadd-sum">0$</div></div>
-              <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="ctadd-treasury">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="ctadd-toemp">0$</div></div>
-              <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="ctadd-perad">0$</div></div>
+              <div class="calc-res-box" id="ctadd-sum-box" data-raw="0"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-sum">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-sum-box',this)">⧉</button></div></div>
+              <div class="calc-res-box" id="ctadd-treasury-box" data-raw="0"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-treasury">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-treasury-box',this)">⧉</button></div></div>
+              <div class="calc-res-box hi" id="ctadd-toemp-box" data-raw="0"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-toemp">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-toemp-box',this)">⧉</button></div></div>
+              <div class="calc-res-box hi" id="ctadd-perad-box" data-raw="0"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-perad">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-perad-box',this)">⧉</button></div></div>
             </div>
 
             <div id="ctadd-error" style="display:none;margin-top:14px;color:var(--red);font-size:12px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.28);border-radius:var(--r);padding:10px 12px;line-height:1.5"></div>
 
             <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:16px" id="ctadd-submit" onclick="submitCTAdd()">✅ Проверить и создать контракт</button>
           </div>
+
+          <div class="acard ctadd-summary">
+            <div class="acard-title" style="margin-bottom:4px">📋 Сводка для клиента</div>
+            <div class="acard-sub" style="margin-bottom:12px">Текст, срок, время показа и сумма — можно скопировать и отправить клиенту.</div>
+            <div class="ctadd-summary-box" id="ctadd-summary-box">—</div>
+            <button type="button" class="btn btn-o btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="copyCTAddSummary()">⧉ Скопировать сводку</button>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -1247,14 +1333,14 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <div>
             <div style="font-size:10px;color:var(--gray);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase">Цвет заголовка</div>
             <div style="display:flex;gap:6px;align-items:center">
-              <input type="color" id="news-title-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,.15);cursor:pointer;background:transparent;padding:2px">
+              <input type="color" id="news-title-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(var(--ovl),.15);cursor:pointer;background:transparent;padding:2px">
               <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('news-title-color').value='#ffffff'">Сброс</button>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--gray);margin-bottom:5px;letter-spacing:1px;text-transform:uppercase">Цвет текста статьи</div>
             <div style="display:flex;gap:6px;align-items:center">
-              <input type="color" id="news-text-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,.15);cursor:pointer;background:transparent;padding:2px">
+              <input type="color" id="news-text-color" value="#ffffff" style="width:38px;height:30px;border-radius:6px;border:1px solid rgba(var(--ovl),.15);cursor:pointer;background:transparent;padding:2px">
               <button type="button" class="btn btn-o btn-sm" onclick="document.getElementById('news-text-color').value='#ffffff'">Сброс</button>
             </div>
           </div>
@@ -1291,6 +1377,24 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-service')">Отмена</button>
         <button class="btn btn-p btn-sm" id="svc-save-btn" onclick="saveSvcCat()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ИЗМЕНИТЬ НИК (имя/фамилию) MODAL -->
+<div class="mo" id="modal-nickname">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Изменить ник</div><button class="mclose" onclick="closeModal('modal-nickname')">✕</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <label class="fl">Имя и фамилия персонажа *</label>
+        <input type="text" class="fi" id="nickname-input" placeholder="Luna Lodge" maxlength="40">
+      </div>
+      <div id="nickname-error" style="display:none;color:var(--red);font-size:12px;margin-top:-6px;margin-bottom:10px"></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-nickname')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="saveNickname()">Сохранить</button>
       </div>
     </div>
   </div>
@@ -1394,7 +1498,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   <div class="modal">
     <div class="mhdr"><div class="mttl">Премия сотруднику</div><button class="mclose" onclick="closeModal('modal-bonus')">✕</button></div>
     <div class="mbody">
-      <div class="fg"><label class="fl">Сотрудник *</label><select class="fsel" id="bonus-emp-select"></select></div>
+      <div class="fg"><label class="fl">Сотрудник *</label><div id="bonus-emp-select"></div></div>
       <div class="fg"><label class="fl">Сумма ($)</label><input type="number" class="fi" id="bonus-amount" min="0" value="0"></div>
       <div class="fg"><label class="fl">Комментарий</label><input type="text" class="fi" id="bonus-comment" placeholder="Выплаты AD"></div>
       <div class="mfoot">
@@ -1491,6 +1595,27 @@ const LS = {
 };
 
 // ══════════════════════════════════════════════
+// СВЕТЛАЯ / ТЁМНАЯ ТЕМА
+// Переключатель влияет на «плоские» (без фонового фото) страницы — Панель
+// управления, Реклама, Вход — именно там сотрудники проводят всё рабочее
+// время. Публичные страницы с фото (Главная/Новости/Услуги/Состав/О нас)
+// сохраняют фирменный тёмный кинематографичный вид независимо от темы.
+// ══════════════════════════════════════════════
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme',theme);
+  LS.set('theme',theme);
+  const btn=document.getElementById('theme-toggle-btn');
+  if(btn){ btn.textContent=theme==='light'?'🌙':'☀️'; }
+  const mbtn=document.getElementById('theme-toggle-btn-mob');
+  if(mbtn){ mbtn.textContent=theme==='light'?'🌙 Тёмная тема':'☀️ Светлая тема'; }
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
+  applyTheme(cur==='light'?'dark':'light');
+}
+function initTheme(){ applyTheme(LS.get('theme','dark')); }
+
+// ══════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════
 let CU = null;
@@ -1584,6 +1709,26 @@ async function logout(){
   renderHeader();showPage('home');toast('Вы вышли','i');
 }
 
+// ── Изменить собственный ник (имя/фамилию) ──
+function openNicknameModal(){
+  if(!CU)return;
+  const errEl=document.getElementById('nickname-error'); errEl.style.display='none'; errEl.textContent='';
+  document.getElementById('nickname-input').value=CU.name||'';
+  openModal('modal-nickname');
+}
+async function saveNickname(){
+  const errEl=document.getElementById('nickname-error'); errEl.style.display='none'; errEl.textContent='';
+  const name=document.getElementById('nickname-input').value.trim();
+  if(name.length<2){ errEl.textContent='Имя должно быть от 2 символов'; errEl.style.display='block'; return; }
+  try{
+    const {user}=await API.put('/auth/me',{name});
+    CU=user;
+    closeModal('modal-nickname');
+    renderHeader();
+    toast('Ник обновлён','s');
+  }catch(e){ errEl.textContent=e.error||'Ошибка'; errEl.style.display='block'; }
+}
+
 function switchAuthTab(t){
   document.getElementById('auth-login-form').style.display=t==='login'?'block':'none';
   document.getElementById('auth-reg-form').style.display=t==='reg'?'block':'none';
@@ -1604,7 +1749,7 @@ function renderHeader(){
   if(bas)bas.style.display=canEdit()?'block':'none';
   if(CU){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
-      <span style="font-size:11px;color:var(--gray)" class="mob-hide-name">${xe(CU.name)}</span>
+      <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
       ${(canEdit()||isCuratorPlus())?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
@@ -1612,11 +1757,12 @@ function renderHeader(){
     </div>`;
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
+      <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
       ${(canEdit()||isCuratorPlus())?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
-      <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(255,255,255,.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
+      <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(var(--ovl),.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
   } else {
     ac.innerHTML=`<button class="btn btn-o btn-sm" onclick="showPage('auth')">Войти</button>`;
     if(mob)mob.innerHTML=`<button class="mnl" onclick="showPage('auth');closeMobMenu()">Войти</button>`;
@@ -1704,8 +1850,9 @@ function logSiteVisit(){
 function adHubAllowedTabs(){
   const t=[];
   if(canAds())t.push('ads','calc');
-  // Контракты и Статистика: полный доступ у Curator AD и выше, и просмотр (с
-  // ограниченным редактированием — см. renderContractsTable/renderBonusGrid) — у Advertising Department.
+  // Контракты и Статистика: полный доступ у Curator AD и выше; у Advertising
+  // Department — просмотр (с ограниченным редактированием, см.
+  // renderContractsTable/renderBonusGrid) плюс доступ к «Добавить контракт».
   if(isCuratorPlus()||isAdvertisingOnly())t.push('contracts','stats');
   return t;
 }
@@ -1794,15 +1941,15 @@ function renderAdsResults(r){
 
   if(!r.foundSlots||!r.foundSlots.length){
     resEl.innerHTML=`<div class="acard">
-      <div style="font-size:14px;color:var(--white);margin-bottom:6px">${colorLabel} · ${r.days} дн. · ${r.adsPerDay} объявл/день</div>
+      <div style="font-size:14px;color:var(--ink);margin-bottom:6px">${colorLabel} · ${r.days} дн. · ${r.adsPerDay} объявл/день</div>
       <div style="color:var(--gray);font-size:13px">Свободных слотов, подходящих на все ${r.days} дня подряд, не найдено.</div>
       ${missingHtml}
     </div>`;
     return;
   }
 
-  const rows=r.foundSlots.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
-    <span style="font-family:var(--font-d);font-size:20px;letter-spacing:1px;color:var(--white)">${xe(s.time)}</span>
+  const rows=r.foundSlots.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(var(--ovl),.05)">
+    <span style="font-family:var(--font-d);font-size:20px;letter-spacing:1px;color:var(--ink)">${xe(s.time)}</span>
     <span style="font-size:12px;color:var(--gray)">${s.dates.map(d=>xe(d)).join(', ')}</span>
   </div>`).join('');
 
@@ -1812,7 +1959,7 @@ function renderAdsResults(r){
 
   resEl.innerHTML=`<div class="acard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:14px;color:var(--white)">${colorLabel} · ${r.days} дн. · запрошено ${r.adsPerDay} объявл/день</div>
+      <div style="font-size:14px;color:var(--ink)">${colorLabel} · ${r.days} дн. · запрошено ${r.adsPerDay} объявл/день</div>
       ${badge}
     </div>
     <div style="max-height:400px;overflow-y:auto;margin-top:8px">${rows}</div>
@@ -1890,7 +2037,7 @@ async function renderEmployees(){
   await ensureEmployeesLoaded(true);
   if(!EMPLOYEES.length){el.innerHTML=`<div style="color:var(--gray);font-size:13px">Сотрудников пока нет</div>`;return;}
   el.innerHTML=EMPLOYEES.map(e=>`<div class="emp-roster-row${e.active?'':' inactive'}">
-    <div><span style="color:var(--white);font-weight:600">${xe(e.name)}</span>${e.static_id?`<span style="color:var(--gray);font-size:11px;margin-left:8px">ID ${xe(e.static_id)}</span>`:''}${!e.active?`<span class="badge b-guest" style="margin-left:8px">неактивен</span>`:''}</div>
+    <div><span style="color:var(--ink);font-weight:600">${xe(e.name)}</span>${e.static_id?`<span style="color:var(--gray);font-size:11px;margin-left:8px">ID ${xe(e.static_id)}</span>`:''}${!e.active?`<span class="badge b-guest" style="margin-left:8px">неактивен</span>`:''}</div>
     <div><button class="btn btn-o btn-sm" style="width:100%;justify-content:center" onclick="toggleEmployeeActive('${e.id}',${!e.active})">${e.active?'Деактив.':'Актив.'}</button></div>
     <div class="bg-group"><button class="btn btn-o btn-sm" onclick="editEmployee('${e.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delEmployee('${e.id}')">✕</button></div>
   </div>`).join('');
@@ -1967,7 +2114,7 @@ async function setCTDateToday(){ CT_STATE.date=todayISO(); await loadContractsTa
 async function setCTDate(val){ if(val){CT_STATE.date=val; await loadContractsTable();} }
 
 async function switchCTView(view){
-  if(view==='add'&&!isCuratorPlus()){toast('Нет доступа','e');return;}
+  if(view==='add'&&!canAds()){toast('Нет доступа','e');return;}
   if(view==='add'){
     document.getElementById('ct-tab-green')?.classList.remove('active');
     document.getElementById('ct-tab-red')?.classList.remove('active');
@@ -1983,9 +2130,10 @@ async function openContractsTab(color){
   CT_STATE.color=color||'green';
   document.getElementById('ct-tab-green')?.classList.toggle('active',CT_STATE.color==='green');
   document.getElementById('ct-tab-red')?.classList.toggle('active',CT_STATE.color==='red');
-  // «Добавить контракт» — только для Curator AD и выше; Advertising Department эту кнопку не видит.
+  // «Добавить контракт» — доступно всем сотрудникам с доступом к «Рекламе»
+  // (Advertising Department и выше), не только Curator AD и выше.
   const addTabBtn=document.getElementById('ct-tab-add');
-  if(addTabBtn)addTabBtn.style.display=isCuratorPlus()?'':'none';
+  if(addTabBtn)addTabBtn.style.display=canAds()?'':'none';
   ctShowView('table');
   await ensureEmployeesLoaded();
   await loadContractsTable();
@@ -2008,11 +2156,6 @@ async function loadContractsTable(){
   }
 }
 
-function empOptions(selectedId){
-  const activeEmps=EMPLOYEES.filter(e=>e.active||e.id===selectedId);
-  return `<option value="">—</option>`+activeEmps.map(e=>`<option value="${e.id}" ${e.id===selectedId?'selected':''}>${xe(e.name)}</option>`).join('');
-}
-
 function renderContractsTable(){
   const holder=document.getElementById('ct-table-holder');
   const color=CT_STATE.color;
@@ -2022,14 +2165,18 @@ function renderContractsTable(){
   const roLock=isAdvertisingOnly();
   const rows=CT_ROWS.map(s=>{
     const empty=!s.text&&!s.price&&!s.accepted_id&&!s.declined_id;
-    return `<tr data-id="${s.id}" class="${empty?'ct-empty':''}">
-      <td style="text-align:center"><input type="checkbox" class="ct-status-chk" ${s.status?'checked':''} onchange="ctSave('${s.id}',{status:this.checked})"></td>
+    // Разделитель на каждый час (00 минут) — как в исходной Google Таблице.
+    const hourSep=/:00$/.test(s.slot_time||'')?' ct-hour-sep':'';
+    // Подсветка строки, когда объявление реально отправлено (галочка «Статус») — видна всем ролям.
+    const doneCls=s.status?' ct-done':'';
+    return `<tr data-id="${s.id}" class="${empty?'ct-empty':''}${hourSep}${doneCls}">
+      <td style="text-align:center"><input type="checkbox" class="ct-status-chk" ${s.status?'checked':''} onchange="ctSave('${s.id}',{status:this.checked});ctToggleDoneRow(this)"></td>
       <td class="ct-time-cell">${xe(s.slot_time)}</td>
       <td><input type="number" min="0" value="${Number(s.price)||0}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{price:Number(this.value)||0})"></td>
       <td><div class="ct-text-cell"><input type="text" class="ct-text" value="${xe(s.text||'')}" data-role="text" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{text:this.value})"><button type="button" class="ct-copy-btn" title="Копировать текст" onclick="ctCopyRowText('${s.id}',this)">⧉</button></div></td>
-      <td><select ${roLock?'disabled':''} onchange="ctSave('${s.id}',{accepted_id:this.value||null})">${empOptions(s.accepted_id)}</select></td>
-      <td><select onchange="ctSave('${s.id}',{declined_id:this.value||null})">${empOptions(s.declined_id)}</select></td>
-      <td><input type="number" min="0" value="${Number(s.payout)||0}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
+      <td>${empComboMarkup('ct-acc-'+s.id,s.accepted_id,{disabled:roLock})}</td>
+      <td>${empComboMarkup('ct-dec-'+s.id,s.declined_id,{})}</td>
+      <td><input type="number" min="0" placeholder="0" value="${Number(s.payout)?Number(s.payout):''}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
       <td><input type="text" class="ct-time-transfer" placeholder="ЧЧ:ММ" maxlength="5" value="${xe(s.transfer_time||'')}" data-role="transfer" data-orig="${xe(s.slot_time)}" oninput="ctMaskTransfer(this)" onchange="ctTransferChanged(this,'${s.id}')"></td>
     </tr>`;
   }).join('');
@@ -2037,6 +2184,128 @@ function renderContractsTable(){
     <thead><tr><th>Статус</th><th>Время</th><th>Цена контракта</th><th>Текст</th><th>Принял</th><th>Откинул</th><th>К выплате</th><th>Время переноса</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+// Мгновенно (без ожидания перерисовки всей таблицы) подсвечивает/снимает
+// подсветку строки при клике по галочке «Статус», см. .ct-done в CSS.
+function ctToggleDoneRow(chk){
+  const tr=chk.closest('tr');
+  if(tr)tr.classList.toggle('ct-done',chk.checked);
+}
+
+// ══════════════════════════════════════════════
+// ПОИСК СОТРУДНИКА ПО БУКВАМ (комбобокс вместо обычного <select>)
+// Используется в колонках «Принял»/«Откинул» таблицы «Контракты», в поле
+// «Кто принял контракт» формы «Добавить контракт» и при назначении премии.
+// Можно напечатать первые буквы имени, либо вставить скопированные откуда-то
+// имя и фамилию — список отфильтруется на лету по совпадению подстроки.
+// ══════════════════════════════════════════════
+function empComboMarkup(comboId,selectedId,opts){
+  opts=opts||{};
+  const emp=EMPLOYEES.find(e=>e.id===selectedId);
+  const name=emp?emp.name:'';
+  const cls=(opts.formStyle?'fi ':'')+'emp-combo-input';
+  return `<div class="emp-combo" id="${comboId}" ${opts.allEmployees?'data-all="1"':''}>
+    <input type="text" class="${cls}" id="${comboId}-inp" value="${xe(name)}" data-sel="${selectedId||''}"
+      placeholder="—" autocomplete="off" ${opts.disabled?'disabled':''}
+      oninput="empComboType('${comboId}')" onfocus="empComboOpen('${comboId}')"
+      onkeydown="empComboKey(event,'${comboId}')" onblur="empComboBlur('${comboId}')">
+    <div class="emp-combo-drop" id="${comboId}-drop"></div>
+  </div>`;
+}
+function empComboFilteredList(comboId){
+  const inp=document.getElementById(comboId+'-inp');
+  const wrap=document.getElementById(comboId);
+  const q=(inp?inp.value:'').toLowerCase().trim();
+  const curSel=inp?(inp.dataset.sel||''):'';
+  const allowInactive=wrap&&wrap.dataset.all==='1';
+  const pool=EMPLOYEES.filter(e=>allowInactive||e.active||e.id===curSel);
+  if(!q)return pool;
+  return pool.filter(e=>e.name.toLowerCase().includes(q));
+}
+function empComboRenderDrop(comboId){
+  const drop=document.getElementById(comboId+'-drop');
+  const inp=document.getElementById(comboId+'-inp');
+  if(!drop||!inp||inp.disabled)return;
+  const q=(inp.value||'').trim();
+  const list=empComboFilteredList(comboId);
+  let html='';
+  if(!q)html+=`<div class="emp-combo-opt none" data-combo="${comboId}" data-id="" data-name="">— Никто —</div>`;
+  html+=list.map(e=>`<div class="emp-combo-opt" data-combo="${comboId}" data-id="${e.id}" data-name="${xe(e.name)}">${xe(e.name)}${e.static_id?`<span class="emp-combo-sid">#${xe(e.static_id)}</span>`:''}</div>`).join('');
+  if(!list.length)html+=`<div class="emp-combo-empty">Не найдено</div>`;
+  drop.innerHTML=html;
+  empComboPositionDrop(comboId);
+  drop.classList.add('open');
+}
+// Открывает список вверх, если снизу не хватает места (например, для последних
+// строк таблицы) — иначе список может обрезаться скролл-контейнером таблицы.
+function empComboPositionDrop(comboId){
+  const wrap=document.getElementById(comboId);
+  const drop=document.getElementById(comboId+'-drop');
+  if(!wrap||!drop)return;
+  const rect=wrap.getBoundingClientRect();
+  const spaceBelow=window.innerHeight-rect.bottom;
+  const spaceAbove=rect.top;
+  if(spaceBelow<230&&spaceAbove>spaceBelow){ drop.style.top='auto'; drop.style.bottom='calc(100% + 4px)'; }
+  else { drop.style.top='calc(100% + 4px)'; drop.style.bottom='auto'; }
+}
+function empComboOpen(comboId){ empComboRenderDrop(comboId); }
+function empComboType(comboId){ empComboRenderDrop(comboId); }
+function empComboCloseAll(){ document.querySelectorAll('.emp-combo-drop.open').forEach(d=>d.classList.remove('open')); }
+function empComboBlur(comboId){
+  clearTimeout(window['_ecT_'+comboId]);
+  window['_ecT_'+comboId]=setTimeout(()=>{
+    const drop=document.getElementById(comboId+'-drop');
+    if(drop)drop.classList.remove('open');
+    const inp=document.getElementById(comboId+'-inp');
+    if(!inp)return;
+    const emp=EMPLOYEES.find(e=>e.id===(inp.dataset.sel||''));
+    inp.value=emp?emp.name:'';
+  },160);
+}
+function empComboKey(e,comboId){
+  const drop=document.getElementById(comboId+'-drop');
+  if(!drop)return;
+  const opts=()=>Array.from(drop.querySelectorAll('.emp-combo-opt'));
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    if(!drop.classList.contains('open')){ empComboRenderDrop(comboId); return; }
+    const list=opts(); if(!list.length)return;
+    let idx=list.findIndex(o=>o.classList.contains('hl'));
+    list.forEach(o=>o.classList.remove('hl'));
+    idx=e.key==='ArrowDown'?(idx+1)%list.length:(idx-1+list.length)%list.length;
+    list[idx].classList.add('hl');
+    list[idx].scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    const list=opts();
+    const hl=list.find(o=>o.classList.contains('hl'))||list[0];
+    if(hl)empComboPick(comboId,hl.dataset.id,hl.dataset.name);
+  } else if(e.key==='Escape'){
+    drop.classList.remove('open');
+    document.getElementById(comboId+'-inp')?.blur();
+  }
+}
+function empComboPick(comboId,id,name){
+  const inp=document.getElementById(comboId+'-inp');
+  if(!inp)return;
+  inp.value=name||'';
+  inp.dataset.sel=id||'';
+  empComboCloseAll();
+  empComboOnChange(comboId,id||'');
+}
+// Клик по варианту списка — один обработчик-делегат на весь документ
+// (mousedown+preventDefault, чтобы выбор срабатывал раньше потери фокуса инпутом).
+document.addEventListener('mousedown',function(e){
+  const opt=e.target.closest('.emp-combo-opt');
+  if(opt){ e.preventDefault(); empComboPick(opt.dataset.combo,opt.dataset.id,opt.dataset.name); return; }
+  if(!e.target.closest('.emp-combo'))empComboCloseAll();
+});
+// Что делать при выборе — определяем по префиксу id комбобокса. Для
+// таблицы «Контракты» сразу сохраняем на сервер; для формы «Добавить
+// контракт» и премии значение просто лежит в data-sel до отправки формы.
+function empComboOnChange(comboId,id){
+  if(comboId.indexOf('ct-acc-')===0) ctSave(comboId.slice('ct-acc-'.length),{accepted_id:id||null});
+  else if(comboId.indexOf('ct-dec-')===0) ctSave(comboId.slice('ct-dec-'.length),{declined_id:id||null});
 }
 
 // ══════════════════════════════════════════════
@@ -2261,7 +2530,8 @@ async function ctSave(id,fields){
 // Указываем время(-ена) показа, срок в днях и текст — сервер сам проверяет,
 // свободны ли эти времена на нужные дни, и если да — одним действием
 // проставляет текст/принявшего сотрудника и считает цену/выплату как
-// в Калькуляторе. Контракт всегда заполняется начиная со следующего дня.
+// в Калькуляторе. Дата начала — любая (по умолчанию сегодня): раньше было
+// обязательно «начиная со следующего дня», это ограничение снято.
 // ══════════════════════════════════════════════
 const CTADD_STATE={ color:'green' };
 let CTADD_SELECTED_TIMES=[];
@@ -2271,6 +2541,18 @@ let CTADD_SELECTED_TIMES=[];
 function getScheduleTimes(){
   if(CT_ROWS&&CT_ROWS.length)return CT_ROWS.map(r=>r.slot_time);
   return [];
+}
+// Для формы «Добавить контракт» показываем только времена ДО полуночи —
+// без «хвоста» расписания, уходящего на следующие сутки (например 00:00…02:50
+// при расписании 13:00→03:00). Один контракт всё равно размножается на нужное
+// число дней полем «Срок контракта», так что времена после полуночи здесь
+// только путали и были лишними.
+function getScheduleTimesForAdd(){
+  const all=getScheduleTimes();
+  if(!all.length)return all;
+  const toMin=t=>{ const [h,m]=(t||'0:0').split(':').map(Number); return h*60+m; };
+  const startMin=toMin((CT_ROWS&&CT_ROWS[0]&&CT_ROWS[0].slot_time)||'00:00');
+  return all.filter(t=>toMin(t)>=startMin);
 }
 
 function ctAddSetColor(color){
@@ -2282,28 +2564,50 @@ function ctAddSetColor(color){
   ctAddRun();
 }
 
+// Времена показа теперь вводятся ВРУЧНУЮ текстом (ЧЧ:ММ), а не только
+// выбором из выпадающего списка — раньше при попытке напечатать, например,
+// «15:30» нативный <select> перескакивал на первый пункт, начинающийся с
+// «15» (то есть на «15:00»), и ввод не срабатывал. Список остаётся —
+// он подключён как подсказки (datalist), из которых можно кликнуть — но
+// можно и просто напечатать время целиком, двоеточие подставляется само
+// (как и в поле «Время переноса» в самой таблице).
 function renderCTAddTimeRows(){
   const holder=document.getElementById('ctadd-times');
-  const times=getScheduleTimes();
+  const times=getScheduleTimesForAdd();
+  const datalist=`<datalist id="ctadd-times-datalist">${times.map(t=>`<option value="${t}">`).join('')}</datalist>`;
   if(!times.length){
-    holder.innerHTML=`<div class="fhint">Расписание слотов ещё не загружено — откройте вкладку 🟢 или 🔴 хотя бы раз.</div>`;
+    holder.innerHTML=datalist+`<div class="fhint">Расписание слотов ещё не загружено — откройте вкладку 🟢 или 🔴 хотя бы раз.</div>`;
     return;
   }
-  holder.innerHTML=CTADD_SELECTED_TIMES.map((val,idx)=>`
+  holder.innerHTML=datalist+CTADD_SELECTED_TIMES.map((val,idx)=>`
     <div class="ct-add-time-row">
-      <select class="fsel" onchange="ctAddTimeChanged(${idx},this.value)">
-        ${times.map(t=>`<option value="${t}" ${t===val?'selected':''}>${t}</option>`).join('')}
-      </select>
+      <input type="text" class="fi" inputmode="numeric" list="ctadd-times-datalist" maxlength="5" placeholder="ЧЧ:ММ"
+        value="${xe(val)}" oninput="ctAddTimeMaskInput(this,${idx})" onchange="ctAddTimeChanged(this,${idx})">
       ${CTADD_SELECTED_TIMES.length>1?`<button type="button" class="btn btn-d btn-sm" onclick="ctAddRemoveTimeRow(${idx})">✕</button>`:''}
     </div>`).join('');
 }
-function ctAddTimeChanged(idx,val){ CTADD_SELECTED_TIMES[idx]=val; ctAddRun(); }
+// Тот же авто-ввод двоеточия (ЧЧ:ММ), что и в «Времени переноса» — см. ctMaskTransfer.
+function ctAddTimeMaskInput(input,idx){
+  ctMaskTransfer(input);
+  const v=input.value.trim();
+  if(/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) CTADD_SELECTED_TIMES[idx]=v;
+  ctAddRun();
+}
+function ctAddTimeChanged(input,idx){
+  const val=(input.value||'').trim();
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(val)){
+    toast('Введите время в формате ЧЧ:ММ','e');
+    input.value=CTADD_SELECTED_TIMES[idx]||'';
+    return;
+  }
+  CTADD_SELECTED_TIMES[idx]=val;
+  ctAddRun();
+}
 function ctAddAddTimeRow(){
-  const times=getScheduleTimes();
-  if(!times.length)return;
   if(CTADD_SELECTED_TIMES.length>=10){toast('Максимум 10 времён в день','e');return;}
+  const times=getScheduleTimesForAdd();
   const unused=times.find(t=>!CTADD_SELECTED_TIMES.includes(t));
-  CTADD_SELECTED_TIMES.push(unused||times[0]);
+  CTADD_SELECTED_TIMES.push(unused||times[0]||'13:00');
   renderCTAddTimeRows();
   ctAddRun();
 }
@@ -2315,10 +2619,10 @@ function ctAddRemoveTimeRow(idx){
 }
 
 // Даты контракта: начиная с выбранной пользователем даты (поле «Дата начала»),
-// по умолчанию — со следующего дня после сегодняшнего, если дата не указана.
+// по умолчанию — сегодняшняя дата, если дата не указана.
 function ctAddGetStartDate(){
   const v=document.getElementById('ctadd-startdate')?.value;
-  return v||shiftISO(todayISO(),1);
+  return v||todayISO();
 }
 function ctAddComputeDates(days,startDate){
   const dates=[];
@@ -2348,29 +2652,68 @@ function ctAddRun(){
   document.getElementById('ctadd-treasury').textContent=fmtMoney(treasury);
   document.getElementById('ctadd-toemp').textContent=fmtMoney(toEmployee);
   document.getElementById('ctadd-perad').textContent=fmtMoney(perAd);
+  // Сырые (без пробелов-разделителей и знака $) значения — для кнопок
+  // «⧉» рядом с суммами, чтобы можно было сразу вставить число в казну и т.п.
+  document.getElementById('ctadd-sum-box').dataset.raw=String(Math.round(orderSum));
+  document.getElementById('ctadd-treasury-box').dataset.raw=String(Math.round(treasury));
+  document.getElementById('ctadd-toemp-box').dataset.raw=String(Math.round(toEmployee));
+  document.getElementById('ctadd-perad-box').dataset.raw=String(Math.round(perAd));
 
   const dates=ctAddComputeDates(days);
   const rangeEl=document.getElementById('ctadd-daterange');
   if(dates.length)rangeEl.textContent=dates.length===1?`Дата: ${fmtPlainDate(dates[0])}`:`С ${fmtPlainDate(dates[0])} по ${fmtPlainDate(dates[dates.length-1])} (${dates.length} дн.)`;
+  updateCTAddSummary();
 }
+// Копирует «сырое» число (без пробелов и «$») из data-raw бокса — чтобы можно
+// было сразу вставить сумму, например, в команду начисления в казну.
+function copyCalcVal(boxId,btn){
+  const box=document.getElementById(boxId);
+  const raw=box?(box.dataset.raw||'0'):'0';
+  copyToClipboard(raw,btn);
+}
+
+// ── Сводка для клиента (текст объявления, срок, время показа, сумма) ──
+// Обновляется вживую при любом изменении полей формы «Добавить контракт»,
+// чтобы можно было скопировать и отправить клиенту, не дожидаясь создания контракта.
+function buildCTAddSummaryText(){
+  const text=(document.getElementById('ctadd-text').value||'').trim();
+  let days=parseInt(document.getElementById('ctadd-days').value,10); if(isNaN(days)||days<1)days=1; if(days>30)days=30;
+  let discount=parseFloat(document.getElementById('ctadd-discount').value); if(isNaN(discount)||discount<0)discount=0; if(discount>100)discount=100;
+  const times=[...CTADD_SELECTED_TIMES].filter(Boolean).sort();
+  const timesCount=times.length||1;
+  const totalAds=timesCount*days;
+  const rate=CTADD_STATE.color==='red'?150:300;
+  const orderSum=(totalAds*text.length*rate)*(1-discount/100);
+  const dates=ctAddComputeDates(days);
+  const period=dates.length>1?`с ${fmtPlainDate(dates[0])} по ${fmtPlainDate(dates[dates.length-1])} (${dates.length} дн.)`:(dates[0]?fmtPlainDate(dates[0]):'—');
+  return [
+    `Текст объявления: ${text||'—'}`,
+    `Период: ${period}`,
+    `Показы в день: ${times.length?times.join(', '):'—'}`,
+    `Сумма заказа: ${fmtMoney(orderSum)}`
+  ].join('\n');
+}
+function updateCTAddSummary(){
+  const box=document.getElementById('ctadd-summary-box');
+  if(box)box.textContent=buildCTAddSummaryText();
+}
+function copyCTAddSummary(){ copyToClipboard(buildCTAddSummaryText()); }
 
 async function initCTAddForm(){
   const errEl=document.getElementById('ctadd-error'); errEl.style.display='none'; errEl.textContent='';
   ctAddSetColor(CTADD_STATE.color==='red'?'red':'green');
   if(!CT_ROWS.length)await loadContractsTable();
   if(!CTADD_SELECTED_TIMES.length){
-    const times=getScheduleTimes();
+    const times=getScheduleTimesForAdd();
     if(times.length)CTADD_SELECTED_TIMES=[times[0]];
   }
   renderCTAddTimeRows();
   const dateInput=document.getElementById('ctadd-startdate');
-  if(dateInput&&!dateInput.value)dateInput.value=shiftISO(todayISO(),1); // по умолчанию завтра, только при первом открытии формы
+  // По умолчанию — сегодня (ограничение «только со следующего дня» снято, см.
+  // сервер): часто контракт заносят прямо в день, когда его приняли.
+  if(dateInput&&!dateInput.value)dateInput.value=todayISO();
   await ensureEmployeesLoaded();
-  const sel=document.getElementById('ctadd-employee');
-  const activeEmps=EMPLOYEES.filter(e=>e.active);
-  sel.innerHTML=activeEmps.length
-    ? activeEmps.map(e=>`<option value="${e.id}">${xe(e.name)}</option>`).join('')
-    : `<option value="">Нет активных сотрудников</option>`;
+  document.getElementById('ctadd-employee').innerHTML=empComboMarkup('ctadd-employee-c','',{formStyle:true});
   ctAddRun();
 }
 
@@ -2381,7 +2724,7 @@ async function submitCTAdd(){
   const text=document.getElementById('ctadd-text').value.trim();
   const days=parseInt(document.getElementById('ctadd-days').value,10)||0;
   const discount=parseFloat(document.getElementById('ctadd-discount').value)||0;
-  const employeeId=document.getElementById('ctadd-employee').value;
+  const employeeId=document.getElementById('ctadd-employee-c-inp')?.dataset.sel||'';
   const times=[...CTADD_SELECTED_TIMES];
   const dates=ctAddComputeDates(days);
 
@@ -2500,14 +2843,13 @@ function renderBonusGrid(){
 
 async function openBonusModal(){
   await ensureEmployeesLoaded();
-  const sel=document.getElementById('bonus-emp-select');
-  sel.innerHTML=EMPLOYEES.map(e=>`<option value="${e.id}">${xe(e.name)}${e.static_id?' (#'+xe(e.static_id)+')':''}</option>`).join('')||`<option value="">Нет сотрудников</option>`;
+  document.getElementById('bonus-emp-select').innerHTML=empComboMarkup('bonus-emp-select-c','',{formStyle:true,allEmployees:true});
   document.getElementById('bonus-amount').value=0;
   document.getElementById('bonus-comment').value='';
   openModal('modal-bonus');
 }
 async function saveBonus(){
-  const employee_id=document.getElementById('bonus-emp-select').value;
+  const employee_id=document.getElementById('bonus-emp-select-c-inp')?.dataset.sel||'';
   const amount=Number(document.getElementById('bonus-amount').value)||0;
   const comment=document.getElementById('bonus-comment').value.trim();
   if(!employee_id){toast('Выберите сотрудника','e');return;}
@@ -2707,7 +3049,7 @@ function preloadUploadZone(key,url){
 // ══════════════════════════════════════════════
 function ncHTML(n,featured=false){
   const imgUrl=safeImg(n.img);
-  const ph=`<div class="nc-ph" id="ncph_${n.id}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+  const ph=`<div class="nc-ph" id="ncph_${n.id}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ovl),0.12)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
   const img=imgUrl?`<img src="${imgUrl}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';document.getElementById('ncph_${n.id}').style.display='flex'">${ph}`:ph;
   const editBtns=canEdit()?`<div style="display:flex;gap:5px">
     <button class="btn btn-o btn-sm" onclick="editNews('${n.id}');event.stopPropagation()">✎</button>
@@ -2750,15 +3092,22 @@ async function renderHomeNews(){
 }
 
 // ══════════════════════════════════════════════
-// ВКЛАДКА «НОВОСТИ» — постраничная загрузка
+// ВКЛАДКА «НОВОСТИ» — постраничная загрузка + автоподгрузка при скролле
 // ══════════════════════════════════════════════
 // Раньше renderAllNews() одним запросом качал ВСЕ новости (включая тяжёлое
 // поле blocks) и разом вставлял все карточки в DOM — при большом архиве
 // новостей это и вызывало лаги при заходе на вкладку (долгий запрос + долгий
 // парсинг JSON + огромная вставка в DOM за один кадр). Теперь при открытии
-// вкладки грузится и рисуется только первая порция (NEWS_PAGE_SIZE штук),
-// а остальные подгружаются по кнопке «Показать ещё» — новые карточки просто
-// дорисовываются в конец, без пересборки уже отрисованных.
+// вкладки грузится и рисуется только первая порция (NEWS_PAGE_SIZE штук).
+//
+// Следующие порции подгружаются АВТОМАТИЧЕСКИ по мере скролла — причём
+// заранее, ДО того как пользователь реально долистает до конца (см. большой
+// rootMargin у IntersectionObserver в setupNewsInfiniteScroll). Именно
+// заблаговременная подгрузка убирает эффект «долистал — пусто — подвисло —
+// появилось»: к моменту, когда карточки попадают в кадр, запрос уже
+// отработал заранее, и они просто плавно проявляются reveal-анимацией.
+let newsScrollObserver=null;
+
 async function renderAllNews(){
   const el=document.getElementById('all-news-grid');if(!el)return;
   newsPageOffset=0;newsHasMore=true;newsLoadingMore=false;
@@ -2774,20 +3123,39 @@ async function renderAllNews(){
     el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📰</div><div class="empty-tx">Ошибка загрузки</div></div>`;
     newsHasMore=false;
   }
-  renderNewsLoadMoreBtn();
+  renderNewsLoadMoreIndicator();
+  setupNewsInfiniteScroll();
   setTimeout(initReveal,50); // см. комментарий в renderHomeNews() выше
 }
 
-function renderNewsLoadMoreBtn(){
+// Тонкая полоска-индикатор внизу ленты — она же служит «датчиком» для
+// IntersectionObserver (см. setupNewsInfiniteScroll). Видимого текста в ней
+// почти никогда не видно: он мелькает на долю секунды во время подгрузки,
+// которая обычно уже завершается к тому моменту, когда пользователь реально
+// долистывает досюда.
+function renderNewsLoadMoreIndicator(){
   const wrap=document.getElementById('news-load-more-wrap');if(!wrap)return;
-  wrap.innerHTML=newsHasMore?`<button class="btn btn-o" id="news-load-more-btn" onclick="loadMoreNews()">Показать ещё</button>`:'';
+  wrap.innerHTML=newsLoadingMore?`<div style="color:var(--gray);font-size:12px;padding:8px 0">Загрузка…</div>`:'';
+}
+
+// rootMargin расширяет область "видимости" датчика на 900px вниз за пределы
+// реального экрана — то есть подгрузка следующей порции стартует, когда
+// пользователь ещё довольно далеко от конца текущей, а не в момент, когда он
+// уже там. Это и убирает видимый лаг/рывок при долистывании.
+function setupNewsInfiniteScroll(){
+  const sentinel=document.getElementById('news-load-more-wrap');if(!sentinel)return;
+  if(newsScrollObserver){newsScrollObserver.disconnect();newsScrollObserver=null;}
+  if(!newsHasMore)return;
+  newsScrollObserver=new IntersectionObserver(entries=>{
+    if(entries.some(e=>e.isIntersecting))loadMoreNews();
+  },{rootMargin:'0px 0px 900px 0px'});
+  newsScrollObserver.observe(sentinel);
 }
 
 async function loadMoreNews(){
   if(newsLoadingMore||!newsHasMore)return;
   newsLoadingMore=true;
-  const btn=document.getElementById('news-load-more-btn');
-  if(btn){btn.disabled=true;btn.textContent='Загрузка…';}
+  renderNewsLoadMoreIndicator();
   try{
     const batch=await API.get(`/news?limit=${NEWS_PAGE_SIZE}&offset=${newsPageOffset}`);
     if(batch.length){
@@ -2798,10 +3166,13 @@ async function loadMoreNews(){
     }
     newsHasMore=batch.length===NEWS_PAGE_SIZE;
   }catch{
+    // Не удалось — не глушим автоподгрузку навсегда: пользователь продолжит
+    // скроллить, датчик снова пересечёт границу и попытка повторится сама.
     toast('Не удалось загрузить ещё новости','e');
   }
   newsLoadingMore=false;
-  renderNewsLoadMoreBtn();
+  renderNewsLoadMoreIndicator();
+  if(!newsHasMore&&newsScrollObserver){newsScrollObserver.disconnect();newsScrollObserver=null;}
   setTimeout(initReveal,50);
 }
 
@@ -2966,7 +3337,7 @@ function setNewsAlign(align){
   document.getElementById('news-align-input').value=align;
   document.querySelectorAll('.news-align-btn').forEach(b=>{
     const a=b.dataset.nalign===align;
-    b.style.background=a?'var(--red)':'';b.style.borderColor=a?'var(--red)':'rgba(255,255,255,.25)';b.style.color=a?'#fff':'';
+    b.style.background=a?'var(--red)':'';b.style.borderColor=a?'var(--red)':'rgba(var(--ovl),.25)';b.style.color=a?'#fff':'';
   });
 }
 
@@ -3017,7 +3388,7 @@ function clearBlockColorAtCursor(idx){
 }
 function renderNewsBlocks(){
   const el=document.getElementById('news-blocks-editor');if(!el)return;
-  if(!newsBlocks.length){el.innerHTML=`<div style="text-align:center;color:var(--gray);font-size:12px;padding:16px;border:1px dashed rgba(255,255,255,.08);border-radius:var(--r)">Нажмите кнопки ниже чтобы добавить блоки</div>`;return;}
+  if(!newsBlocks.length){el.innerHTML=`<div style="text-align:center;color:var(--gray);font-size:12px;padding:16px;border:1px dashed rgba(var(--ovl),.08);border-radius:var(--r)">Нажмите кнопки ниже чтобы добавить блоки</div>`;return;}
   el.innerHTML=newsBlocks.map((b,idx)=>{
     const typeLabel={text:'📝 Текст',img:'🖼 Фото',link:'🔗 Гиперссылка',embed:'▶ Видео/FlipHTML5'}[b.type]||'📝';
     const alignBtns=['left','center','right'].map(a=>`<button type="button" class="nb-align-btn${b.align===a?' active':''}" onclick="setBlockAlign('${b.id}','${a}')" title="${{left:'Слева',center:'Центр',right:'Справа'}[a]}">${{left:'◀',center:'▶◀',right:'▶'}[a]}</button>`).join('');
@@ -3531,7 +3902,7 @@ function renderTickerList(){
   const el=document.getElementById('ticker-list');if(!el)return;
   const items=SETTINGS.ticker||LS.get('ticker',[]);
   el.innerHTML=items.map((it,i)=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
-    <span style="flex:1;font-size:12px;color:var(--off-white);background:rgba(255,255,255,.04);padding:5px 9px;border-radius:6px">${xe(it)}</span>
+    <span style="flex:1;font-size:12px;color:var(--off-white);background:rgba(var(--ovl),.04);padding:5px 9px;border-radius:6px">${xe(it)}</span>
     <button class="btn btn-d btn-sm" style="padding:4px 8px;font-size:10px" onclick="delTickerItem(${i})">✕</button>
   </div>`).join('')||`<div style="color:var(--gray);font-size:11px;padding-top:4px">Пусто</div>`;
 }
@@ -3694,7 +4065,7 @@ async function renderTeamMgmt(){
   const orphansHTML=orphans.length?`<div class="acard" style="border-color:rgba(224,60,60,.4);margin-bottom:14px">
     <div class="acard-hdr"><div><div class="acard-title" style="color:var(--red)">⚠ Без категории (${orphans.length})</div><div class="acard-sub">Эти участники не отображаются на публичной странице «Состав» — откройте и выберите категорию заново.</div></div></div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${orphans.map(m=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(224,60,60,.08);border:1px solid rgba(224,60,60,.3);border-radius:6px;padding:5px 10px">
-      <span style="font-size:12px;color:var(--white)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
+      <span style="font-size:12px;color:var(--ink)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
       <button class="btn btn-o btn-sm" style="padding:2px 6px;font-size:10px" onclick="editMember('${m.id}')">✎ Исправить</button>
       <button class="btn btn-d btn-sm" style="padding:2px 6px;font-size:10px" onclick="delMember('${m.id}')">✕</button>
     </div>`).join('')}</div>
@@ -3705,8 +4076,8 @@ async function renderTeamMgmt(){
       <div><div class="acard-title">${xe(cat.name)}</div><div class="acard-sub">${cm.length} участников</div></div>
       <div class="bg-group"><button class="btn btn-p btn-sm" onclick="openTeamMemberModal(null,'${cat.id}')">+ Участник</button><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>
     </div>
-    ${cm.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${cm.map(m=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:5px 10px">
-      <span style="font-size:12px;color:var(--white)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
+    ${cm.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${cm.map(m=>`<div style="display:flex;align-items:center;gap:6px;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.07);border-radius:6px;padding:5px 10px">
+      <span style="font-size:12px;color:var(--ink)">${xe(m.name)}</span>${m.role?`<span style="font-size:10px;color:var(--red)">${xe(m.role)}</span>`:''}
       <button class="btn btn-o btn-sm" style="padding:2px 6px;font-size:10px" onclick="editMember('${m.id}')">✎</button>
       <button class="btn btn-d btn-sm" style="padding:2px 6px;font-size:10px" onclick="delMember('${m.id}')">✕</button>
     </div>`).join('')}</div>`:''}
@@ -3785,6 +4156,7 @@ function initReveal(){
 // BOOT
 // ══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async ()=>{
+  initTheme();
   initITEDrag();
 
   // Check session
@@ -3816,7 +4188,7 @@ document.addEventListener('keydown',e=>{
 </script>
 <!-- INLINE TEXT EDITOR POPUP -->
 <div id="ite-popup">
-  <div id="ite-drag-hdr" style="display:flex;align-items:center;justify-content:space-between;cursor:grab;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:10px;user-select:none">
+  <div id="ite-drag-hdr" style="display:flex;align-items:center;justify-content:space-between;cursor:grab;padding-bottom:10px;border-bottom:1px solid rgba(var(--ovl),.07);margin-bottom:10px;user-select:none">
     <span class="ite-pop-title" style="margin:0">✎ Редактировать</span>
     <span style="font-size:16px;opacity:.3;letter-spacing:2px">⠿⠿</span>
   </div>
