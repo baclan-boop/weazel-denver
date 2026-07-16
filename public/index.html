@@ -897,7 +897,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec" id="admin-users">
         <div class="asec-title">Пользователи</div>
-        <div class="fhint" style="margin-bottom:12px">Доступно Dep. Director, Лидеру и Администратору — можно назначить любую роль.</div>
+        <div class="fhint" style="margin-bottom:12px">Dep. Director, Лидер и Администратор могут назначить любую роль. Curator AD тоже видит этот раздел, но может выдавать/снимать только роль Advertising Department.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
           <tbody id="users-tbody"></tbody>
@@ -1652,14 +1652,18 @@ let TEAM = {cats:[], members:[]};
 let SETTINGS = {};
 
 // ─── Права по ролям (см. подробное описание ролей в server.js) ───
-// canEdit()          — доступ к Панели управления хоть с чем-то (у Редактора — только вкладка «Новости»).
+// canOpenPanel()      — доступ к Панели управления хоть с чем-то (у Редактора — только «Новости»,
+//                        у Curator AD — только «Пользователи»/«Сотрудники»).
+// canEdit()           — права на новости (добавление/редактирование).
 // canDeleteNews()     — удаление новостей (Редактору недоступно, только добавление/редактирование).
 // canEditServices()   — управление Услугами (Редактору недоступно).
 // canEditTeam()       — управление Составом (Dep. Director и Редактору недоступно).
 // canEditTexts()      — «Все тексты» и «Фоны страниц» (только Лидер/Администратор).
-// canManageUsers()    — вкладки «Пользователи» и «Сотрудники» (создание/удаление/роли).
+// canManageUsers()    — полное управление ролями любого пользователя (см. canChangeUserRole
+//                        для более тонкого правила Curator AD — она выдаёт только роль AD).
 // canAds()            — доступ к разделу «Реклама» вообще (просмотр).
 // canManageAdsFull()  — полное редактирование раздела «Реклама» (все поля контракта, премии) — все, кроме роли Advertising Dept.
+const canOpenPanel = () => CU && ['editor','curator_ad','dep_director','admin','leader'].includes(CU.role);
 const canEdit = () => CU && ['editor','dep_director','admin','leader'].includes(CU.role);
 const canDeleteNews = () => CU && ['dep_director','admin','leader'].includes(CU.role);
 const canEditServices = () => CU && ['dep_director','admin','leader'].includes(CU.role);
@@ -1671,9 +1675,16 @@ const canManageAdsFull = () => CU && ['curator_ad','dep_director','admin','leade
 const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
 const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='dep_director'?'Dep. Director':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+// Кто какие роли может назначать другим пользователям:
+//  • admin/leader/dep_director — любую роль любому пользователю.
+//  • curator_ad — ИСКЛЮЧИТЕЛЬНО роль Advertising Department, и только если
+//    у пользователя сейчас Guest либо уже Advertising (см. ту же проверку
+//    на сервере в PUT /api/users/:id/role).
 function canChangeUserRole(targetRole){
   if(!CU)return false;
-  return ['admin','leader','dep_director'].includes(CU.role);
+  if(['admin','leader','dep_director'].includes(CU.role))return true;
+  if(CU.role==='curator_ad')return['guest','advertising'].includes(targetRole);
+  return false;
 }
 
 // ══════════════════════════════════════════════
@@ -1783,7 +1794,7 @@ function renderHeader(){
       <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
-      ${canEdit()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
+      ${canOpenPanel()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
     if(mob)mob.innerHTML=`
@@ -1791,7 +1802,7 @@ function renderHeader(){
       <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
-      ${canEdit()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
+      ${canOpenPanel()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(var(--ovl),.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
   } else {
@@ -1818,7 +1829,7 @@ function closeMobMenu(){
 // ══════════════════════════════════════════════
 let curPage='home';
 async function showPage(page){
-  if(page==='admin'&&!canEdit()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='admin'&&!canOpenPanel()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   if(page==='adhub'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
@@ -3986,14 +3997,19 @@ async function renderAdmin(){
 //                   видимости исключительно Администратора (requireAdmin).
 //  • dep_director — как leader, но дополнительно без «Состав» (requireTeam)
 //                   и без «Все тексты»/«Настройки сайта» (requireSiteSettings).
+//  • curator_ad   — «Пользователи» (ограниченно: только роль Advertising
+//                   Department, см. canChangeUserRole/openRoleModal ниже)
+//                   и «Сотрудники» (полное управление ростером). Остальное
+//                   в Панели не видит — плюс полный доступ к «Рекламе».
 //  • editor       — только «Новости» (добавление/редактирование, без
 //                   удаления — см. requireNewsDelete в server.js).
-//  • curator_ad, advertising, guest — ни одной вкладки Панели: их зона —
-//                   исключительно страница «Реклама» (см. canAds()).
+//  • advertising, guest — ни одной вкладки Панели: их зона — исключительно
+//                   страница «Реклама» (см. canAds()), да и там не у guest.
 const ADMIN_TABS_BY_ROLE={
   admin:['visitors','edit-logs','users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
   leader:['users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
   dep_director:['users','employees','news-mgmt','services-mgmt'],
+  curator_ad:['users','employees'],
   editor:['news-mgmt'],
 };
 function allowedAdminTabs(){
@@ -4166,8 +4182,14 @@ function openRoleModal(uid,currentRole){
   document.getElementById('role-username').textContent=name;
   const sel=document.getElementById('role-select');
   const hint=document.getElementById('role-hint');
-  Array.from(sel.options).forEach(o=>o.disabled=false);
-  hint.textContent='';
+  if(CU.role==='curator_ad'){
+    // Curator AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
+    Array.from(sel.options).forEach(o=>o.disabled=!['guest','advertising'].includes(o.value));
+    hint.textContent='Curator AD может назначать только роль Advertising Department.';
+  } else {
+    Array.from(sel.options).forEach(o=>o.disabled=false);
+    hint.textContent='';
+  }
   sel.value=currentRole||'guest';
   openModal('modal-role');
 }

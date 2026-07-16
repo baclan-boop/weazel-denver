@@ -436,9 +436,15 @@ async function requireAuth(req,res,next){
 //                              Не может удалять новости, не имеет доступа
 //                              ни к чему в разделе «Реклама», ни к Составу/
 //                              Услугам/Текстам/Пользователям/Сотрудникам.
-//  • curator_ad (Curator AD) — нет доступа ни к чему на сайте, КРОМЕ полного
-//                              редактирования раздела «Реклама» (объявления,
-//                              контракты — все поля, статистика, премии).
+//  • curator_ad (Curator AD) — полное редактирование раздела «Реклама»
+//                              (объявления, контракты — все поля,
+//                              статистика, премии) + вкладка «Сотрудники»
+//                              (полное управление ростером) + вкладка
+//                              «Пользователи», но ТАМ ограниченно: может
+//                              выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль
+//                              Advertising Department (см. проверку внутри
+//                              PUT /api/users/:id/role). Остального в
+//                              Панели (Новости/Услуги/Состав/Тексты) не видит.
 //  • advertising (AD)        — только раздел «Реклама», и то не полностью:
 //                              может добавлять контракты (bulk-добавление) и
 //                              в самой таблице контрактов — только галочку
@@ -471,12 +477,15 @@ async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{
 // Advertising Dept. сюда не входит: премии не входит в её ограниченный список прав.
 async function requireBonusMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 // Сотрудники (ростер отдела рекламы) — управление (создание/редактирование/
-// удаление). Curator AD сюда больше не входит — её полный доступ ограничен
-// исключительно вкладкой «Реклама» (контракты/статистика/премии), а ростер
-// сотрудников теперь зона Dep. Director/Лидера/Администратора.
-async function requireEmployeeMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
-// Пользователи: просмотр списка и назначение ролей.
-async function requireUserMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// удаление) — Curator AD, Dep. Director, Лидер, Администратор (ростер
+// сотрудников — часть повседневной работы отдела рекламы, поэтому Curator
+// AD также имеет сюда полный доступ).
+async function requireEmployeeMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// Пользователи: просмотр списка — Curator AD, Dep. Director, Лидер,
+// Администратор. Назначение ролей — тоже им всем, но у Curator AD доступ
+// ограничен: она может выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль Advertising
+// Department (см. проверку внутри PUT /api/users/:id/role ниже).
+async function requireUserMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
 // Файл принимаем в память (buffer), а не сразу на диск: так его можно
 // отправить в Cloudinary. Если Cloudinary не настроен — пишем этот же
@@ -608,8 +617,11 @@ app.put('/api/auth/me', requireAuth, async (req, res) => {
 });
 
 // USERS
-// Просмотр списка пользователей и назначение ролей — Dep. Director, Лидер, Администратор.
-// Curator AD и Редактор доступа сюда больше не имеют (см. requireUserMgmt выше).
+// Просмотр списка пользователей и назначение ролей — Curator AD, Dep.
+// Director, Лидер, Администратор (Редактору доступа сюда больше нет,
+// см. requireUserMgmt выше). Curator AD ограничена: см. проверку внутри
+// PUT /api/users/:id/role ниже — она может выдавать/снимать только роль
+// Advertising Department.
 app.get('/api/users',requireUserMgmt,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
 
 app.put('/api/users/:id/role',requireUserMgmt,async(req,res)=>{
@@ -619,6 +631,14 @@ app.put('/api/users/:id/role',requireUserMgmt,async(req,res)=>{
   if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});
   const beforeR=await query('SELECT name,role FROM users WHERE id=$1',[req.params.id]);
   if(!beforeR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
+  // Curator AD может выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль Advertising Department:
+  // и назначаемая роль, и текущая роль пользователя должны быть guest либо advertising
+  // (более высокие роли — Редактор/Dep. Director/Лидер/Администратор/сам Curator AD —
+  // ей недоступны ни как источник, ни как цель).
+  if(req.user.role==='curator_ad'){
+    if(!['guest','advertising'].includes(role))return res.status(403).json({error:'Curator AD может назначать только роль Advertising Department'});
+    if(!['guest','advertising'].includes(beforeR.rows[0].role))return res.status(403).json({error:'Недостаточно прав для изменения этой роли'});
+  }
   await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);
   await logFieldEdit(req,'user_role',req.params.id,beforeR.rows[0].name,beforeR.rows[0],{role},EDIT_LOG_FIELD_LABELS.user_role);
   res.json({ok:true});
@@ -628,9 +648,8 @@ app.put('/api/users/:id/role',requireUserMgmt,async(req,res)=>{
 // СОТРУДНИКИ (роster отдела рекламы: имя персонажа + StaticID)
 // Используется в выпадающих списках «Принял/Откинул» таблицы контрактов
 // и в недельной статистике. Просмотр — Advertising Department и выше;
-// добавление/редактирование/удаление — Dep. Director, Лидер, Администратор
-// (Curator AD теперь просмотр без права управления ростером — её полный
-// доступ ограничен вкладкой «Реклама»: контракты и премии).
+// добавление/редактирование/удаление — Curator AD, Dep. Director, Лидер,
+// Администратор.
 // ═══════════════════════════════════════════════════════════════════════
 app.get('/api/employees',requireAdvertising,async(req,res)=>{
   try{ const r=await query('SELECT * FROM employees ORDER BY sort_order,name'); res.json(r.rows); }
