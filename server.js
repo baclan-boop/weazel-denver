@@ -198,9 +198,12 @@ async function initDB() {
 
   // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Curator AD)
   // + 'leader' (Лидер — доступ как у Администратора, кроме статистики
-  // посещений и журнала редактирования, см. requireAdmin ниже).
+  // посещений и журнала редактирования, см. requireAdmin ниже)
+  // + 'dep_director' (Dep. Director — см. requireNewsEdit/requireServices/
+  // requireTeam/requireSiteSettings/requireAdvertising/requireUserMgmt/
+  // requireEmployeeMgmt ниже за подробным разбором прав этой роли).
   await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
-  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising','curator_ad','leader'))`);
+  await query(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN ('guest','editor','admin','advertising','curator_ad','leader','dep_director'))`);
 
   // ─── Модуль «Контракты» (роли, таблица контрактов, калькулятор, статистика) ───
   await query(`
@@ -412,10 +415,68 @@ async function requireAuth(req,res,next){
   if(!r.rows.length){req.session.destroy(()=>{});return res.status(401).json({error:'Сессия недействительна'});}
   req.user=r.rows[0];next();
 }
-async function requireEditor(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+
+// ═══════════════════════════════════════════════════════════════════════
+// РОЛИ И ПРАВА ДОСТУПА
+// ─────────────────────────────────────────────────────────────────────
+//  • admin (Администратор)   — абсолютно все права без исключений.
+//  • leader (Лидер)          — как Администратор, КРОМЕ статистики посещений
+//                              (/api/visitors, /api/site-visits/stats) и
+//                              журнала редактирования (/api/edit-logs) —
+//                              это зона видимости исключительно Администратора
+//                              (см. requireAdmin).
+//  • dep_director (Dep. Director) — как Лидер, НО дополнительно не видит:
+//                              посещаемость и логи (как и Лидер), не может
+//                              управлять Составом (requireTeam) и не может
+//                              менять тексты сайта/фоны страниц
+//                              (requireSiteSettings). Во всём остальном,
+//                              включая раздел «Реклама» — полные права.
+//  • editor (Редактор)       — только добавление и редактирование новостей
+//                              (requireNewsEdit) + загрузка картинок для них.
+//                              Не может удалять новости, не имеет доступа
+//                              ни к чему в разделе «Реклама», ни к Составу/
+//                              Услугам/Текстам/Пользователям/Сотрудникам.
+//  • curator_ad (Curator AD) — нет доступа ни к чему на сайте, КРОМЕ полного
+//                              редактирования раздела «Реклама» (объявления,
+//                              контракты — все поля, статистика, премии).
+//  • advertising (AD)        — только раздел «Реклама», и то не полностью:
+//                              может добавлять контракты (bulk-добавление) и
+//                              в самой таблице контрактов — только галочку
+//                              «Статус», «Откинул» и время переноса (см.
+//                              проверку роли внутри PUT /api/contracts/:id).
+//                              Не видит и не правит цену/текст/принявшего/
+//                              выплату, не управляет сотрудниками и премиями.
+//  • guest (Гость)           — обычный авторизованный посетитель, без прав.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Добавление и редактирование новостей + загрузка картинок для них.
+async function requireNewsEdit(req,res,next){ await requireAuth(req,res,()=>{ if(!['editor','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+// Удаление новостей — Редактору недоступно, только добавление/редактирование.
+async function requireNewsDelete(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+// Услуги (создание/редактирование/удаление категорий и позиций).
+async function requireServices(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+// Состав (публичная страница «команда сайта») — категории и участники.
+async function requireTeam(req,res,next){ await requireAuth(req,res,()=>{ if(!['admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
+// Настройки сайта: «Все тексты» (главная/о нас/названия разделов/бегущая
+// строка) и «Фоны страниц» — обе вкладки сохраняются через один и тот же
+// роут PUT /api/settings, поэтому и права на них совпадают.
+async function requireSiteSettings(req,res,next){ await requireAuth(req,res,()=>{ if(!['admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет прав'});next();}); }
 async function requireAdmin(req,res,next){  await requireAuth(req,res,()=>{ if(req.user.role!=='admin')return res.status(403).json({error:'Только для администратора'});next();}); }
-async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
-async function requireStaffMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','editor','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// Раздел «Реклама»: объявления/калькулятор/просмотр контрактов и статистики.
+// Сюда же входит и редактирование контрактов — ограничение по конкретным
+// полям для роли Advertising Dept. проверяется отдельно внутри самого
+// роута PUT /api/contracts/:id (см. ниже).
+async function requireAdvertising(req,res,next){ await requireAuth(req,res,()=>{ if(!['advertising','curator_ad','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// Премии (премирование сотрудников отдела рекламы) — управление (не просмотр).
+// Advertising Dept. сюда не входит: премии не входит в её ограниченный список прав.
+async function requireBonusMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['curator_ad','dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// Сотрудники (ростер отдела рекламы) — управление (создание/редактирование/
+// удаление). Curator AD сюда больше не входит — её полный доступ ограничен
+// исключительно вкладкой «Реклама» (контракты/статистика/премии), а ростер
+// сотрудников теперь зона Dep. Director/Лидера/Администратора.
+async function requireEmployeeMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
+// Пользователи: просмотр списка и назначение ролей.
+async function requireUserMgmt(req,res,next){ await requireAuth(req,res,()=>{ if(!['dep_director','admin','leader'].includes(req.user.role))return res.status(403).json({error:'Нет доступа'});next();}); }
 
 // Файл принимаем в память (buffer), а не сразу на диск: так его можно
 // отправить в Cloudinary. Если Cloudinary не настроен — пишем этот же
@@ -547,32 +608,15 @@ app.put('/api/auth/me', requireAuth, async (req, res) => {
 });
 
 // USERS
-// Просмотр списка пользователей — доступен Curator AD и выше (Редактор, Администратор).
-app.get('/api/users',requireStaffMgmt,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
+// Просмотр списка пользователей и назначение ролей — Dep. Director, Лидер, Администратор.
+// Curator AD и Редактор доступа сюда больше не имеют (см. requireUserMgmt выше).
+app.get('/api/users',requireUserMgmt,async(req,res)=>{ const r=await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at');res.json(r.rows.map(u=>({...u,email:maskEmail(u.email)})));});
 
-// Изменение роли — иерархия:
-//  • Администратор — может назначить любую роль любому пользователю.
-//  • Лидер (leader) — доступ как у Администратора почти везде (см.
-//    requireEditor/requireAdvertising/requireStaffMgmt выше), включая
-//    управление ролями; НЕ видит статистику посещений и журнал
-//    редактирования (эти два роута остались на requireAdmin).
-//  • Curator AD — эксклюзивное право выдавать/снимать ИМЕННО роль Advertising Department,
-//    и только пользователям, которые сейчас Guest либо уже Advertising (не может трогать более высокие роли).
-//  • Редактор — доступ к списку только на просмотр, менять роли не может (это зона ответственности Curator AD).
-app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
+app.put('/api/users/:id/role',requireUserMgmt,async(req,res)=>{
   const{role}=req.body;
-  const ROLES=['guest','advertising','curator_ad','editor','leader','admin'];
+  const ROLES=['guest','advertising','curator_ad','editor','dep_director','leader','admin'];
   if(!ROLES.includes(role))return res.status(400).json({error:'Неверная роль'});
   if(req.params.id===req.user.id)return res.status(400).json({error:'Нельзя изменить свою роль'});
-  if(req.user.role==='editor'){
-    return res.status(403).json({error:'Изменение ролей доступно только Curator AD, Лидеру или Администратору'});
-  }
-  if(req.user.role==='curator_ad'){
-    if(!['guest','advertising'].includes(role))return res.status(403).json({error:'Curator AD может назначать только роль Advertising Department'});
-    const targetR=await query('SELECT role FROM users WHERE id=$1',[req.params.id]);
-    if(!targetR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
-    if(!['guest','advertising'].includes(targetR.rows[0].role))return res.status(403).json({error:'Недостаточно прав для изменения этой роли'});
-  }
   const beforeR=await query('SELECT name,role FROM users WHERE id=$1',[req.params.id]);
   if(!beforeR.rows.length)return res.status(404).json({error:'Пользователь не найден'});
   await query('UPDATE users SET role=$1 WHERE id=$2',[role,req.params.id]);
@@ -584,13 +628,15 @@ app.put('/api/users/:id/role',requireStaffMgmt,async(req,res)=>{
 // СОТРУДНИКИ (роster отдела рекламы: имя персонажа + StaticID)
 // Используется в выпадающих списках «Принял/Откинул» таблицы контрактов
 // и в недельной статистике. Просмотр — Advertising Department и выше;
-// добавление/редактирование/удаление — только Curator AD и выше.
+// добавление/редактирование/удаление — Dep. Director, Лидер, Администратор
+// (Curator AD теперь просмотр без права управления ростером — её полный
+// доступ ограничен вкладкой «Реклама»: контракты и премии).
 // ═══════════════════════════════════════════════════════════════════════
 app.get('/api/employees',requireAdvertising,async(req,res)=>{
   try{ const r=await query('SELECT * FROM employees ORDER BY sort_order,name'); res.json(r.rows); }
   catch(e){res.status(500).json({error:e.message});}
 });
-app.post('/api/employees',requireStaffMgmt,async(req,res)=>{
+app.post('/api/employees',requireEmployeeMgmt,async(req,res)=>{
   try{
     const{name,static_id}=req.body;
     if(!name?.trim())return res.status(400).json({error:'Укажите имя сотрудника'});
@@ -600,7 +646,7 @@ app.post('/api/employees',requireStaffMgmt,async(req,res)=>{
     res.json({id,name:name.trim(),static_id:(static_id||'').toString().trim(),active:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
-app.put('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
+app.put('/api/employees/:id',requireEmployeeMgmt,async(req,res)=>{
   try{
     const{name,static_id,active}=req.body;
     const before=await query('SELECT * FROM employees WHERE id=$1',[req.params.id]);
@@ -615,7 +661,7 @@ app.put('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
-app.delete('/api/employees/:id',requireStaffMgmt,async(req,res)=>{
+app.delete('/api/employees/:id',requireEmployeeMgmt,async(req,res)=>{
   try{ await query('DELETE FROM employees WHERE id=$1',[req.params.id]); res.json({ok:true}); }
   catch(e){res.status(500).json({error:e.message});}
 });
@@ -838,8 +884,11 @@ app.get('/api/stats/week',requireAdvertising,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
-// ─── Премирование ───
-app.post('/api/bonuses',requireStaffMgmt,async(req,res)=>{
+// ─── Премирование (часть вкладки «Реклама» → «Статистика») ───
+// Curator AD, Dep. Director, Лидер, Администратор — полное управление.
+// Advertising Dept. премиями не управляет (только просматривает, см.
+// requireAdvertising на GET /api/stats/week).
+app.post('/api/bonuses',requireBonusMgmt,async(req,res)=>{
   try{
     const{employee_id,week_start,amount,comment}=req.body;
     if(!employee_id||!week_start||isNaN(Date.parse(week_start)))return res.status(400).json({error:'Укажите сотрудника и неделю'});
@@ -849,7 +898,7 @@ app.post('/api/bonuses',requireStaffMgmt,async(req,res)=>{
     res.json(r.rows[0]);
   }catch(e){res.status(500).json({error:e.message});}
 });
-app.put('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
+app.put('/api/bonuses/:id',requireBonusMgmt,async(req,res)=>{
   try{
     const{amount,comment,paid}=req.body;
     const before=await query('SELECT b.*, e.name AS emp_name FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.id=$1',[req.params.id]);
@@ -865,7 +914,7 @@ app.put('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
-app.delete('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
+app.delete('/api/bonuses/:id',requireBonusMgmt,async(req,res)=>{
   try{ await query('DELETE FROM bonuses WHERE id=$1',[req.params.id]); res.json({ok:true}); }
   catch(e){res.status(500).json({error:e.message});}
 });
@@ -876,7 +925,7 @@ app.delete('/api/bonuses/:id',requireStaffMgmt,async(req,res)=>{
 // Все они используют этот один роут — поэтому подключение Cloudinary
 // здесь автоматически чинит проблему с потерей файлов при редеплое
 // сразу везде, включая аватарки.
-app.post('/api/upload',requireEditor,upload.single('image'),async(req,res)=>{
+app.post('/api/upload',requireNewsEdit,upload.single('image'),async(req,res)=>{
   if(!req.file)return res.status(400).json({error:'Файл не загружен'});
   try{
     if(CLOUDINARY_ENABLED){
@@ -895,6 +944,8 @@ app.post('/api/upload',requireEditor,upload.single('image'),async(req,res)=>{
 });
 
 // NEWS
+// Добавление/редактирование — Редактор, Dep. Director, Лидер, Администратор.
+// Удаление — Редактору недоступно (может только добавлять и редактировать).
 // ── Список новостей ──
 // ВАЖНО: отдаём "лёгкие" поля без blocks (полное тело статьи) и bg_img (фон
 // статьи) — они не нужны для карточек в лентах/бегущей строке/таблице
@@ -936,13 +987,13 @@ app.get('/api/news/:id',async(req,res)=>{
     res.json(r.rows[0]);
   }catch(e){res.status(500).json({error:e.message});}
 });
-app.post('/api/news',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const finalAuthor=(author_name&&author_name.trim())?author_name.trim().slice(0,100):req.user.name;await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,finalAuthor,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
-app.put('/api/news/:id',requireEditor,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const authorVal=(author_name&&author_name.trim())?author_name.trim().slice(0,100):null;const before=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,author_name=COALESCE($10,author_name),created_at=COALESCE($11,created_at),updated_at=NOW() WHERE id=$12',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',authorVal,dateVal,req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await logFieldEdit(req,'news',req.params.id,title.trim(),before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.news);}res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
-app.delete('/api/news/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM news WHERE id=$1',[req.params.id]);res.json({ok:true});});
+app.post('/api/news',requireNewsEdit,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});const id=uuid();let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const finalAuthor=(author_name&&author_name.trim())?author_name.trim().slice(0,100):req.user.name;await query('INSERT INTO news (id,title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,author_id,author_name,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,COALESCE($13,NOW()))',[id,title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',req.user.id,finalAuthor,dateVal]);const r=await query('SELECT * FROM news WHERE id=$1',[id]);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+app.put('/api/news/:id',requireNewsEdit,async(req,res)=>{ try{const{title,category,excerpt,blocks,img,bg_img,align,title_color,text_color,created_at,author_name}=req.body;if(!title?.trim())return res.status(400).json({error:'Укажите заголовок'});let dateVal=null;if(created_at){const d=new Date(created_at);if(!isNaN(d.getTime()))dateVal=d.toISOString();}const authorVal=(author_name&&author_name.trim())?author_name.trim().slice(0,100):null;const before=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await query('UPDATE news SET title=$1,category=$2,excerpt=$3,blocks=$4,img=$5,bg_img=$6,align=$7,title_color=$8,text_color=$9,author_name=COALESCE($10,author_name),created_at=COALESCE($11,created_at),updated_at=NOW() WHERE id=$12',[title.trim(),category||'',excerpt||'',blocks||'[]',img||'',bg_img||'',align||'left',title_color||'',text_color||'',authorVal,dateVal,req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM news WHERE id=$1',[req.params.id]);await logFieldEdit(req,'news',req.params.id,title.trim(),before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.news);}res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+app.delete('/api/news/:id',requireNewsDelete,async(req,res)=>{ await query('DELETE FROM news WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
-// SERVICES
+// SERVICES — управление доступно Dep. Director, Лидеру, Администратору (Редактору недоступно).
 app.get('/api/services',async(req,res)=>{ const r=await query('SELECT * FROM services ORDER BY sort_order');res.json(r.rows.map(s=>({...s,items:parseJSON(s.items)})));});
-app.post('/api/services',requireEditor,async(req,res)=>{
+app.post('/api/services',requireServices,async(req,res)=>{
   const{name,items}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});
   // Защита от дублей при повторной/двойной отправке одной и той же формы
   // (например, двойной клик по кнопке «Сохранить» до того, как пришёл ответ сервера):
@@ -954,24 +1005,25 @@ app.post('/api/services',requireEditor,async(req,res)=>{
   if(dup.rows.length)return res.json({id:dup.rows[0].id,name,items:items||[]});
   const id=uuid();await query('INSERT INTO services (id,name,items) VALUES ($1,$2,$3)',[id,name.trim(),JSON.stringify(items||[])]);res.json({id,name,items:items||[]});
 });
-app.put('/api/services/:id',requireEditor,async(req,res)=>{ const{name,items}=req.body;const before=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await query('UPDATE services SET name=$1,items=$2 WHERE id=$3',[name,JSON.stringify(items||[]),req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await logFieldEdit(req,'service',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.service);}res.json({ok:true});});
-app.delete('/api/services/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM services WHERE id=$1',[req.params.id]);res.json({ok:true});});
+app.put('/api/services/:id',requireServices,async(req,res)=>{ const{name,items}=req.body;const before=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await query('UPDATE services SET name=$1,items=$2 WHERE id=$3',[name,JSON.stringify(items||[]),req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM services WHERE id=$1',[req.params.id]);await logFieldEdit(req,'service',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.service);}res.json({ok:true});});
+app.delete('/api/services/:id',requireServices,async(req,res)=>{ await query('DELETE FROM services WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
-// TEAM
+// TEAM («Состав») — управление доступно только Лидеру и Администратору
+// (Dep. Director составом управлять не может — см. requireTeam выше).
 app.get('/api/team',async(req,res)=>{ const c=await query('SELECT * FROM team_cats ORDER BY sort_order');const m=await query('SELECT * FROM team_members ORDER BY sort_order');res.json({cats:c.rows,members:m.rows});});
 
-app.post('/api/team/cats',requireEditor,async(req,res)=>{
+app.post('/api/team/cats',requireTeam,async(req,res)=>{
   const{name,layout}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите название'});
   const id=uuid();
   const maxR=await query('SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM team_cats');
   await query('INSERT INTO team_cats (id,name,layout,sort_order) VALUES ($1,$2,$3,$4)',[id,name.trim(),layout||'pyramid',maxR.rows[0].n]);
   res.json({id,name,layout:layout||'pyramid'});
 });
-app.put('/api/team/cats/:id',requireEditor,async(req,res)=>{ const{name,layout}=req.body;const before=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await query('UPDATE team_cats SET name=$1,layout=$2 WHERE id=$3',[name,layout||'pyramid',req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await logFieldEdit(req,'team_cat',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.team_cat);}res.json({ok:true});});
-app.delete('/api/team/cats/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_cats WHERE id=$1',[req.params.id]);res.json({ok:true});});
+app.put('/api/team/cats/:id',requireTeam,async(req,res)=>{ const{name,layout}=req.body;const before=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await query('UPDATE team_cats SET name=$1,layout=$2 WHERE id=$3',[name,layout||'pyramid',req.params.id]);if(before.rows.length){const after=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);await logFieldEdit(req,'team_cat',req.params.id,name||before.rows[0].name,before.rows[0],after.rows[0],EDIT_LOG_FIELD_LABELS.team_cat);}res.json({ok:true});});
+app.delete('/api/team/cats/:id',requireTeam,async(req,res)=>{ await query('DELETE FROM team_cats WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // Переместить категорию вверх/вниз (меняет местами sort_order с соседней категорией)
-app.put('/api/team/cats/:id/move',requireEditor,async(req,res)=>{
+app.put('/api/team/cats/:id/move',requireTeam,async(req,res)=>{
   const{direction}=req.body;
   const cur=await query('SELECT * FROM team_cats WHERE id=$1',[req.params.id]);
   if(!cur.rows.length)return res.status(404).json({error:'Категория не найдена'});
@@ -986,7 +1038,7 @@ app.put('/api/team/cats/:id/move',requireEditor,async(req,res)=>{
   res.json({ok:true,moved:true});
 });
 
-app.post('/api/team/members',requireEditor,async(req,res)=>{
+app.post('/api/team/members',requireTeam,async(req,res)=>{
   const{cat_id,name,role,photo,role_font}=req.body;if(!name?.trim())return res.status(400).json({error:'Укажите имя'});
   const id=uuid();
   const maxR=await query('SELECT COALESCE(MAX(sort_order),0)+1 AS n FROM team_members WHERE cat_id=$1',[cat_id]);
@@ -994,7 +1046,7 @@ app.post('/api/team/members',requireEditor,async(req,res)=>{
     [id,cat_id,name.trim(),role||'',photo||'',role_font||'',maxR.rows[0].n]);
   res.json({id,cat_id,name,role,photo,role_font});
 });
-app.put('/api/team/members/:id',requireEditor,async(req,res)=>{
+app.put('/api/team/members/:id',requireTeam,async(req,res)=>{
   const{cat_id,name,role,photo,role_font}=req.body;
   const before=await query('SELECT * FROM team_members WHERE id=$1',[req.params.id]);
   await query('UPDATE team_members SET cat_id=$1,name=$2,role=$3,photo=$4,role_font=$5 WHERE id=$6',
@@ -1005,10 +1057,10 @@ app.put('/api/team/members/:id',requireEditor,async(req,res)=>{
   }
   res.json({ok:true});
 });
-app.delete('/api/team/members/:id',requireEditor,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});});
+app.delete('/api/team/members/:id',requireTeam,async(req,res)=>{ await query('DELETE FROM team_members WHERE id=$1',[req.params.id]);res.json({ok:true});});
 
 // Переместить участника вверх/вниз ВНУТРИ его категории
-app.put('/api/team/members/:id/move',requireEditor,async(req,res)=>{
+app.put('/api/team/members/:id/move',requireTeam,async(req,res)=>{
   const{direction}=req.body;
   const cur=await query('SELECT * FROM team_members WHERE id=$1',[req.params.id]);
   if(!cur.rows.length)return res.status(404).json({error:'Участник не найден'});
@@ -1024,9 +1076,12 @@ app.put('/api/team/members/:id/move',requireEditor,async(req,res)=>{
 });
 
 
-// SETTINGS
+// SETTINGS — «Все тексты» (главная/о нас/названия разделов/бегущая строка)
+// и «Фоны страниц» сохраняются через этот же роут, поэтому право на запись
+// (PUT) — только у Лидера и Администратора (Dep. Director и Редактор менять
+// тексты сайта и фоны не могут, см. requireSiteSettings выше). Чтение (GET) — публично.
 app.get('/api/settings',async(req,res)=>{ const r=await query('SELECT key,value FROM site_settings');const s={};r.rows.forEach(row=>{try{s[row.key]=JSON.parse(row.value);}catch{s[row.key]=row.value;}});res.json(s);});
-app.put('/api/settings',requireEditor,async(req,res)=>{
+app.put('/api/settings',requireSiteSettings,async(req,res)=>{
   try{
     const changes=[];
     for(const[k,v]of Object.entries(req.body)){

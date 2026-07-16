@@ -307,6 +307,7 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 7px;border-radius:3px}
 .b-admin{background:rgba(201,168,76,.15);color:var(--gold)}
 .b-leader{background:rgba(46,213,115,.15);color:#2ed573}
+.b-dep_director{background:rgba(88,166,255,.15);color:#58a6ff}
 .b-editor{background:rgba(232,25,44,.15);color:var(--red)}
 .b-advertising{background:rgba(88,101,242,.15);color:#5865F2}
 .b-guest{background:rgba(var(--ovl),.07);color:var(--gray)}
@@ -896,7 +897,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec" id="admin-users">
         <div class="asec-title">Пользователи</div>
-        <div class="fhint" style="margin-bottom:12px">Доступно Curator AD и выше. Curator AD может выдавать/снимать только роль Advertising Department.</div>
+        <div class="fhint" style="margin-bottom:12px">Доступно Dep. Director, Лидеру и Администратору — можно назначить любую роль.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
           <tbody id="users-tbody"></tbody>
@@ -1496,6 +1497,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <option value="advertising">Advertising Department</option>
           <option value="curator_ad">Curator AD</option>
           <option value="editor">Редактор</option>
+          <option value="dep_director">Dep. Director</option>
           <option value="leader">Лидер</option>
           <option value="admin">Администратор</option>
         </select>
@@ -1649,17 +1651,29 @@ let SERVICES = [];
 let TEAM = {cats:[], members:[]};
 let SETTINGS = {};
 
-const canEdit = () => CU && (CU.role==='editor'||CU.role==='admin'||CU.role==='leader');
-const canAds = () => CU && ['advertising','curator_ad','editor','admin','leader'].includes(CU.role);
-const isCuratorPlus = () => CU && ['curator_ad','editor','admin','leader'].includes(CU.role);
+// ─── Права по ролям (см. подробное описание ролей в server.js) ───
+// canEdit()          — доступ к Панели управления хоть с чем-то (у Редактора — только вкладка «Новости»).
+// canDeleteNews()     — удаление новостей (Редактору недоступно, только добавление/редактирование).
+// canEditServices()   — управление Услугами (Редактору недоступно).
+// canEditTeam()       — управление Составом (Dep. Director и Редактору недоступно).
+// canEditTexts()      — «Все тексты» и «Фоны страниц» (только Лидер/Администратор).
+// canManageUsers()    — вкладки «Пользователи» и «Сотрудники» (создание/удаление/роли).
+// canAds()            — доступ к разделу «Реклама» вообще (просмотр).
+// canManageAdsFull()  — полное редактирование раздела «Реклама» (все поля контракта, премии) — все, кроме роли Advertising Dept.
+const canEdit = () => CU && ['editor','dep_director','admin','leader'].includes(CU.role);
+const canDeleteNews = () => CU && ['dep_director','admin','leader'].includes(CU.role);
+const canEditServices = () => CU && ['dep_director','admin','leader'].includes(CU.role);
+const canEditTeam = () => CU && ['admin','leader'].includes(CU.role);
+const canEditTexts = () => CU && ['admin','leader'].includes(CU.role);
+const canManageUsers = () => CU && ['dep_director','admin','leader'].includes(CU.role);
+const canAds = () => CU && ['advertising','curator_ad','dep_director','admin','leader'].includes(CU.role);
+const canManageAdsFull = () => CU && ['curator_ad','dep_director','admin','leader'].includes(CU.role);
 const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
-const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='dep_director'?'Dep. Director':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
 function canChangeUserRole(targetRole){
   if(!CU)return false;
-  if(CU.role==='admin'||CU.role==='leader')return true;
-  if(CU.role==='curator_ad')return['guest','advertising'].includes(targetRole);
-  return false;
+  return ['admin','leader','dep_director'].includes(CU.role);
 }
 
 // ══════════════════════════════════════════════
@@ -1689,7 +1703,7 @@ async function doLogin(){
     const {user} = await API.post('/auth/login',{email,password:pass});
     CU=user;
     if(btn){btn.textContent='Войти';btn.disabled=false;}
-    if(canEdit())document.body.classList.add('is-admin');
+    if(canEditTexts())document.body.classList.add('is-admin');
     renderHeader();showPage('home');
     toast(`Добро пожаловать, ${xe(user.name)}!`,'s');
   }catch(e){
@@ -1762,14 +1776,14 @@ function renderHeader(){
   document.getElementById('btn-add-news').style.display=canEdit()?'block':'none';
   const bam=document.getElementById('btn-add-mem');
   const bas=document.getElementById('btn-add-svc');
-  if(bam)bam.style.display=canEdit()?'flex':'none';
-  if(bas)bas.style.display=canEdit()?'block':'none';
+  if(bam)bam.style.display=canEditTeam()?'flex':'none';
+  if(bas)bas.style.display=canEditServices()?'block':'none';
   if(CU){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
       <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
-      ${(canEdit()||isCuratorPlus())?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
+      ${canEdit()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
     if(mob)mob.innerHTML=`
@@ -1777,7 +1791,7 @@ function renderHeader(){
       <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
-      ${(canEdit()||isCuratorPlus())?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
+      ${canEdit()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(var(--ovl),.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
   } else {
@@ -1804,7 +1818,7 @@ function closeMobMenu(){
 // ══════════════════════════════════════════════
 let curPage='home';
 async function showPage(page){
-  if(page==='admin'&&!(canEdit()||isCuratorPlus())){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
+  if(page==='admin'&&!canEdit()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   if(page==='adhub'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(l=>l.classList.remove('active'));
@@ -1866,11 +1880,11 @@ function logSiteVisit(){
 // ══════════════════════════════════════════════
 function adHubAllowedTabs(){
   const t=[];
-  if(canAds())t.push('ads','calc');
-  // Контракты и Статистика: полный доступ у Curator AD и выше; у Advertising
-  // Department — просмотр (с ограниченным редактированием, см.
-  // renderContractsTable/renderBonusGrid) плюс доступ к «Добавить контракт».
-  if(isCuratorPlus()||isAdvertisingOnly())t.push('contracts','stats');
+  // Все, у кого вообще есть доступ к разделу «Реклама», видят все 4 подвкладки:
+  // Объявления/Калькулятор — просто справочные, Контракты/Статистика — с
+  // разным уровнем прав внутри (Advertising Dept. там частично read-only,
+  // см. renderContractsTable/renderBonusGrid и canManageAdsFull()).
+  if(canAds())t.push('ads','calc','contracts','stats');
   return t;
 }
 let ADHUB_TAB='ads';
@@ -2844,9 +2858,10 @@ function applyStatsResponse(r){
   STATS_STATE.range=r.range; STATS_STATE.employees=r.employees||[]; STATS_STATE.bonuses=r.bonuses||[];
   document.getElementById('stats-range').textContent=`Период с ${fmtPlainDate(r.range.start)} по ${fmtPlainDate(r.range.end)}`;
   document.getElementById('stats-archive-box').style.display='flex';
-  // Управление премиями (выписка/ручное добавление/выплата) — только Curator AD и выше.
-  // Advertising Department видит статистику и уже назначенные премии, но без действий.
-  const mgmt=isCuratorPlus();
+  // Управление премиями (выписка/ручное добавление/выплата) — Curator AD,
+  // Dep. Director, Лидер, Администратор. Advertising Department видит
+  // статистику и уже назначенные премии, но без действий.
+  const mgmt=canManageAdsFull();
   document.getElementById('stats-premiums-export-btn').style.display=mgmt?'':'none';
   document.getElementById('stats-add-bonus-btn').style.display=mgmt?'':'none';
   renderStatsTable();
@@ -2869,7 +2884,7 @@ function renderStatsTable(){
 
 function renderBonusGrid(){
   const el=document.getElementById('bonus-grid');
-  const mgmt=isCuratorPlus();
+  const mgmt=canManageAdsFull();
   const involved=STATS_STATE.employees.filter(e=>e.acceptedGreen||e.acceptedRed||e.declinedCount);
   const bonuses=STATS_STATE.bonuses;
   if(!bonuses.length){
@@ -3102,7 +3117,7 @@ function ncHTML(n,featured=false){
   const img=imgUrl?`<img src="${imgUrl}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';document.getElementById('ncph_${n.id}').style.display='flex'">${ph}`:ph;
   const editBtns=canEdit()?`<div style="display:flex;gap:5px">
     <button class="btn btn-o btn-sm" onclick="editNews('${n.id}');event.stopPropagation()">✎</button>
-    <button class="btn btn-d btn-sm" onclick="delNews('${n.id}');event.stopPropagation()">✕</button>
+    ${canDeleteNews()?`<button class="btn btn-d btn-sm" onclick="delNews('${n.id}');event.stopPropagation()">✕</button>`:''}
   </div>`:'';
   const cls=featured?'nc nc-featured reveal':'nc reveal';
   const al=n.align||'left';
@@ -3378,7 +3393,7 @@ async function openNews(id){
   document.getElementById('nf-author').style.textAlign=align;
   const eb=document.getElementById('nf-edit-btns');
   eb.innerHTML=canEdit()?`<button class="btn btn-o btn-sm" onclick="editNews('${n.id}')">✎ Редактировать</button>
-    <button class="btn btn-d btn-sm" onclick="if(confirm('Удалить?')){delNews('${n.id}');showPage('news')}">Удалить</button>`:'';
+    ${canDeleteNews()?`<button class="btn btn-d btn-sm" onclick="if(confirm('Удалить?')){delNews('${n.id}');showPage('news')}">Удалить</button>`:''}`:'';
   showPage('news-full');
 }
 
@@ -3602,7 +3617,7 @@ async function renderServices(){
       <div class="svc-card reveal">
         <div class="svc-cat-hdr">
           <div class="svc-cat-ttl">${xe(cat.name)}</div>
-          ${canEdit()?`<div class="bg-group"><button class="btn btn-o btn-sm" onclick="openServiceModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delSvcCat('${cat.id}')">✕</button></div>`:''}
+          ${canEditServices()?`<div class="bg-group"><button class="btn btn-o btn-sm" onclick="openServiceModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delSvcCat('${cat.id}')">✕</button></div>`:''}
         </div>
         ${(cat.items||[]).map(it=>{
           const priceText=it.price||'';
@@ -3663,9 +3678,9 @@ async function renderTeam(){
     const {cats,members}=TEAM;
     if(!cats.length){el.innerHTML=`<div class="empty"><div class="empty-ic">👥</div><div class="empty-tx">Состав ещё не добавлен.</div></div>`;return;}
     el.innerHTML=cats.map((cat,catIdx)=>{
-      const cm=members.filter(m=>m.cat_id===cat.id);if(!cm.length&&!canEdit())return'';
+      const cm=members.filter(m=>m.cat_id===cat.id);if(!cm.length&&!canEditTeam())return'';
       const layout=cat.layout||'pyramid';
-      const addBtn=canEdit()?`<div class="team-add-card" onclick="openTeamMemberModal(null,'${cat.id}')"><div style="font-size:22px;opacity:.4">+</div><div>Добавить</div></div>`:'';
+      const addBtn=canEditTeam()?`<div class="team-add-card" onclick="openTeamMemberModal(null,'${cat.id}')"><div style="font-size:22px;opacity:.4">+</div><div>Добавить</div></div>`:'';
       let membersHTML='';
       if(layout==='row'){
         membersHTML=`<div class="team-row-grid">${cm.map((m,i)=>memberCard(m,i===0,i===cm.length-1)).join('')}${addBtn}</div>`;
@@ -3673,16 +3688,16 @@ async function renderTeam(){
         membersHTML=`<div class="team-fixed-grid">${cm.map((m,i)=>memberCard(m,i===0,i===cm.length-1)).join('')}${addBtn}</div>`;
       } else {
         const top=cm[0];const rest=cm.slice(1);
-        membersHTML=`${top?`<div class="team-pyramid-top">${memberCard(top,true,cm.length===1)}</div>`:''}${(rest.length||canEdit())?`<div class="team-grid">${rest.map((m,i)=>memberCard(m,false,i===rest.length-1)).join('')}${addBtn}</div>`:''}`;
+        membersHTML=`${top?`<div class="team-pyramid-top">${memberCard(top,true,cm.length===1)}</div>`:''}${(rest.length||canEditTeam())?`<div class="team-grid">${rest.map((m,i)=>memberCard(m,false,i===rest.length-1)).join('')}${addBtn}</div>`:''}`;
       }
       const layoutLabel={row:'↔ ряд',grid:'▦ сетка',pyramid:'△ пирамида'}[layout]||'△ пирамида';
-      const catMoveBtns=canEdit()?`<div class="cat-move-btns">
+      const catMoveBtns=canEditTeam()?`<div class="cat-move-btns">
         <button class="move-btn" ${catIdx===0?'disabled':''} onclick="moveCategory('${cat.id}','up')" title="Переместить категорию выше">▲</button>
         <button class="move-btn" ${catIdx===cats.length-1?'disabled':''} onclick="moveCategory('${cat.id}','down')" title="Переместить категорию ниже">▼</button>
       </div>`:'';
       return`<div class="team-cat reveal">
         <div class="team-cat-hdr"><div class="team-cat-name">${xe(cat.name)}</div><div class="team-cat-line"></div>
-          ${canEdit()?`<div class="bg-group">${catMoveBtns}<span style="font-size:10px;color:var(--gray);margin-right:4px">${layoutLabel}</span><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>`:''}
+          ${canEditTeam()?`<div class="bg-group">${catMoveBtns}<span style="font-size:10px;color:var(--gray);margin-right:4px">${layoutLabel}</span><button class="btn btn-o btn-sm" onclick="openTeamCatModal('${cat.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delTeamCat('${cat.id}')">✕</button></div>`:''}
         </div>${membersHTML}
       </div>`;
     }).join('');
@@ -3699,13 +3714,13 @@ async function renderTeam(){
 function memberCard(m,isFirst,isLast){
   const ini=(m.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const roleFontStyle=m.role_font?`style="font-family:${xe(m.role_font)}"`:'';
-  const moveBtns=canEdit()?`<div class="move-btns">
+  const moveBtns=canEditTeam()?`<div class="move-btns">
     <button class="move-btn" ${isFirst?'disabled':''} onclick="moveMember('${m.id}','up');event.stopPropagation()" title="Выше">▲</button>
     <button class="move-btn" ${isLast?'disabled':''} onclick="moveMember('${m.id}','down');event.stopPropagation()" title="Ниже">▼</button>
   </div>`:'';
   return`<div class="team-card">${moveBtns}<div class="team-av">${m.photo?`<img src="${xe(m.photo)}" alt="">`:`${ini}`}</div>
     <div class="team-name">${xe(m.name)}</div>${m.role?`<div class="team-role" ${roleFontStyle}>${xe(m.role)}</div>`:''}
-    ${canEdit()?`<div class="bg-group" style="justify-content:center;margin-top:8px"><button class="btn btn-o btn-sm" onclick="editMember('${m.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delMember('${m.id}')">✕</button></div>`:''}
+    ${canEditTeam()?`<div class="bg-group" style="justify-content:center;margin-top:8px"><button class="btn btn-o btn-sm" onclick="editMember('${m.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delMember('${m.id}')">✕</button></div>`:''}
   </div>`;
 }
 
@@ -3844,7 +3859,7 @@ function initITEDrag(){
 }
 
 function openITE(key,event){
-  if(!isAdmin()&&!canEdit())return;event.stopPropagation();event.preventDefault();
+  if(!canEditTexts())return;event.stopPropagation();event.preventDefault();
   const map=ITE_MAP[key];if(!map)return;const el=map.el();if(!el)return;
   ITE.key=key;ITE.el=el;
   const tx=SETTINGS.texts||{};const style=(tx['_style_'+key])||{};ITE.align=style.align||'';
@@ -3964,26 +3979,35 @@ async function renderAdmin(){
   renderVisitors();renderVisitsStats();renderEditLogs();renderUsers();renderEmployees();renderNewsMgmt();renderServicesMgmt();renderTeamMgmt();renderTickerList();loadTextFields();buildBGBlocks();
 }
 
-// Curator AD видит в Панели только «Пользователи» и «Сотрудники» — остальные разделы
-// (Посетители, Новости, Услуги, Состав, Тексты, Настройки) остаются зоной Редактора/Администратора.
-// Leader видит всё как Администратор, КРОМЕ «Посетители» (статистика посещений
-// и сырой журнал переходов) и «Логи» (журнал редактирования полей) — это
-// зона видимости исключительно Администратора.
+// Какие вкладки Панели управления видит каждая роль:
+//  • admin        — все вкладки без исключений.
+//  • leader       — все, КРОМЕ «Посетители» и «Логи» — эти два раздела
+//                   (статистика посещений и журнал редактирования) — зона
+//                   видимости исключительно Администратора (requireAdmin).
+//  • dep_director — как leader, но дополнительно без «Состав» (requireTeam)
+//                   и без «Все тексты»/«Настройки сайта» (requireSiteSettings).
+//  • editor       — только «Новости» (добавление/редактирование, без
+//                   удаления — см. requireNewsDelete в server.js).
+//  • curator_ad, advertising, guest — ни одной вкладки Панели: их зона —
+//                   исключительно страница «Реклама» (см. canAds()).
+const ADMIN_TABS_BY_ROLE={
+  admin:['visitors','edit-logs','users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
+  leader:['users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
+  dep_director:['users','employees','news-mgmt','services-mgmt'],
+  editor:['news-mgmt'],
+};
+function allowedAdminTabs(){
+  return (CU&&ADMIN_TABS_BY_ROLE[CU.role])||[];
+}
 function applyAdminSidebarForRole(){
-  const limited=CU&&CU.role==='curator_ad';
-  const allowedForCurator=['users','employees'];
-  const isLeader=CU&&CU.role==='leader';
-  const hiddenForLeader=['visitors','edit-logs'];
+  const allowed=allowedAdminTabs();
   document.querySelectorAll('.admin-sb .ani[data-tab]').forEach(ani=>{
-    const tab=ani.dataset.tab;
-    const hide=(limited&&!allowedForCurator.includes(tab))||(isLeader&&hiddenForLeader.includes(tab));
-    ani.style.display=hide?'none':'flex';
+    ani.style.display=allowed.includes(ani.dataset.tab)?'flex':'none';
   });
-  if(limited&&!document.getElementById('admin-users').classList.contains('active')){
-    switchAdminTab('users',document.querySelector('.admin-sb .ani[data-tab="users"]'));
-  }
-  if(isLeader&&hiddenForLeader.some(t=>document.getElementById('admin-'+t)?.classList.contains('active'))){
-    switchAdminTab('users',document.querySelector('.admin-sb .ani[data-tab="users"]'));
+  const activeAni=document.querySelector('.admin-sb .ani.active');
+  const activeTab=activeAni?.dataset.tab;
+  if(!activeTab||!allowed.includes(activeTab)){
+    if(allowed.length)switchAdminTab(allowed[0],document.querySelector(`.admin-sb .ani[data-tab="${allowed[0]}"]`));
   }
 }
 
@@ -4077,7 +4101,7 @@ async function renderNewsMgmt(){
     <td>${alignIcon[n.align||'left']||'◀'}</td>
     <td>${xe(n.author_name||'—')}</td>
     <td>${fd(n.created_at)}</td>
-    <td><div class="bg-group"><button class="btn btn-o btn-sm" onclick="editNews('${n.id}')">✎</button><button class="btn btn-d btn-sm" onclick="delNews('${n.id}')">✕</button></div></td>
+    <td><div class="bg-group"><button class="btn btn-o btn-sm" onclick="editNews('${n.id}')">✎</button>${canDeleteNews()?`<button class="btn btn-d btn-sm" onclick="delNews('${n.id}')">✕</button>`:''}</div></td>
   </tr>`).join('');
 }
 
@@ -4142,14 +4166,8 @@ function openRoleModal(uid,currentRole){
   document.getElementById('role-username').textContent=name;
   const sel=document.getElementById('role-select');
   const hint=document.getElementById('role-hint');
-  if(CU.role==='curator_ad'){
-    // Curator AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
-    Array.from(sel.options).forEach(o=>o.disabled=!['guest','advertising'].includes(o.value));
-    hint.textContent='Curator AD может назначать только роль Advertising Department.';
-  } else {
-    Array.from(sel.options).forEach(o=>o.disabled=false);
-    hint.textContent='';
-  }
+  Array.from(sel.options).forEach(o=>o.disabled=false);
+  hint.textContent='';
   sel.value=currentRole||'guest';
   openModal('modal-role');
 }
@@ -4212,7 +4230,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   try{
     const {user}=await API.get('/auth/me');
     CU=user;
-    if(CU&&canEdit())document.body.classList.add('is-admin');
+    if(CU&&canEditTexts())document.body.classList.add('is-admin');
   }catch{}
 
   // Load settings
