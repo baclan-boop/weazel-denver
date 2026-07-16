@@ -897,7 +897,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec" id="admin-users">
         <div class="asec-title">Пользователи</div>
-        <div class="fhint" style="margin-bottom:12px">Dep. Director, Лидер и Администратор могут назначить любую роль. Curator AD тоже видит этот раздел, но может выдавать/снимать только роль Advertising Department.</div>
+        <div class="fhint" style="margin-bottom:12px">Администратор может назначить любую роль. Лидер — Dep. Director/Редактора/Curator AD/Advertising Department (роль Leader/Admin ему недоступна, как и пользователи с этими ролями). Dep. Director — то же самое, но БЕЗ роли Dep. Director. Curator AD — только Advertising Department.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
           <tbody id="users-tbody"></tbody>
@@ -1675,14 +1675,24 @@ const canManageAdsFull = () => CU && ['curator_ad','dep_director','admin','leade
 const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
 const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='dep_director'?'Dep. Director':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+// «Средние» роли, доступные для назначения Лидеру (см. ниже) —
+// должно точно совпадать с MID_ROLES на сервере (server.js).
+const MID_ROLES=['guest','advertising','curator_ad','editor','dep_director'];
+// Dep. Director — то же самое, но БЕЗ роли Dep. Director (см. server.js).
+const DEP_DIRECTOR_ASSIGNABLE_ROLES=MID_ROLES.filter(r=>r!=='dep_director');
 // Кто какие роли может назначать другим пользователям:
-//  • admin/leader/dep_director — любую роль любому пользователю.
+//  • admin — любую роль любому пользователю.
+//  • leader/dep_director — только «средние» роли (MID_ROLES): Dep. Director,
+//    Редактор, Curator AD, Advertising Department, Гость. Не могут ни
+//    назначить, ни отобрать роль Leader/Admin — не трогают пользователей,
+//    которые сейчас Leader/Admin, и не назначают эти роли никому.
 //  • curator_ad — ИСКЛЮЧИТЕЛЬНО роль Advertising Department, и только если
 //    у пользователя сейчас Guest либо уже Advertising (см. ту же проверку
 //    на сервере в PUT /api/users/:id/role).
 function canChangeUserRole(targetRole){
   if(!CU)return false;
-  if(['admin','leader','dep_director'].includes(CU.role))return true;
+  if(CU.role==='admin')return true;
+  if(['leader','dep_director'].includes(CU.role))return MID_ROLES.includes(targetRole);
   if(CU.role==='curator_ad')return['guest','advertising'].includes(targetRole);
   return false;
 }
@@ -4186,6 +4196,14 @@ function openRoleModal(uid,currentRole){
     // Curator AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
     Array.from(sel.options).forEach(o=>o.disabled=!['guest','advertising'].includes(o.value));
     hint.textContent='Curator AD может назначать только роль Advertising Department.';
+  } else if(['leader','dep_director'].includes(CU.role)){
+    // Лидер/Dep. Director не могут назначить (или отобрать) роль Leader/Admin.
+    // Dep. Director дополнительно не может назначить саму роль Dep. Director.
+    const assignable=CU.role==='dep_director'?DEP_DIRECTOR_ASSIGNABLE_ROLES:MID_ROLES;
+    Array.from(sel.options).forEach(o=>o.disabled=!assignable.includes(o.value));
+    hint.textContent=CU.role==='dep_director'
+      ?'Вам доступны роли: Редактор, Curator AD, Advertising Department, Гость (роль Dep. Director вы назначить не можете).'
+      :'Вам доступны только роли: Dep. Director, Редактор, Curator AD, Advertising Department, Гость.';
   } else {
     Array.from(sel.options).forEach(o=>o.disabled=false);
     hint.textContent='';
