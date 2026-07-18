@@ -854,6 +854,9 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <label class="fl">Пароль</label>
           <input type="password" class="fi" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
+        <div style="text-align:right;margin:-8px 0 10px">
+          <span style="font-size:12px;color:var(--gray);cursor:pointer" onclick="openForgotModal()">Забыли пароль?</span>
+        </div>
         <div class="ferr" id="login-error"></div>
         <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Войти</button>
       </div>
@@ -1491,6 +1494,52 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   </div>
 </div>
 
+<!-- FORGOT PASSWORD MODAL -->
+<div class="mo" id="modal-forgot-password">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Восстановление пароля</div><button class="mclose" onclick="closeModal('modal-forgot-password')">✕</button></div>
+    <div class="mbody">
+      <div id="forgot-form">
+        <p style="font-size:13px;color:var(--gray);margin:0 0 14px">Укажи почту, на которую зарегистрирован аккаунт — пришлём ссылку для сброса пароля.</p>
+        <div class="fg">
+          <label class="fl">Электронная почта</label>
+          <input type="email" class="fi" id="forgot-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgotEmail()">
+        </div>
+        <div class="ferr" id="forgot-error" style="display:none"></div>
+      </div>
+      <div id="forgot-success" style="display:none;font-size:13px;line-height:1.5">
+        Если такая почта зарегистрирована — на неё отправлено письмо со ссылкой. Ссылка действует 45 минут.
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-forgot-password')">Закрыть</button>
+        <button class="btn btn-p btn-sm" id="forgot-submit-btn" onclick="sendForgotEmail()">Отправить ссылку</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD MODAL (открывается по ссылке из письма, ?reset_token=...) -->
+<div class="mo" id="modal-reset-password">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl">Новый пароль</div><button class="mclose" onclick="closeModal('modal-reset-password')">✕</button></div>
+    <div class="mbody">
+      <div class="fg">
+        <label class="fl">Новый пароль (мин. 6 символов)</label>
+        <input type="password" class="fi" id="reset-password-1" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitResetPassword()">
+      </div>
+      <div class="fg">
+        <label class="fl">Повторите пароль</label>
+        <input type="password" class="fi" id="reset-password-2" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitResetPassword()">
+      </div>
+      <div class="ferr" id="reset-password-error" style="display:none"></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-reset-password')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="submitResetPassword()">Сохранить пароль</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TEAM CAT MODAL -->
 <div class="mo" id="modal-team-cat">
   <div class="modal">
@@ -1826,6 +1875,68 @@ async function doRegister(){
   }catch(e){
     if(btn){btn.textContent='Зарегистрироваться';btn.disabled=false;}
     err.textContent=e.error||'Ошибка регистрации';err.style.display='block';
+  }
+}
+
+function openForgotModal(){
+  document.getElementById('forgot-form').style.display='block';
+  document.getElementById('forgot-success').style.display='none';
+  document.getElementById('forgot-submit-btn').style.display='inline-flex';
+  const err=document.getElementById('forgot-error');err.style.display='none';err.textContent='';
+  document.getElementById('forgot-email').value=document.getElementById('login-email').value.trim();
+  openModal('modal-forgot-password');
+}
+async function sendForgotEmail(){
+  const email=document.getElementById('forgot-email').value.trim();
+  const err=document.getElementById('forgot-error');
+  err.style.display='none';
+  if(!email){err.textContent='Введите почту';err.style.display='block';return}
+  const btn=document.getElementById('forgot-submit-btn');
+  btn.textContent='Отправка...';btn.disabled=true;
+  try{
+    await API.post('/auth/forgot-password',{email});
+    document.getElementById('forgot-form').style.display='none';
+    document.getElementById('forgot-success').style.display='block';
+    btn.style.display='none';
+  }catch(e){
+    err.textContent=e.error||'Ошибка отправки';err.style.display='block';
+  }finally{
+    btn.textContent='Отправить ссылку';btn.disabled=false;
+  }
+}
+
+// Токен из письма — ловим на BOOT (сайт не использует URL-роутинг, поэтому
+// делаем это вручную, см. вызов checkResetTokenInUrl() в самом низу файла).
+let RESET_TOKEN=null;
+function checkResetTokenInUrl(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get('reset_token');
+  if(!token)return;
+  RESET_TOKEN=token;
+  history.replaceState(null,'',location.pathname); // не оставляем токен в адресной строке/истории
+  showPage('auth');
+  const err=document.getElementById('reset-password-error');err.style.display='none';err.textContent='';
+  document.getElementById('reset-password-1').value='';
+  document.getElementById('reset-password-2').value='';
+  openModal('modal-reset-password');
+}
+async function submitResetPassword(){
+  const p1=document.getElementById('reset-password-1').value;
+  const p2=document.getElementById('reset-password-2').value;
+  const err=document.getElementById('reset-password-error');
+  err.style.display='none';
+  if(!p1||p1.length<6){err.textContent='Пароль минимум 6 символов';err.style.display='block';return}
+  if(p1!==p2){err.textContent='Пароли не совпадают';err.style.display='block';return}
+  try{
+    const {user}=await API.post('/auth/reset-password',{token:RESET_TOKEN,password:p1});
+    RESET_TOKEN=null;
+    CU=user;
+    closeModal('modal-reset-password');
+    if(canEditTexts())document.body.classList.add('is-admin');
+    renderHeader();showPage('home');
+    toast('Пароль обновлён, вы вошли в аккаунт','s');
+  }catch(e){
+    err.textContent=e.error||'Ошибка сохранения';err.style.display='block';
   }
 }
 
@@ -4621,6 +4732,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   await renderHomeNews();
   logVisit('home');
   logSiteVisit();
+  checkResetTokenInUrl();
   setTimeout(initReveal,150);
 });
 
