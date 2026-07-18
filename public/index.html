@@ -2336,11 +2336,12 @@ function ctToggleDoneRow(chk){
 }
 
 // ══════════════════════════════════════════════
-// ПОИСК СОТРУДНИКА ПО БУКВАМ (комбобокс вместо обычного <select>)
+// ПОИСК СОТРУДНИКА ПО БУКВАМ ИЛИ ПО STATICID (комбобокс вместо обычного <select>)
 // Используется в колонках «Принял»/«Откинул» таблицы «Контракты», в поле
 // «Кто принял контракт» формы «Добавить контракт» и при назначении премии.
-// Можно напечатать первые буквы имени, либо вставить скопированные откуда-то
-// имя и фамилию — список отфильтруется на лету по совпадению подстроки.
+// Можно напечатать первые буквы имени (или вставить скопированные откуда-то
+// имя и фамилию), А ТАКЖЕ напечатать/вставить StaticID сотрудника — список
+// отфильтруется на лету по совпадению подстроки в любом из двух полей.
 // ══════════════════════════════════════════════
 function empComboMarkup(comboId,selectedId,opts){
   opts=opts||{};
@@ -2363,7 +2364,9 @@ function empComboFilteredList(comboId){
   const allowInactive=wrap&&wrap.dataset.all==='1';
   const pool=EMPLOYEES.filter(e=>allowInactive||e.active||e.id===curSel);
   if(!q)return pool;
-  return pool.filter(e=>e.name.toLowerCase().includes(q));
+  // Ищем и по имени, и по StaticID (можно напечатать/вставить сам номер
+  // статика — не только буквы имени).
+  return pool.filter(e=>e.name.toLowerCase().includes(q)||(e.static_id||'').toLowerCase().includes(q));
 }
 function empComboRenderDrop(comboId){
   const drop=document.getElementById(comboId+'-drop');
@@ -2742,43 +2745,59 @@ async function ctTransferChanged(input,id){
     targetId=target.id;
   }
 
-  // Сохраняем само время переноса в исходной строке — её текст не меняем
-  await ctSave(id,{transfer_time:newVal});
+  // Сохраняем само время переноса в исходной строке — её текст не меняем.
+  // Если сервер отклонил сохранение — не идём дальше и откатываем поле,
+  // иначе в интерфейсе останется значение, которого нет в базе.
+  const savedSelf=await ctSave(id,{transfer_time:newVal});
+  if(!savedSelf){ input.value=prevVal; return; }
 
   // Если раньше был указан перенос на другой слот — снимаем пометку со старого целевого слота
   if(prevVal && prevVal!==newVal && /^([01]\d|2[0-3]):[0-5]\d$/.test(prevVal)){
     const oldTarget=CT_ROWS.find(r=>r.slot_time===prevVal);
     if(oldTarget && oldTarget.text===markText){
-      await ctSave(oldTarget.id,{text:''});
-      const oldInput=document.querySelector(`tr[data-id="${oldTarget.id}"] [data-role="text"]`);
-      if(oldInput)oldInput.value='';
+      const savedOld=await ctSave(oldTarget.id,{text:''});
+      if(savedOld){
+        const oldInput=document.querySelector(`tr[data-id="${oldTarget.id}"] [data-role="text"]`);
+        if(oldInput)oldInput.value='';
+      }
     }
   }
 
-  // Проставляем пометку «Перенос с ЧЧ:ММ» в строку нового целевого времени
+  // Проставляем пометку «Перенос с ЧЧ:ММ» в строку нового целевого времени.
+  // Поле в DOM обновляем ТОЛЬКО если сохранение реально прошло — иначе
+  // пометка отображалась бы локально, но пропадала бы при следующей
+  // загрузке страницы, т.к. в базе её нет (см. ctSave/сообщение об ошибке).
   if(isValid && targetId){
-    await ctSave(targetId,{text:markText});
-    const targetInput=document.querySelector(`tr[data-id="${targetId}"] [data-role="text"]`);
-    if(targetInput)targetInput.value=markText;
+    const savedTarget=await ctSave(targetId,{text:markText});
+    if(savedTarget){
+      const targetInput=document.querySelector(`tr[data-id="${targetId}"] [data-role="text"]`);
+      if(targetInput)targetInput.value=markText;
+    }
   }
 }
 
 let CT_SAVE_TIMER=null;
+// Возвращает true при успешном сохранении и false при ошибке — вызывающий
+// код (см. ctTransferChanged) должен применять оптимистичные изменения в
+// DOM/CT_ROWS только при true, иначе интерфейс покажет то, чего нет в базе.
 async function ctSave(id,fields){
   const ind=document.getElementById('ct-save-ind');
   ind.textContent='Сохранение...';ind.className='ct-save-ind show';
+  let ok=false;
   try{
     const updated=await API.put('/contracts/'+id,fields);
     const idx=CT_ROWS.findIndex(r=>r.id===id);
     if(idx>-1)CT_ROWS[idx]=updated;
     ind.textContent='Сохранено ✓';ind.className='ct-save-ind show ok';
     if('status' in fields || 'text' in fields) loadUpcomingAds();
+    ok=true;
   }catch(e){
     ind.textContent=e.error||'Ошибка сохранения';ind.className='ct-save-ind show err';
     toast(e.error||'Ошибка сохранения','e');
   }
   clearTimeout(CT_SAVE_TIMER);
   CT_SAVE_TIMER=setTimeout(()=>{ind.classList.remove('show')},2000);
+  return ok;
 }
 
 // ══════════════════════════════════════════════

@@ -833,16 +833,30 @@ app.get('/api/contracts',requireAdvertising,async(req,res)=>{
 app.put('/api/contracts/:id',requireAdvertising,async(req,res)=>{
   try{
     const{status,price,text,accepted_id,declined_id,payout,transfer_time}=req.body;
-    // Advertising Department видит контракты, но не имеет права менять цену,
-    // текст, принявшего сотрудника и сумму к выплате — это зона ответственности
-    // Curator AD и выше. Им доступны только статус, «Откинул» и время переноса.
-    if(req.user.role==='advertising'){
-      const forbidden=['price','text','accepted_id','payout'].filter(f=>req.body[f]!==undefined);
-      if(forbidden.length)return res.status(403).json({error:'Advertising Dept. может менять только статус, «Откинул» и время переноса'});
-    }
     const cur=await query('SELECT * FROM contract_slots WHERE id=$1',[req.params.id]);
     if(!cur.rows.length)return res.status(404).json({error:'Слот не найден'});
     const c=cur.rows[0];
+    // Advertising Department видит контракты, но не имеет права менять цену,
+    // текст, принявшего сотрудника и сумму к выплате — это зона ответственности
+    // Curator AD и выше. Им доступны только статус, «Откинул» и время переноса.
+    // ИСКЛЮЧЕНИЕ для «текста»: служебная пометка «Перенос с ЧЧ:ММ» — её сам
+    // фронт проставляет/убирает в СОСЕДНЕЙ строке как побочный эффект поля
+    // «Время переноса», которое этой роли как раз разрешено. Без этого
+    // исключения запись пометки получала 403 и молча не сохранялась — в
+    // интерфейсе она на миг появлялась (см. ctTransferChanged на фронте), но
+    // после обновления страницы пропадала, т.к. в базе её не было. Настоящий
+    // текст контракта (что угодно, что НЕ подходит под пометку) по-прежнему
+    // под запретом для этой роли.
+    if(req.user.role==='advertising'){
+      const textIsTransferMark = text!==undefined && (
+        TRANSFER_MARK_RE.test((text||'').toString().trim()) ||
+        (text==='' && TRANSFER_MARK_RE.test((c.text||'').toString().trim()))
+      );
+      const forbiddenFields=['price','accepted_id','payout'];
+      if(!textIsTransferMark) forbiddenFields.push('text');
+      const forbidden=forbiddenFields.filter(f=>req.body[f]!==undefined);
+      if(forbidden.length)return res.status(403).json({error:'Advertising Dept. может менять только статус, «Откинул» и время переноса'});
+    }
     await query(`UPDATE contract_slots SET
         status=COALESCE($1,status), price=COALESCE($2,price), text=COALESCE($3,text),
         accepted_id=$4, declined_id=$5, payout=COALESCE($6,payout), transfer_time=COALESCE($7,transfer_time),
