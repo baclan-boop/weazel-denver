@@ -482,6 +482,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .ct-table tr.ct-empty td{opacity:.45}
 .ct-table input[type=text],.ct-table input[type=number]{width:100%;min-width:70px;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.08);border-radius:5px;color:var(--ink);font-size:12px;padding:6px 7px;font-family:var(--font-b)}
 .ct-table .emp-combo-input{min-width:130px}
+.ct-table .ct-td-declined .emp-combo-input{min-width:190px}
 .ct-table input.ct-text{min-width:220px}
 .ct-table input.ct-time-transfer{min-width:64px;text-align:center}
 .ct-table select{width:100%;min-width:130px;background:rgba(var(--ovl),.04);border:1px solid rgba(var(--ovl),.08);border-radius:5px;color:var(--ink);font-size:12px;padding:6px 7px}
@@ -2318,7 +2319,7 @@ function renderContractsTable(){
       <td><input type="number" min="0" value="${Number(s.price)||0}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{price:Number(this.value)||0})"></td>
       <td><div class="ct-text-cell"><input type="text" class="ct-text" value="${xe(s.text||'')}" data-role="text" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{text:this.value})"><button type="button" class="ct-copy-btn" title="Копировать текст" onclick="ctCopyRowText('${s.id}',this)">⧉</button></div></td>
       <td>${empComboMarkup('ct-acc-'+s.id,s.accepted_id,{disabled:roLock})}</td>
-      <td>${empComboMarkup('ct-dec-'+s.id,s.declined_id,{})}</td>
+      <td class="ct-td-declined">${empComboMarkup('ct-dec-'+s.id,s.declined_id,{})}</td>
       <td><input type="number" min="0" placeholder="0" value="${Number(s.payout)?Number(s.payout):''}" ${roLock?'disabled':''} onchange="ctSave('${s.id}',{payout:Number(this.value)||0})"></td>
       <td><input type="text" class="ct-time-transfer" placeholder="ЧЧ:ММ" maxlength="5" value="${xe(s.transfer_time||'')}" data-role="transfer" data-orig="${xe(s.slot_time)}" oninput="ctMaskTransfer(this)" onchange="ctTransferChanged(this,'${s.id}')"></td>
     </tr>`;
