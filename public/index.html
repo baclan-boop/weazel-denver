@@ -504,20 +504,40 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
    страницы вниз и показывает только объявления своего цвета. */
 .ct-layout{display:flex;gap:16px;align-items:flex-start}
 .ct-layout .ct-main{flex:1;min-width:0}
-.ct-upcoming-side{flex:0 0 226px;position:sticky;top:100px;z-index:40}
-.ct-upcoming{background:var(--dark2);backdrop-filter:blur(10px);border:1px solid rgba(var(--ovl),.08);border-radius:var(--rl);padding:14px;max-height:calc(100vh - 116px);display:flex;flex-direction:column}
+.ct-upcoming-side{flex:0 0 226px;position:sticky;top:100px;z-index:40;display:flex;flex-direction:column}
+/* Кнопка переключения цвета таблицы («Зелёные/Красные объявления») теперь
+   лежит прямо над своей карточкой «к отправке» внутри того же sticky-блока —
+   при прокрутке страницы кнопка и карточка едут и закрепляются как одно целое. */
+.ct-color-btn{width:100%;box-sizing:border-box;text-align:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
+.ct-upcoming{background:var(--dark2);backdrop-filter:blur(10px);border:1px solid rgba(var(--ovl),.08);border-radius:var(--rl);padding:14px;max-height:calc(100vh - 168px);display:flex;flex-direction:column}
 .ct-upcoming.side-green{border-top:3px solid #2ed573}
 .ct-upcoming.side-red{border-top:3px solid var(--red)}
 .ct-upcoming-hdr{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:12px;flex-shrink:0}
 .ct-upcoming-hdr-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;flex-wrap:wrap}
 .ct-upcoming-title{font-family:var(--font-d);font-size:13px;letter-spacing:.5px;color:var(--ink);line-height:1.3}
-.ct-upcoming-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
+.ct-upcoming-list{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;padding-right:2px}
+/* Режим «2 колонки»: карточка становится шире и список раскладывается на
+   2 узких столбца (Просрочено / Ближайшее) вместо одной колонки */
+.ct-upcoming-side:has(.ct-upcoming.cols){flex-basis:420px}
+.ct-upcoming-list.two-col{flex-direction:row;overflow:visible}
+.ct-upcoming-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
+.ct-upcoming-col-hdr{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--gray);font-weight:700;margin-bottom:2px;flex-shrink:0}
 @media(max-width:900px){
   .ct-layout{display:block}
   .ct-upcoming-side{position:static;flex:none;width:100%;margin-bottom:16px}
+  .ct-upcoming-side:has(.ct-upcoming.cols){flex-basis:auto}
   .ct-upcoming{max-height:none}
   .ct-upcoming-list{overflow-y:visible;max-height:none}
+  .ct-upcoming-col{overflow-y:visible}
 }
+/* Переключатель вида блоков «Ближайшие» — виден только admin/leader,
+   меняет режим сразу для всех пользователей (хранится в site_settings) */
+.ct-mode-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;border:1px dashed rgba(var(--ovl),.16);border-radius:var(--r);background:rgba(var(--ovl),.02)}
+.ct-mode-switch-label{font-size:11.5px;color:var(--gray);font-weight:600;white-space:nowrap}
+.ct-mode-switch-btns{display:flex;gap:6px;flex-wrap:wrap}
+.ct-mode-btn{background:transparent;border:1px solid rgba(var(--ovl),.14);color:var(--ink);font-size:11px;font-weight:700;letter-spacing:.3px;padding:6px 12px;border-radius:var(--r);cursor:pointer;transition:var(--tr)}
+.ct-mode-btn:hover{border-color:rgba(var(--ovl),.4)}
+.ct-mode-btn.active{background:var(--red);border-color:var(--red);color:#fff}
 .ct-upcoming-count{font-size:11px;color:var(--gray);font-weight:600;white-space:nowrap}
 .ct-upcoming-count.has-overdue{color:#ffb020}
 .ct-pending-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:700;margin-left:4px}
@@ -1123,41 +1143,48 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
       <!-- КОНТРАКТЫ -->
       <div class="adhub-tab" id="adhub-contracts">
         <div class="subtabs">
-          <button class="subtab green" id="ct-tab-green" onclick="switchCTColor('green')">🟢 Зелёные объявления</button>
-          <button class="subtab red" id="ct-tab-red" onclick="switchCTColor('red')">🔴 Красные объявления</button>
           <button class="subtab plain" id="ct-tab-add" onclick="switchCTView('add')">➕ Добавить контракт</button>
           <button class="subtab plain" id="ct-tab-pending" onclick="switchCTView('pending')" style="display:none">🕒 На одобрении <span class="ct-pending-badge" id="ct-pending-badge" style="display:none"></span></button>
         </div>
 
-        <div id="ct-view-pending" style="display:none">
-          <div class="acard">
-            <div class="acard-hdr">
-              <div class="acard-title">🕒 Заявки на добавление контракта</div>
-              <button type="button" class="btn btn-o btn-sm" onclick="loadPendingContracts()">↻ Обновить</button>
-            </div>
-            <div class="fhint" style="margin-bottom:14px">Здесь можно поправить любое поле заявки перед одобрением — цвет, времена, даты, текст, скидку, сотрудника. После одобрения контракт сразу попадает в таблицу «Контракты» (слоты перепроверяются на занятость в момент одобрения).</div>
-            <div id="ct-pending-list"><div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div></div>
-          </div>
-        </div>
-
-        <div id="ct-view-table">
-          <div class="ct-layout">
-            <aside class="ct-upcoming-side">
-              <div class="ct-upcoming side-green" id="ct-upcoming-green">
-                <div class="ct-upcoming-hdr">
-                  <div class="ct-upcoming-hdr-row">
-                    <span class="ct-upcoming-title">🟢 Зелёные — к отправке</span>
-                    <button type="button" class="ct-copy-btn" title="Обновить" onclick="loadUpcomingAds()">↻</button>
-                  </div>
-                  <span class="ct-upcoming-count" id="ct-upcoming-count-green"></span>
+        <div class="ct-layout">
+          <aside class="ct-upcoming-side">
+            <button type="button" class="subtab green ct-color-btn" id="ct-tab-green" onclick="switchCTColor('green')">🟢 Зелёные объявления</button>
+            <div class="ct-upcoming side-green" id="ct-upcoming-green">
+              <div class="ct-upcoming-hdr">
+                <div class="ct-upcoming-hdr-row">
+                  <span class="ct-upcoming-title">🟢 Зелёные — к отправке</span>
+                  <button type="button" class="ct-copy-btn" title="Обновить" onclick="loadUpcomingAds()">↻</button>
                 </div>
-                <div class="ct-upcoming-list" id="ct-upcoming-list-green">
-                  <div class="ct-upcoming-empty">Загрузка...</div>
+                <span class="ct-upcoming-count" id="ct-upcoming-count-green"></span>
+              </div>
+              <div class="ct-upcoming-list" id="ct-upcoming-list-green">
+                <div class="ct-upcoming-empty">Загрузка...</div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="ct-main">
+            <div id="ct-view-pending" style="display:none">
+              <div class="acard">
+                <div class="acard-hdr">
+                  <div class="acard-title">🕒 Заявки на добавление контракта</div>
+                  <button type="button" class="btn btn-o btn-sm" onclick="loadPendingContracts()">↻ Обновить</button>
+                </div>
+                <div class="fhint" style="margin-bottom:14px">Здесь можно поправить любое поле заявки перед одобрением — цвет, времена, даты, текст, скидку, сотрудника. После одобрения контракт сразу попадает в таблицу «Контракты» (слоты перепроверяются на занятость в момент одобрения).</div>
+                <div id="ct-pending-list"><div style="padding:2rem;text-align:center;color:var(--gray)">Загрузка...</div></div>
+              </div>
+            </div>
+
+            <div id="ct-view-table">
+              <div class="ct-mode-switch" id="ct-mode-switch" style="display:none">
+                <span class="ct-mode-switch-label">⚙ Вид блоков «Ближайшие» (для всех пользователей):</span>
+                <div class="ct-mode-switch-btns">
+                  <button type="button" class="ct-mode-btn" data-mode="default" onclick="setCtUpcomingMode('default')">1. Как сейчас</button>
+                  <button type="button" class="ct-mode-btn" data-mode="reverse" onclick="setCtUpcomingMode('reverse')">2. Ближайшее сверху</button>
+                  <button type="button" class="ct-mode-btn" data-mode="columns" onclick="setCtUpcomingMode('columns')">3. Колонками</button>
                 </div>
               </div>
-            </aside>
-
-            <div class="ct-main">
               <div class="ct-toolbar">
                 <button class="ct-datebtn" onclick="shiftCTDate(-1)">‹</button>
                 <div class="ct-date-lbl" id="ct-date-lbl">—</div>
@@ -1172,92 +1199,93 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               </div>
             </div>
 
-            <aside class="ct-upcoming-side">
-              <div class="ct-upcoming side-red" id="ct-upcoming-red">
-                <div class="ct-upcoming-hdr">
-                  <div class="ct-upcoming-hdr-row">
-                    <span class="ct-upcoming-title">🔴 Красные — к отправке</span>
-                    <button type="button" class="ct-copy-btn" title="Обновить" onclick="loadUpcomingAds()">↻</button>
+            <div id="ct-view-add" style="display:none">
+            <div class="ctadd-layout">
+              <div class="acard" style="max-width:640px;padding:22px">
+                <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
+                <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — заявка не отправится, будет показано, что именно занято. После отправки контракт попадёт в таблицу только после одобрения Curator AD (и выше).</div>
+
+                <div class="fg">
+                  <label class="fl">Тип объявлений</label>
+                  <div style="display:flex;gap:10px;margin-top:8px">
+                    <button type="button" id="ctadd-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="ctAddSetColor('green')">🟢 Зелёные</button>
+                    <button type="button" id="ctadd-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="ctAddSetColor('red')">🔴 Красные</button>
                   </div>
-                  <span class="ct-upcoming-count" id="ct-upcoming-count-red"></span>
                 </div>
-                <div class="ct-upcoming-list" id="ct-upcoming-list-red">
-                  <div class="ct-upcoming-empty">Загрузка...</div>
+
+                <div class="fg">
+                  <label class="fl">Время показа (объявлений в день — можно добавить несколько)</label>
+                  <div id="ctadd-times"></div>
+                  <button type="button" class="btn btn-o btn-sm" style="margin-top:4px" onclick="ctAddAddTimeRow()">+ Ещё время</button>
                 </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div class="fg">
+                    <label class="fl">Дата начала</label>
+                    <input type="date" class="fi" id="ctadd-startdate" oninput="ctAddRun()">
+                  </div>
+                  <div class="fg">
+                    <label class="fl">Срок контракта (дней)</label>
+                    <input type="number" class="fi" id="ctadd-days" min="1" max="30" value="2" oninput="ctAddRun()">
+                  </div>
+                </div>
+                <div class="fhint" id="ctadd-daterange" style="margin:-6px 0 14px">—</div>
+
+                <div class="fg">
+                  <label class="fl">Текст объявления</label>
+                  <textarea class="fta" id="ctadd-text" placeholder="Открыт набор в гос. семью..." oninput="ctAddRun()"></textarea>
+                  <div class="calc-chars">Символов: <b id="ctadd-chars">0</b></div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                  <div class="fg">
+                    <label class="fl">Скидка (%)</label>
+                    <input type="number" class="fi" id="ctadd-discount" min="0" max="100" value="0" oninput="ctAddRun()">
+                  </div>
+                  <div class="fg">
+                    <label class="fl">Кто принял контракт</label>
+                    <div id="ctadd-employee"></div>
+                  </div>
+                </div>
+
+                <div class="calc-results">
+                  <div class="calc-res-box"><div class="calc-res-lbl">Всего объявлений</div><div class="calc-res-val" id="ctadd-total">0</div></div>
+                  <div class="calc-res-box" id="ctadd-sum-box" data-raw="0"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-sum">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-sum-box',this)">⧉</button></div></div>
+                  <div class="calc-res-box" id="ctadd-treasury-box" data-raw="0"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-treasury">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-treasury-box',this)">⧉</button></div></div>
+                  <div class="calc-res-box hi" id="ctadd-toemp-box" data-raw="0"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-toemp">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-toemp-box',this)">⧉</button></div></div>
+                  <div class="calc-res-box hi" id="ctadd-perad-box" data-raw="0"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-perad">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-perad-box',this)">⧉</button></div></div>
+                </div>
+
+                <div id="ctadd-error" style="display:none;margin-top:14px;color:var(--red);font-size:12px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.28);border-radius:var(--r);padding:10px 12px;line-height:1.5"></div>
+
+                <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:16px" id="ctadd-submit" onclick="submitCTAdd()">📨 Проверить и отправить на одобрение</button>
               </div>
-            </aside>
-          </div>
-        </div>
 
-        <div id="ct-view-add" style="display:none">
-        <div class="ctadd-layout">
-          <div class="acard" style="max-width:640px;padding:22px">
-            <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
-            <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — заявка не отправится, будет показано, что именно занято. После отправки контракт попадёт в таблицу только после одобрения Curator AD (и выше).</div>
-
-            <div class="fg">
-              <label class="fl">Тип объявлений</label>
-              <div style="display:flex;gap:10px;margin-top:8px">
-                <button type="button" id="ctadd-color-green" class="btn btn-p" style="flex:1;justify-content:center;background:#2ed573" onclick="ctAddSetColor('green')">🟢 Зелёные</button>
-                <button type="button" id="ctadd-color-red" class="btn btn-o" style="flex:1;justify-content:center" onclick="ctAddSetColor('red')">🔴 Красные</button>
-              </div>
-            </div>
-
-            <div class="fg">
-              <label class="fl">Время показа (объявлений в день — можно добавить несколько)</label>
-              <div id="ctadd-times"></div>
-              <button type="button" class="btn btn-o btn-sm" style="margin-top:4px" onclick="ctAddAddTimeRow()">+ Ещё время</button>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-              <div class="fg">
-                <label class="fl">Дата начала</label>
-                <input type="date" class="fi" id="ctadd-startdate" oninput="ctAddRun()">
-              </div>
-              <div class="fg">
-                <label class="fl">Срок контракта (дней)</label>
-                <input type="number" class="fi" id="ctadd-days" min="1" max="30" value="2" oninput="ctAddRun()">
-              </div>
-            </div>
-            <div class="fhint" id="ctadd-daterange" style="margin:-6px 0 14px">—</div>
-
-            <div class="fg">
-              <label class="fl">Текст объявления</label>
-              <textarea class="fta" id="ctadd-text" placeholder="Открыт набор в гос. семью..." oninput="ctAddRun()"></textarea>
-              <div class="calc-chars">Символов: <b id="ctadd-chars">0</b></div>
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-              <div class="fg">
-                <label class="fl">Скидка (%)</label>
-                <input type="number" class="fi" id="ctadd-discount" min="0" max="100" value="0" oninput="ctAddRun()">
-              </div>
-              <div class="fg">
-                <label class="fl">Кто принял контракт</label>
-                <div id="ctadd-employee"></div>
+              <div class="acard ctadd-summary">
+                <div class="acard-title" style="margin-bottom:4px">📋 Сводка для клиента</div>
+                <div class="acard-sub" style="margin-bottom:12px">Текст, срок, время показа и сумма — можно скопировать и отправить клиенту.</div>
+                <div class="ctadd-summary-box" id="ctadd-summary-box">—</div>
+                <button type="button" class="btn btn-o btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="copyCTAddSummary()">⧉ Скопировать сводку</button>
               </div>
             </div>
-
-            <div class="calc-results">
-              <div class="calc-res-box"><div class="calc-res-lbl">Всего объявлений</div><div class="calc-res-val" id="ctadd-total">0</div></div>
-              <div class="calc-res-box" id="ctadd-sum-box" data-raw="0"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-sum">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-sum-box',this)">⧉</button></div></div>
-              <div class="calc-res-box" id="ctadd-treasury-box" data-raw="0"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-treasury">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-treasury-box',this)">⧉</button></div></div>
-              <div class="calc-res-box hi" id="ctadd-toemp-box" data-raw="0"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-toemp">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-toemp-box',this)">⧉</button></div></div>
-              <div class="calc-res-box hi" id="ctadd-perad-box" data-raw="0"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-perad">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-perad-box',this)">⧉</button></div></div>
             </div>
-
-            <div id="ctadd-error" style="display:none;margin-top:14px;color:var(--red);font-size:12px;background:rgba(232,25,44,.08);border:1px solid rgba(232,25,44,.28);border-radius:var(--r);padding:10px 12px;line-height:1.5"></div>
-
-            <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:16px" id="ctadd-submit" onclick="submitCTAdd()">📨 Проверить и отправить на одобрение</button>
           </div>
 
-          <div class="acard ctadd-summary">
-            <div class="acard-title" style="margin-bottom:4px">📋 Сводка для клиента</div>
-            <div class="acard-sub" style="margin-bottom:12px">Текст, срок, время показа и сумма — можно скопировать и отправить клиенту.</div>
-            <div class="ctadd-summary-box" id="ctadd-summary-box">—</div>
-            <button type="button" class="btn btn-o btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="copyCTAddSummary()">⧉ Скопировать сводку</button>
-          </div>
-        </div>
+          <aside class="ct-upcoming-side">
+            <button type="button" class="subtab red ct-color-btn" id="ct-tab-red" onclick="switchCTColor('red')">🔴 Красные объявления</button>
+            <div class="ct-upcoming side-red" id="ct-upcoming-red">
+              <div class="ct-upcoming-hdr">
+                <div class="ct-upcoming-hdr-row">
+                  <span class="ct-upcoming-title">🔴 Красные — к отправке</span>
+                  <button type="button" class="ct-copy-btn" title="Обновить" onclick="loadUpcomingAds()">↻</button>
+                </div>
+                <span class="ct-upcoming-count" id="ct-upcoming-count-red"></span>
+              </div>
+              <div class="ct-upcoming-list" id="ct-upcoming-list-red">
+                <div class="ct-upcoming-empty">Загрузка...</div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 
@@ -1971,9 +1999,9 @@ async function switchAdHubTab(tab){
     b.classList.toggle('active',t===tab);
   });
   // Вкладке «Контракты» нужен более широкий контейнер — по бокам таблицы
-  // стоят закреплённые блоки «Ближайшие объявления» (зелёный/красный).
-  const secInner=document.getElementById('adhub-sec-inner');
-  if(secInner) secInner.style.maxWidth=(tab==='contracts')?'1560px':'1200px';
+  // стоят закреплённые блоки «Ближайшие объявления» (зелёный/красный);
+  // режим «2 колонки» (см. ctUpcomingMode) требует ещё больше ширины.
+  updateAdhubContainerWidth();
   if(tab==='calc')initCalculators();
   if(tab==='contracts')await openContractsTab(CT_STATE.color);
   if(tab==='stats')await loadStatsTab(STATS_STATE.offset);
@@ -2248,6 +2276,7 @@ async function openContractsTab(color){
   const pendingTabBtn=document.getElementById('ct-tab-pending');
   if(pendingTabBtn)pendingTabBtn.style.display=canManageAdsFull()?'':'none';
   ctShowView('table');
+  renderCtModeSwitch();
   await ensureEmployeesLoaded();
   await loadContractsTable();
   loadUpcomingAds();
@@ -2471,6 +2500,7 @@ function ctCopyRowText(id,btn){
 // полночь (например 13:00 → 03:00 следующих суток).
 // ══════════════════════════════════════════════
 let CT_UPCOMING={green:[],red:[]};
+let CT_UPCOMING_RAW={green:{overdue:[],nearest:null},red:{overdue:[],nearest:null}};
 // ── Часовой пояс: панель всегда работает по московскому времени (МСК,
 // UTC+3, без перехода на летнее/зимнее время) — расписание объявлений
 // привязано к МСК, а не к локальному часовому поясу браузера того, кто
@@ -2558,53 +2588,126 @@ async function loadUpcomingAds(){
     const now=Date.now();
     const cutoff=now-6*60*60*1000; // просроченные показываем не дольше 6 часов
     // Отдельно для каждого цвета: все просроченные (время уже прошло, но
-    // объявление не отмечено отправленным) + ровно одно ближайшее предстоящее
+    // объявление не отмечено отправленным) + ровно одно ближайшее предстоящее.
+    // Храним "сырыми" (без учёта режима отображения) — переключение режима
+    // (см. setCtUpcomingMode) просто перерисовывает эти же данные иначе,
+    // без повторного запроса к серверу.
     const buildForColor=color=>{
       const items=all.filter(s=>s.color===color);
       const overdue=items.filter(s=>s.dt.getTime()<now && s.dt.getTime()>=cutoff).sort((a,b)=>a.dt-b.dt);
-      const nearest=items.filter(s=>s.dt.getTime()>=now).sort((a,b)=>a.dt-b.dt)[0];
-      return [...overdue,nearest].filter(Boolean);
+      const nearest=items.filter(s=>s.dt.getTime()>=now).sort((a,b)=>a.dt-b.dt)[0]||null;
+      return {overdue,nearest};
     };
-    renderUpcomingAds('green',buildForColor('green'));
-    renderUpcomingAds('red',buildForColor('red'));
+    CT_UPCOMING_RAW.green=buildForColor('green');
+    CT_UPCOMING_RAW.red=buildForColor('red');
+    renderUpcomingAds('green');
+    renderUpcomingAds('red');
   }catch(e){
     if(boxG)boxG.innerHTML=`<div class="ct-upcoming-empty">Не удалось загрузить</div>`;
     if(boxR)boxR.innerHTML=`<div class="ct-upcoming-empty">Не удалось загрузить</div>`;
   }
 }
-function renderUpcomingAds(color,list){
+// Режим отображения блоков «Ближайшие» — общая настройка для всех
+// пользователей (хранится в site_settings под ключом ctUpcomingMode,
+// меняется только admin/leader через setCtUpcomingMode).
+//   'default' — просроченные сверху, ближайшее предстоящее последним (как было)
+//   'reverse' — ближайшее предстоящее сверху, просроченные снизу
+//   'columns' — 2 колонки рядом: «Просрочено» и «Ближайшее»
+function updateAdhubContainerWidth(){
+  const secInner=document.getElementById('adhub-sec-inner');
+  if(!secInner)return;
+  if(ADHUB_TAB!=='contracts'){ secInner.style.maxWidth='1200px'; return; }
+  // Режиму «2 колонки» нужно заметно больше горизонтального места, чем
+  // узким однострочным боковым блокам (см. .ct-upcoming-side:has(.cols)).
+  secInner.style.maxWidth=(ctUpcomingMode()==='columns')?'1800px':'1560px';
+}
+function ctUpcomingMode(){
+  const m=SETTINGS&&SETTINGS.ctUpcomingMode;
+  return (m==='reverse'||m==='columns')?m:'default';
+}
+function ctUpcomingItemHtml(s,key,i){
+  const now=Date.now();
+  const overdue=s.dt.getTime()<now;
+  return `<div class="ct-upcoming-item ${s.color}${overdue?' overdue':''}">
+    <div class="ct-upcoming-top">
+      <span class="ct-upcoming-dot ${s.color}"></span>
+      <span class="ct-upcoming-when">${overdue?'⚠ Просрочено · ':''}${xe(fmtUpcomingDT(s.dt))}</span>
+      <button type="button" class="ct-copy-btn" title="Копировать время" onclick="copyUpcomingTime('${key}',${i},this)">⧉</button>
+    </div>
+    <div class="ct-upcoming-text">${xe(s.text)}</div>
+    <button type="button" class="ct-copy-btn ct-copy-full" onclick="copyUpcomingText('${key}',${i},this)">⧉ Копировать текст</button>
+  </div>`;
+}
+function renderUpcomingAds(color){
   const box=document.getElementById('ct-upcoming-list-'+color);
   const countEl=document.getElementById('ct-upcoming-count-'+color);
+  const cardEl=document.getElementById('ct-upcoming-'+color);
   if(!box)return;
-  CT_UPCOMING[color]=list;
-  if(!list.length){
-    box.innerHTML=`<div class="ct-upcoming-empty">Нет объявлений, ожидающих отправки</div>`;
-    if(countEl){ countEl.textContent=''; countEl.classList.remove('has-overdue'); }
+  const {overdue,nearest}=CT_UPCOMING_RAW[color]||{overdue:[],nearest:null};
+  const mode=ctUpcomingMode();
+  const overdueCount=overdue.length;
+
+  if(countEl){
+    if(!overdueCount && !nearest){ countEl.textContent=''; countEl.classList.remove('has-overdue'); }
+    else{
+      countEl.textContent=overdueCount?`⚠ просрочено: ${overdueCount}`:'предстоящих: 1';
+      countEl.classList.toggle('has-overdue',overdueCount>0);
+    }
+  }
+  if(cardEl)cardEl.classList.toggle('cols',mode==='columns');
+
+  if(mode==='columns'){
+    box.classList.add('two-col');
+    CT_UPCOMING[color+'_overdue']=overdue;
+    CT_UPCOMING[color+'_nearest']=nearest?[nearest]:[];
+    const overdueHtml=overdue.length
+      ? overdue.map((s,i)=>ctUpcomingItemHtml(s,color+'_overdue',i)).join('')
+      : `<div class="ct-upcoming-empty">Нет</div>`;
+    const nearestHtml=nearest
+      ? ctUpcomingItemHtml(nearest,color+'_nearest',0)
+      : `<div class="ct-upcoming-empty">Нет</div>`;
+    box.innerHTML=`
+      <div class="ct-upcoming-col">
+        <div class="ct-upcoming-col-hdr">Просрочено</div>
+        ${overdueHtml}
+      </div>
+      <div class="ct-upcoming-col">
+        <div class="ct-upcoming-col-hdr">Ближайшее</div>
+        ${nearestHtml}
+      </div>`;
     return;
   }
-  const now=Date.now();
-  // Счётчик у заголовка — чтобы было видно, сколько объявлений просрочено,
-  // не прокручивая список (у каждого блока своя прокрутка, см. CSS).
-  const overdueCount=list.filter(s=>s.dt.getTime()<now).length;
-  if(countEl){
-    countEl.textContent=overdueCount?`⚠ просрочено: ${overdueCount}`:`предстоящих: ${list.length}`;
-    countEl.classList.toggle('has-overdue',overdueCount>0);
+  box.classList.remove('two-col');
+  const flat=mode==='reverse'?[...(nearest?[nearest]:[]),...overdue]:[...overdue,...(nearest?[nearest]:[])];
+  CT_UPCOMING[color]=flat;
+  if(!flat.length){
+    box.innerHTML=`<div class="ct-upcoming-empty">Нет объявлений, ожидающих отправки</div>`;
+    return;
   }
-  box.innerHTML=list.map((s,i)=>{
-    const overdue=s.dt.getTime()<now;
-    return `<div class="ct-upcoming-item ${s.color}${overdue?' overdue':''}">
-      <div class="ct-upcoming-top">
-        <span class="ct-upcoming-dot ${s.color}"></span>
-        <span class="ct-upcoming-when">${overdue?'⚠ Просрочено · ':''}${xe(fmtUpcomingDT(s.dt))}</span>
-        <button type="button" class="ct-copy-btn" title="Копировать время" onclick="copyUpcomingTime('${color}',${i},this)">⧉</button>
-      </div>
-      <div class="ct-upcoming-text">${xe(s.text)}</div>
-      <button type="button" class="ct-copy-btn ct-copy-full" onclick="copyUpcomingText('${color}',${i},this)">⧉ Копировать текст</button>
-    </div>`;
-  }).join('');
+  box.innerHTML=flat.map((s,i)=>ctUpcomingItemHtml(s,color,i)).join('');
 }
-function copyUpcomingText(color,i,btn){ const it=CT_UPCOMING[color]&&CT_UPCOMING[color][i]; if(it)copyToClipboard(it.text,btn); }
-function copyUpcomingTime(color,i,btn){ const it=CT_UPCOMING[color]&&CT_UPCOMING[color][i]; if(it)copyToClipboard(it.slot_time,btn); }
+function copyUpcomingText(key,i,btn){ const it=CT_UPCOMING[key]&&CT_UPCOMING[key][i]; if(it)copyToClipboard(it.text,btn); }
+function copyUpcomingTime(key,i,btn){ const it=CT_UPCOMING[key]&&CT_UPCOMING[key][i]; if(it)copyToClipboard(it.slot_time,btn); }
+// Панель переключения режима видна только admin/leader (совпадает с правами
+// на PUT /api/settings на сервере) — но применяется ко ВСЕМ пользователям,
+// т.к. режим читается из общих SETTINGS, а не из localStorage конкретного браузера.
+function renderCtModeSwitch(){
+  const el=document.getElementById('ct-mode-switch');
+  if(!el)return;
+  el.style.display=canEditTexts()?'flex':'none';
+  const mode=ctUpcomingMode();
+  el.querySelectorAll('.ct-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+}
+async function setCtUpcomingMode(mode){
+  if(!canEditTexts())return;
+  SETTINGS.ctUpcomingMode=mode;
+  renderCtModeSwitch();
+  updateAdhubContainerWidth();
+  renderUpcomingAds('green');
+  renderUpcomingAds('red');
+  try{ await API.put('/settings',{ctUpcomingMode:mode}); }
+  catch(e){ toast('Не удалось сохранить режим','e'); }
+}
 
 // Маска ввода: после первых 2 цифр автоматически ставим двоеточие (ЧЧ:ММ)
 function ctMaskTransfer(input){
