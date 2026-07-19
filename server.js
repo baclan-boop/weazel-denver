@@ -18,7 +18,6 @@ const fs           = require('fs');
 const crypto       = require('crypto');
 const multer       = require('multer');
 const cloudinary   = require('cloudinary').v2;
-const nodemailer   = require('nodemailer');
 // sharp используется ТОЛЬКО для необязательного сжатия картинок перед
 // загрузкой в Cloudinary (см. shrinkImageIfNeeded ниже). Грузим его
 // защищённо: если на конкретной платформе/архитектуре не нашлось
@@ -68,57 +67,6 @@ if (CLOUDINARY_ENABLED) {
   console.log('Cloudinary подключён — загруженные файлы переживут редеплой');
 } else {
   console.warn('ВНИМАНИЕ: Cloudinary не настроен (нет CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET). Загруженные через сайт картинки (фоны, аватарки, изображения новостей) будут теряться при каждом редеплое!');
-}
-
-// ─── ПОЧТА: отправка писем со ссылкой для восстановления пароля ──────────
-// Используем отдельный Gmail-ящик (НЕ ADMIN_EMAIL) через App Password —
-// см. README, раздел "Подключить почту". Если переменные не заданы, сайт
-// всё равно поднимется (как и без Cloudinary выше): форма "Забыли пароль?"
-// будет отвечать тем же общим сообщением, но письмо реально не уйдёт —
-// об этом будет явно сказано в логах сервера при каждой попытке.
-const MAIL_USER         = process.env.MAIL_USER || '';
-const MAIL_APP_PASSWORD = process.env.MAIL_APP_PASSWORD || '';
-const MAIL_FROM_NAME    = process.env.MAIL_FROM_NAME || 'Weazel News';
-const MAIL_ENABLED      = !!(MAIL_USER && MAIL_APP_PASSWORD);
-
-let mailTransporter = null;
-if (MAIL_ENABLED) {
-  mailTransporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: MAIL_USER, pass: MAIL_APP_PASSWORD },
-  });
-  console.log('Почта подключена — восстановление пароля будет слать письма с', MAIL_USER);
-} else {
-  console.warn('ВНИМАНИЕ: MAIL_USER / MAIL_APP_PASSWORD не заданы — восстановление пароля не сможет отправлять письма (см. README, "Подключить почту").');
-}
-
-async function sendMail(to, subject, html) {
-  if (!MAIL_ENABLED) { console.error('sendMail: почта не настроена, письмо на', maskEmail(to), 'не отправлено'); return; }
-  await mailTransporter.sendMail({ from: `"${MAIL_FROM_NAME}" <${MAIL_USER}>`, to, subject, html });
-}
-
-// Базовый URL сайта — нужен, чтобы вставить в письмо рабочую ссылку вида
-// https://.../?reset_token=... . 'trust proxy' уже включён выше по файлу,
-// поэтому req.protocol/req.get('host') корректно отражают реальный домен
-// и за прокси Render/Fly. APP_URL можно задать вручную, если понадобится
-// (например свой домен вместо стандартного *.onrender.com).
-function buildAppUrl(req) {
-  return (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-}
-
-function escHtml(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function resetEmailHtml(name, link) {
-  return `
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:28px;background:#0A0A0A;color:#fff;border-radius:12px">
-    <div style="font-weight:700;font-size:20px;letter-spacing:.5px;margin-bottom:18px">WEAZEL NEWS</div>
-    <p style="margin:0 0 12px">Привет, ${escHtml(name)}!</p>
-    <p style="margin:0 0 12px;opacity:.85">Поступил запрос на сброс пароля от вашего аккаунта. Ссылка действует 45 минут и работает только один раз.</p>
-    <p style="margin:24px 0"><a href="${link}" style="background:#C1272D;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Придумать новый пароль</a></p>
-    <p style="margin:0;opacity:.55;font-size:12px">Если это были не вы — просто проигнорируйте письмо, пароль останется прежним.</p>
-  </div>`;
 }
 
 function uploadBufferToCloudinary(buffer) {
@@ -242,19 +190,6 @@ async function initDB() {
       sid TEXT PRIMARY KEY, sess JSONB NOT NULL, expire TIMESTAMPTZ NOT NULL
     );
     CREATE INDEX IF NOT EXISTS session_expire ON session(expire);
-    -- Восстановление пароля: храним только SHA-256 хэш токена, никогда —
-    -- сам токен (см. /api/auth/forgot-password и /api/auth/reset-password
-    -- ниже). used_at проставляется после успешного использования — повторно
-    -- ссылка уже не сработает, даже если её кто-то сохранил/переслал.
-    CREATE TABLE IF NOT EXISTS password_resets (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token_hash TEXT NOT NULL UNIQUE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      expires_at TIMESTAMPTZ NOT NULL,
-      used_at TIMESTAMPTZ
-    );
-    CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
   `);
 
   // Миграция: добавить новые колонки если БД уже существует
@@ -398,9 +333,6 @@ app.use(session({
 
 const loginLimiter = rateLimit({ windowMs: 15*60*1000, max: 10, message: { error: 'Слишком много попыток. Подождите 15 минут.' }, keyGenerator: r => hashIP(r.ip) });
 const apiLimiter   = rateLimit({ windowMs: 60*1000, max: 200, message: { error: 'Слишком много запросов.' }, keyGenerator: r => hashIP(r.ip) });
-// Отдельный, более строгий лимит для восстановления пароля — не даёт
-// заваливать чужой ящик письмами и защищает /reset-password от подбора токена.
-const forgotPasswordLimiter = rateLimit({ windowMs: 15*60*1000, max: 5, message: { error: 'Слишком много запросов. Подождите 15 минут.' }, keyGenerator: r => hashIP(r.ip) });
 app.use('/api/', apiLimiter);
 
 function hashIP(ip) { return crypto.createHash('sha256').update((ip||'')+SESSION_SECRET).digest('hex').slice(0,16); }
@@ -417,6 +349,7 @@ const EDIT_LOG_FIELD_LABELS = {
   contract_slot:{price:'Цена контракта',text:'Текст',accepted_id:'Принял',declined_id:'Откинул',payout:'К выплате',status:'Статус',transfer_time:'Время переноса'},
   bonus:{amount:'Сумма',comment:'Комментарий',paid:'Выплачено'},
   user_role:{role:'Роль'},
+  user_password:{password:'Пароль'},
 };
 function truncForLog(v,len=300){
   if(v===null||v===undefined)return '';
@@ -778,68 +711,25 @@ app.put('/api/auth/me', requireAuth, async (req, res) => {
   } catch (e) { console.error(e.message); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-// ─── ВОССТАНОВЛЕНИЕ ПАРОЛЯ ────────────────────────────────────────────────
-const RESET_TOKEN_TTL_MS = 45*60*1000; // ссылка живёт 45 минут
-const RESET_RESEND_COOLDOWN_MS = 60*1000; // не шлём повторное письмо чаще раза в минуту
-
-// Запрос ссылки для сброса пароля. Отвечаем ОДНИМ И ТЕМ ЖЕ сообщением
-// независимо от того, найден email в базе или нет — иначе по разнице
-// в ответе можно было бы перебором узнать, какие email зарегистрированы.
-app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req,res) => {
-  const generic = { ok:true, message:'Если такая почта зарегистрирована, на неё отправлено письмо со ссылкой для сброса пароля.' };
+// Смена пароля самим пользователем (пока залогинен) — этим же путём
+// пользователь меняет временный пароль, который ему выдал администратор
+// через «Сбросить пароль» в разделе Пользователи (см. POST
+// /api/users/:id/reset-password ниже). Требуем текущий пароль — защита
+// на случай, если сессия осталась открытой на чужом/общем компьютере.
+app.put('/api/auth/password', requireAuth, loginLimiter, async (req,res) => {
   try {
-    const { email } = req.body;
-    if (!email || !/\S+@\S+\.\S+/.test(email)) return res.json(generic);
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error:'Заполните все поля' });
+    if (newPassword.length < 6) return res.status(400).json({ error:'Новый пароль минимум 6 символов' });
 
-    const r = await query('SELECT id,name,email FROM users WHERE email=$1', [email.trim().toLowerCase()]);
+    const r = await query('SELECT * FROM users WHERE id=$1', [req.user.id]);
     const user = r.rows[0];
-    if (user) {
-      const last = await query('SELECT created_at FROM password_resets WHERE user_id=$1 AND used_at IS NULL ORDER BY created_at DESC LIMIT 1', [user.id]);
-      const lastAt = last.rows[0]?.created_at;
-      if (!lastAt || (Date.now() - new Date(lastAt).getTime()) > RESET_RESEND_COOLDOWN_MS) {
-        const rawToken = crypto.randomBytes(32).toString('hex');
-        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-        await query('DELETE FROM password_resets WHERE user_id=$1', [user.id]); // прошлые ссылки для этого юзера отзываем
-        await query('INSERT INTO password_resets (id,user_id,token_hash,expires_at) VALUES ($1,$2,$3,$4)',
-          [uuid(), user.id, tokenHash, new Date(Date.now()+RESET_TOKEN_TTL_MS).toISOString()]);
-        await query(`DELETE FROM password_resets WHERE expires_at < NOW() - INTERVAL '1 day'`); // фоновая уборка мусора
+    const ok = await bcrypt.compare(currentPassword, user.pwd_hash);
+    if (!ok) return res.status(400).json({ error:'Текущий пароль указан неверно' });
 
-        const link = `${buildAppUrl(req)}/?reset_token=${rawToken}`;
-        sendMail(user.email, 'Восстановление пароля — Weazel News', resetEmailHtml(user.name, link))
-          .catch(e => console.error('Не удалось отправить письмо восстановления:', e.message));
-      }
-    }
-    res.json(generic);
-  } catch (e) { console.error(e.message); res.json(generic); }
-});
-
-// Установка нового пароля по токену из письма.
-app.post('/api/auth/reset-password', forgotPasswordLimiter, async (req,res) => {
-  try {
-    const { token, password } = req.body;
-    if (!token || !password) return res.status(400).json({ error:'Заполните все поля' });
-    if (password.length < 6) return res.status(400).json({ error:'Пароль минимум 6 символов' });
-
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const r = await query('SELECT * FROM password_resets WHERE token_hash=$1', [tokenHash]);
-    const pr = r.rows[0];
-    if (!pr || pr.used_at || new Date(pr.expires_at) < new Date()) {
-      return res.status(400).json({ error:'Ссылка недействительна или устарела. Запросите новую через «Забыли пароль?».' });
-    }
-
-    const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    await query('UPDATE users SET pwd_hash=$1 WHERE id=$2', [hash, pr.user_id]);
-    await query('UPDATE password_resets SET used_at=NOW() WHERE id=$1', [pr.id]);
-    // На случай, если пароль восстанавливали из-за утечки доступа — гасим
-    // ВСЕ активные сессии этого пользователя (не только текущий браузер).
-    await query(`DELETE FROM session WHERE sess->>'userId' = $1`, [pr.user_id]);
-
-    const ur = await query('SELECT * FROM users WHERE id=$1', [pr.user_id]);
-    req.session.regenerate(err => {
-      if (err) return res.status(500).json({ error:'Пароль обновлён, но не удалось войти автоматически — войдите вручную.' });
-      req.session.userId = pr.user_id;
-      res.json({ user: safeUser(ur.rows[0]) });
-    });
+    const hash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await query('UPDATE users SET pwd_hash=$1 WHERE id=$2', [hash, user.id]);
+    res.json({ ok:true });
   } catch (e) { console.error(e.message); res.status(500).json({ error:'Ошибка сервера' }); }
 });
 
@@ -890,6 +780,35 @@ app.put('/api/users/:id/role',requireUserMgmt,async(req,res)=>{
 
   await logFieldEdit(req,'user_role',req.params.id,beforeR.rows[0].name,beforeR.rows[0],{role},EDIT_LOG_FIELD_LABELS.user_role);
   res.json({ok:true});
+});
+
+// Случайный пароль без букв 0/O/1/l/I (чтобы админ не путал при передаче
+// голосом/в чат) — администратор видит его в ответе и передаёт пользователю
+// сам (Discord и т.п.), тот входит с ним и меняет на свой через «Сменить
+// пароль» в личном кабинете (см. PUT /api/auth/password выше).
+function generateRandomPassword(len=10){
+  const chars='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let out='';
+  for(let i=0;i<len;i++) out+=chars[crypto.randomInt(chars.length)];
+  return out;
+}
+
+app.post('/api/users/:id/reset-password',requireAdmin,async(req,res)=>{
+  try{
+    const r=await query('SELECT id,name FROM users WHERE id=$1',[req.params.id]);
+    const target=r.rows[0];
+    if(!target)return res.status(404).json({error:'Пользователь не найден'});
+
+    const newPassword=generateRandomPassword();
+    const hash=await bcrypt.hash(newPassword,BCRYPT_ROUNDS);
+    await query('UPDATE users SET pwd_hash=$1 WHERE id=$2',[hash,target.id]);
+    // Гасим все активные сессии этого пользователя — со старым паролем
+    // никто (в т.ч. если доступ был скомпрометирован) не остаётся залогинен.
+    await query(`DELETE FROM session WHERE sess->>'userId' = $1`,[target.id]);
+
+    await logFieldEdit(req,'user_password',target.id,target.name,{password:'—'},{password:'сброшен администратором'},EDIT_LOG_FIELD_LABELS.user_password);
+    res.json({ok:true,password:newPassword});
+  }catch(e){console.error(e.message);res.status(500).json({error:'Ошибка сервера'});}
 });
 
 // ═══════════════════════════════════════════════════════════════════════
