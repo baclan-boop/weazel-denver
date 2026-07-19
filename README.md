@@ -7,6 +7,37 @@
 3. Аккаунт Render (хостинг) — render.com
 Всё регистрируется через Google — без карты.
 
+## СТРУКТУРА ПРОЕКТА
+
+Серверный код разложен по файлам (раньше всё лежало в одном server.js):
+
+```
+server.js                    — точка входа: initDB() + app.listen()
+src/
+  config.js                  — переменные окружения и константы (см. .env.example)
+  db.js                      — подключение к Postgres, схема таблиц, миграции
+  app.js                     — сборка Express: helmet, сессии, статика, роутеры
+  cloudinary.js              — загрузка картинок в облако (+ сжатие через sharp)
+  middleware/
+    auth.js                  — requireAuth и все requireXxx (проверки ролей)
+    rateLimiters.js          — loginLimiter, apiLimiter
+  utils/
+    helpers.js               — hashIP, maskEmail, safeUser, parseJSON, boolLbl
+    editLog.js               — журнал редактирования (logFieldEdit, empNameMap)
+    schedule.js               — недельные диапазоны, расписание слотов контрактов
+    contractsEngine.js        — расчёт цены/выплаты контракта, проверка занятости слотов
+  routes/
+    auth.js, users.js, employees.js, contracts.js, bonuses.js,
+    booking.js, upload.js, news.js, services.js, team.js,
+    settings.js, visitors.js, editLogs.js
+                              — по одному файлу на раздел API, каждый — express.Router()
+public/                       — фронтенд (не изменялся)
+google-apps-script/           — код Google Apps Script для поиска слотов объявлений
+```
+
+Переменные окружения — см. `.env.example` (скопировать в `.env` для локального запуска;
+в проде задаются в Render → Environment).
+
 =========================================
 ПОСЛЕДНИЕ ОБНОВЛЕНИЯ (раздел «Реклама» / «Контракты»)
 =========================================

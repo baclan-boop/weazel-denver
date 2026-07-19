@@ -24,9 +24,15 @@ primary_region = "ams"
     path = "/"
     timeout = "5s"
 
+# Примечание: сейчас сайт деплоится на Render (см. README.md), этот файл
+# используется только если снова понадобится деплой на Fly.io.
+# destination исправлен на /app/uploads — раньше был /app/data, а
+# приложение пишет локальные файлы (fallback, если Cloudinary не настроен,
+# см. src/config.js → UPLOADS_DIR) именно в /app/uploads, так что старый
+# путь монтирования никогда реально не использовался для персистентности.
 [[mounts]]
   source = "weazel_data"
-  destination = "/app/data"
+  destination = "/app/uploads"
 
 [[vm]]
   memory = "256mb"

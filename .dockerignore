@@ -3,6 +3,6 @@ node_modules/
 .env.*
 !.env.example
 uploads/
-npm-debug.log*
-.DS_Store
-*.log
+.git/
+*.md
+google-apps-script/
