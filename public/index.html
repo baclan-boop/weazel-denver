@@ -854,6 +854,9 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
           <label class="fl">Пароль</label>
           <input type="password" class="fi" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
+        <div style="text-align:right;margin:-8px 0 10px">
+          <span style="font-size:12px;color:var(--gray);cursor:pointer" onclick="openForgotModal()">Забыли пароль?</span>
+        </div>
         <div class="ferr" id="login-error"></div>
         <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Войти</button>
       </div>
@@ -1491,47 +1494,47 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
   </div>
 </div>
 
-<!-- ADMIN RESET PASSWORD RESULT MODAL -->
-<div class="mo" id="modal-admin-reset-result">
+<!-- FORGOT PASSWORD MODAL -->
+<div class="mo" id="modal-forgot-password">
   <div class="modal">
-    <div class="mhdr"><div class="mttl">Новый пароль выдан</div><button class="mclose" onclick="closeModal('modal-admin-reset-result')">✕</button></div>
+    <div class="mhdr"><div class="mttl">Восстановление пароля</div><button class="mclose" onclick="closeModal('modal-forgot-password')">✕</button></div>
     <div class="mbody">
-      <p style="font-size:13px;color:var(--gray);margin:0 0 10px">Для <b id="arr-username" style="color:var(--white)"></b> сгенерирован новый пароль. Передай его пользователю сам (Discord и т.п.) — он сможет сменить его на свой после входа.</p>
-      <div class="fg">
-        <label class="fl">Новый пароль</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" class="fi" id="arr-password" readonly style="font-family:monospace;font-size:15px;letter-spacing:.5px">
-          <button class="btn btn-o btn-sm" onclick="copyResetPassword()">Копировать</button>
+      <div id="forgot-form">
+        <p style="font-size:13px;color:var(--gray);margin:0 0 14px">Укажи почту, на которую зарегистрирован аккаунт — пришлём ссылку для сброса пароля.</p>
+        <div class="fg">
+          <label class="fl">Электронная почта</label>
+          <input type="email" class="fi" id="forgot-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendForgotEmail()">
         </div>
+        <div class="ferr" id="forgot-error" style="display:none"></div>
+      </div>
+      <div id="forgot-success" style="display:none;font-size:13px;line-height:1.5">
+        Если такая почта зарегистрирована — на неё отправлено письмо со ссылкой. Ссылка действует 45 минут.
       </div>
       <div class="mfoot">
-        <button class="btn btn-p btn-sm" onclick="closeModal('modal-admin-reset-result')">Готово</button>
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-forgot-password')">Закрыть</button>
+        <button class="btn btn-p btn-sm" id="forgot-submit-btn" onclick="sendForgotEmail()">Отправить ссылку</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL (самостоятельная смена пароля залогиненным пользователем) -->
-<div class="mo" id="modal-change-password">
+<!-- RESET PASSWORD MODAL (открывается по ссылке из письма, ?reset_token=...) -->
+<div class="mo" id="modal-reset-password">
   <div class="modal">
-    <div class="mhdr"><div class="mttl">Смена пароля</div><button class="mclose" onclick="closeModal('modal-change-password')">✕</button></div>
+    <div class="mhdr"><div class="mttl">Новый пароль</div><button class="mclose" onclick="closeModal('modal-reset-password')">✕</button></div>
     <div class="mbody">
       <div class="fg">
-        <label class="fl">Текущий пароль</label>
-        <input type="password" class="fi" id="cp-current" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
-      </div>
-      <div class="fg">
         <label class="fl">Новый пароль (мин. 6 символов)</label>
-        <input type="password" class="fi" id="cp-new1" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
+        <input type="password" class="fi" id="reset-password-1" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitResetPassword()">
       </div>
       <div class="fg">
-        <label class="fl">Повторите новый пароль</label>
-        <input type="password" class="fi" id="cp-new2" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
+        <label class="fl">Повторите пароль</label>
+        <input type="password" class="fi" id="reset-password-2" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitResetPassword()">
       </div>
-      <div class="ferr" id="cp-error" style="display:none"></div>
+      <div class="ferr" id="reset-password-error" style="display:none"></div>
       <div class="mfoot">
-        <button class="btn btn-o btn-sm" onclick="closeModal('modal-change-password')">Отмена</button>
-        <button class="btn btn-p btn-sm" onclick="submitChangePassword()">Сохранить</button>
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-reset-password')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="submitResetPassword()">Сохранить пароль</button>
       </div>
     </div>
   </div>
@@ -1875,29 +1878,63 @@ async function doRegister(){
   }
 }
 
-// Самостоятельная смена пароля залогиненным пользователем — этим же путём
-// меняют временный пароль, который выдал администратор (см. кнопку
-// «Сбросить пароль» в Панели → Пользователи и openAdminResetPassword()).
-function openChangePasswordModal(){
-  document.getElementById('cp-current').value='';
-  document.getElementById('cp-new1').value='';
-  document.getElementById('cp-new2').value='';
-  const err=document.getElementById('cp-error');err.style.display='none';err.textContent='';
-  openModal('modal-change-password');
+function openForgotModal(){
+  document.getElementById('forgot-form').style.display='block';
+  document.getElementById('forgot-success').style.display='none';
+  document.getElementById('forgot-submit-btn').style.display='inline-flex';
+  const err=document.getElementById('forgot-error');err.style.display='none';err.textContent='';
+  document.getElementById('forgot-email').value=document.getElementById('login-email').value.trim();
+  openModal('modal-forgot-password');
 }
-async function submitChangePassword(){
-  const currentPassword=document.getElementById('cp-current').value;
-  const p1=document.getElementById('cp-new1').value;
-  const p2=document.getElementById('cp-new2').value;
-  const err=document.getElementById('cp-error');
+async function sendForgotEmail(){
+  const email=document.getElementById('forgot-email').value.trim();
+  const err=document.getElementById('forgot-error');
   err.style.display='none';
-  if(!currentPassword){err.textContent='Введите текущий пароль';err.style.display='block';return}
-  if(!p1||p1.length<6){err.textContent='Новый пароль минимум 6 символов';err.style.display='block';return}
+  if(!email){err.textContent='Введите почту';err.style.display='block';return}
+  const btn=document.getElementById('forgot-submit-btn');
+  btn.textContent='Отправка...';btn.disabled=true;
+  try{
+    await API.post('/auth/forgot-password',{email});
+    document.getElementById('forgot-form').style.display='none';
+    document.getElementById('forgot-success').style.display='block';
+    btn.style.display='none';
+  }catch(e){
+    err.textContent=e.error||'Ошибка отправки';err.style.display='block';
+  }finally{
+    btn.textContent='Отправить ссылку';btn.disabled=false;
+  }
+}
+
+// Токен из письма — ловим на BOOT (сайт не использует URL-роутинг, поэтому
+// делаем это вручную, см. вызов checkResetTokenInUrl() в самом низу файла).
+let RESET_TOKEN=null;
+function checkResetTokenInUrl(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get('reset_token');
+  if(!token)return;
+  RESET_TOKEN=token;
+  history.replaceState(null,'',location.pathname); // не оставляем токен в адресной строке/истории
+  showPage('auth');
+  const err=document.getElementById('reset-password-error');err.style.display='none';err.textContent='';
+  document.getElementById('reset-password-1').value='';
+  document.getElementById('reset-password-2').value='';
+  openModal('modal-reset-password');
+}
+async function submitResetPassword(){
+  const p1=document.getElementById('reset-password-1').value;
+  const p2=document.getElementById('reset-password-2').value;
+  const err=document.getElementById('reset-password-error');
+  err.style.display='none';
+  if(!p1||p1.length<6){err.textContent='Пароль минимум 6 символов';err.style.display='block';return}
   if(p1!==p2){err.textContent='Пароли не совпадают';err.style.display='block';return}
   try{
-    await API.put('/auth/password',{currentPassword,newPassword:p1});
-    closeModal('modal-change-password');
-    toast('Пароль изменён','s');
+    const {user}=await API.post('/auth/reset-password',{token:RESET_TOKEN,password:p1});
+    RESET_TOKEN=null;
+    CU=user;
+    closeModal('modal-reset-password');
+    if(canEditTexts())document.body.classList.add('is-admin');
+    renderHeader();showPage('home');
+    toast('Пароль обновлён, вы вошли в аккаунт','s');
   }catch(e){
     err.textContent=e.error||'Ошибка сохранения';err.style.display='block';
   }
@@ -1908,7 +1945,6 @@ async function logout(){
   CU=null;document.body.classList.remove('is-admin');
   renderHeader();showPage('home');toast('Вы вышли','i');
 }
-
 
 // ── Изменить собственный ник (имя/фамилию) ──
 function openNicknameModal(){
@@ -1951,7 +1987,6 @@ function renderHeader(){
   if(CU){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
       <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
-      <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Сменить пароль" onclick="openChangePasswordModal()">🔑</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
       ${canOpenPanel()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
@@ -1960,7 +1995,6 @@ function renderHeader(){
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
-      <button class="mnl" onclick="openChangePasswordModal();closeMobMenu()">🔑 Сменить пароль</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
       ${canOpenPanel()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
@@ -4518,18 +4552,13 @@ async function renderUsers(){
   const el=document.getElementById('users-tbody');if(!el)return;
   try{
     const users=await API.get('/users');
-    el.innerHTML=users.map(u=>{
-      const canRole=u.id!==CU?.id&&canChangeUserRole(u.role);
-      const canReset=u.id!==CU?.id&&CU?.role==='admin';
-      const actions=(canRole?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'')
-                   +(canReset?`<button class="btn btn-o btn-sm" onclick="openAdminResetPassword('${u.id}')">Сбросить пароль</button>`:'');
-      return`<tr>
+    el.innerHTML=users.map(u=>`<tr>
       <td>${xe(u.name)}</td>
       <td><span style="font-family:monospace;font-size:11px;color:var(--gray)">${xe(u.email)}</span></td>
       <td><span class="badge b-${u.role}">${rlbl(u.role)}</span></td>
       <td>${fd(u.created_at)}</td>
-      <td>${actions?`<div class="bg-group">${actions}</div>`:'—'}</td>
-    </tr>`;}).join('');
+      <td>${u.id!==CU?.id&&canChangeUserRole(u.role)?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'—'}</td>
+    </tr>`).join('');
   }catch{el.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
 }
 
@@ -4638,30 +4667,6 @@ async function saveRole(){
   catch(e){toast(e.error||'Ошибка','e');}
 }
 
-// Сброс пароля пользователя на случайный (только Администратор). Имя берём
-// из уже отрисованной строки таблицы — тем же приёмом, что и в openRoleModal
-// выше, чтобы не тащить имя через onclick (риск сломать атрибут кавычками).
-function openAdminResetPassword(uid){
-  const rows=document.querySelectorAll('#users-tbody tr');
-  let name='пользователя';
-  rows.forEach(tr=>{const btn=tr.querySelector(`[onclick*="${uid}"]`);if(btn)name=tr.cells[0]?.textContent||name;});
-  if(!confirm(`Сбросить пароль для «${name}» на случайный? Со старым паролем войти будет нельзя.`))return;
-  doAdminResetPassword(uid,name);
-}
-async function doAdminResetPassword(uid,name){
-  try{
-    const {password}=await API.post('/users/'+uid+'/reset-password',{});
-    document.getElementById('arr-username').textContent=name;
-    document.getElementById('arr-password').value=password;
-    openModal('modal-admin-reset-result');
-  }catch(e){toast(e.error||'Ошибка','e');}
-}
-function copyResetPassword(){
-  const inp=document.getElementById('arr-password');
-  inp.select();inp.setSelectionRange(0,9999);
-  if(navigator.clipboard)navigator.clipboard.writeText(inp.value).then(()=>toast('Скопировано','s')).catch(()=>{});
-}
-
 function loadTextFields(){
   const tx=SETTINGS.texts||{};
   const setVal=(id,val,fb)=>{const e=document.getElementById(id);if(e)e.value=val||fb||''};
@@ -4727,6 +4732,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   await renderHomeNews();
   logVisit('home');
   logSiteVisit();
+  checkResetTokenInUrl();
   setTimeout(initReveal,150);
 });
 
