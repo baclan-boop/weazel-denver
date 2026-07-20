@@ -282,7 +282,7 @@ router.get('/stats/week', requireAdvertising, async (req, res) => {
     const emps = await query('SELECT * FROM employees ORDER BY sort_order,name');
     const slots = await query('SELECT * FROM contract_slots WHERE slot_date BETWEEN $1 AND $2', [range.start, range.end]);
     const stats = {};
-    emps.rows.forEach(e => { stats[e.id] = { id: e.id, name: e.name, static_id: e.static_id, acceptedGreen: 0, sentGreen: 0, acceptedRed: 0, sentRed: 0, payout: 0, declinedCount: 0 }; });
+    emps.rows.forEach(e => { stats[e.id] = { id: e.id, name: e.name, static_id: e.static_id, acceptedGreen: 0, sentGreen: 0, acceptedRed: 0, sentRed: 0, payout: 0, declinedCount: 0, payoutSlots: [] }; });
     slots.rows.forEach(s => {
       if (s.accepted_id && stats[s.accepted_id]) {
         const st = stats[s.accepted_id];
@@ -298,8 +298,18 @@ router.get('/stats/week', requireAdvertising, async (req, res) => {
         st.declinedCount++;
         st.payout += Number(s.payout) || 0;
         if (s.color === 'green') st.sentGreen++; else st.sentRed++;
+        // Детализация «из каких ячеек» сложилась сумма — показывается на
+        // фронте по клику на «К выплате» (раскладка по датам/времени).
+        st.payoutSlots.push({
+          date: s.slot_date instanceof Date ? s.slot_date.toISOString().slice(0, 10) : String(s.slot_date).slice(0, 10),
+          time: s.slot_time,
+          color: s.color,
+          amount: Number(s.payout) || 0,
+          text: s.text || '',
+        });
       }
     });
+    Object.values(stats).forEach(st => st.payoutSlots.sort((a, b) => a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
     const bonuses = await query(`SELECT b.*, e.name AS emp_name, e.static_id FROM bonuses b LEFT JOIN employees e ON e.id=b.employee_id WHERE b.week_start=$1 ORDER BY b.created_at`, [range.start]);
     res.json({ range, employees: Object.values(stats), bonuses: bonuses.rows });
   } catch (e) { res.status(500).json({ error: e.message }); }

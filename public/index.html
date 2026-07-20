@@ -567,6 +567,12 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .kpi-row-bad td{background:rgba(232,25,44,.12)!important}
 .kpi-row-bad .stats-payout{color:#ff6b6b;font-weight:700}
 .stats-payout{font-family:var(--font-d);font-size:14px;letter-spacing:1px}
+.stats-payout-btn{background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stats-payout-btn:hover{text-decoration:underline}
+.stats-payout-btn:disabled{cursor:default}
+.stats-payout-btn:disabled:hover{text-decoration:none}
+.stats-payout-ic{opacity:.55;font-size:11px}
+.stats-payout-btn:hover .stats-payout-ic{opacity:1}
 .bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:8px}
 .bonus-card{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:12px 14px}
 .bonus-card.paid{opacity:.45}
@@ -1666,6 +1672,25 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
     </div>
   </div>
 </div>
+
+<!-- PAYOUT BREAKDOWN MODAL -->
+<div class="mo" id="modal-payout-breakdown">
+  <div class="modal modal-wide">
+    <div class="mhdr"><div class="mttl" id="payout-breakdown-title">К выплате</div><button class="mclose" onclick="closeModal('modal-payout-breakdown')">✕</button></div>
+    <div class="mbody">
+      <div class="fhint" style="margin-bottom:10px">Ячейки за этот период, засчитанные в «К выплате» (объявление отправлено — стоит «Статус», сотрудник указан в «Откинул»).</div>
+      <div class="tw"><table class="dt">
+        <thead><tr><th>Дата</th><th>Время</th><th>Тип</th><th>Текст</th><th>Сумма</th></tr></thead>
+        <tbody id="payout-breakdown-tbody"></tbody>
+      </table></div>
+      <div style="margin-top:12px;text-align:right;font-family:var(--font-d);font-size:15px;letter-spacing:1px">Итого: <span id="payout-breakdown-total"></span></div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-payout-breakdown')">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- EMPLOYEE MODAL -->
 <div class="mo" id="modal-employee">
@@ -3315,12 +3340,32 @@ function renderStatsTable(){
   if(!emps.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--gray);padding:1.5rem">Сотрудников нет — добавьте их в Панели → Сотрудники</td></tr>`;return;}
   tb.innerHTML=emps.map(e=>{
     const bad=e.payout<15000;
+    const hasSlots=(e.payoutSlots||[]).length>0;
     return `<tr class="${bad?'kpi-row-bad':''}">
       <td>${xe(e.name)}${e.static_id?` <span style="color:var(--gray);font-size:10px">#${xe(e.static_id)}</span>`:''}</td>
       <td>${e.acceptedGreen}</td><td>${e.sentGreen}</td><td>${e.acceptedRed}</td><td>${e.sentRed}</td>
-      <td class="stats-payout">${fmtMoney(e.payout)}</td>
+      <td class="stats-payout"><button class="stats-payout-btn" onclick="openPayoutBreakdown('${e.id}')" ${hasSlots?'':'disabled'} title="${hasSlots?'Показать ячейки, из которых считается сумма':'Нет ячеек за этот период'}">${fmtMoney(e.payout)}${hasSlots?' <span class="stats-payout-ic">🔍</span>':''}</button></td>
     </tr>`;
   }).join('');
+}
+
+function openPayoutBreakdown(empId){
+  const e=STATS_STATE.employees.find(x=>x.id===empId);
+  if(!e)return;
+  const slots=e.payoutSlots||[];
+  document.getElementById('payout-breakdown-title').textContent=`К выплате — ${e.name}`;
+  const tb=document.getElementById('payout-breakdown-tbody');
+  tb.innerHTML=slots.length
+    ? slots.map(s=>`<tr>
+        <td>${fmtPlainDate(s.date)}</td>
+        <td>${xe(s.time)}</td>
+        <td>${s.color==='green'?'🟢 ЗО':'🔴 КО'}</td>
+        <td>${xe(s.text||'—')}</td>
+        <td class="stats-payout">${fmtMoney(s.amount)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="5" style="text-align:center;color:var(--gray);padding:1rem">Нет ячеек за этот период</td></tr>`;
+  document.getElementById('payout-breakdown-total').textContent=fmtMoney(e.payout||0);
+  openModal('modal-payout-breakdown');
 }
 
 function renderBonusGrid(){
@@ -3376,14 +3421,16 @@ async function delBonus(id){
 // ─── Выписать премии ───
 // Премия сотруднику = та же сумма, что показана в колонке «К выплате» в
 // таблице статистики (payout по слотам, где сотрудник стоит в «Откинул»,
-// за просматриваемый период). В список попадают ВСЕ сотрудники,
-// задействованные за период хоть как-то (приняли или откинули хотя бы
-// один слот), в формате StaticID;сумма;Выплаты AD — без пробелов, через
-// точку с запятой.
+// за просматриваемый период). В список попадают только сотрудники с
+// ПОЛОЖИТЕЛЬНОЙ суммой к выплате — просто «принял» контракт (без реальной
+// отправки, т.е. без отметки «Откинул»+«Статус») деньги не начисляет, и
+// такого сотрудника незачем предлагать к выплате 0$ (см. StaticID;0;...
+// в списке — баг, который тут и правится). Формат:
+// StaticID;сумма;Выплаты AD — без пробелов, через точку с запятой.
 function buildPremiumsExportLines(){
   const skippedNoStatic=[];
   const lines=STATS_STATE.employees
-    .filter(e=>e.acceptedGreen||e.acceptedRed||e.declinedCount)
+    .filter(e=>Math.round(e.payout||0)>0)
     .filter(e=>{
       if(!e.static_id){ skippedNoStatic.push(e.name); return false; }
       return true;
