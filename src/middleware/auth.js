@@ -28,7 +28,7 @@ async function requireAuth(req, res, next) {
 //                              Не может удалять новости, не имеет доступа
 //                              ни к чему в разделе «Реклама», ни к Составу/
 //                              Услугам/Текстам/Пользователям/Сотрудникам.
-//  • curator_ad (Curator AD) — полное редактирование раздела «Реклама»
+//  • curator_ad (Старший состав AD) — полное редактирование раздела «Реклама»
 //                              (объявления, контракты — все поля,
 //                              статистика, премии) + вкладка «Сотрудники»
 //                              (полное управление ростером) + вкладка
@@ -69,17 +69,17 @@ async function requireAdvertising(req, res, next) { await requireAuth(req, res, 
 // Advertising Dept. сюда не входит: премии не входит в её ограниченный список прав.
 async function requireBonusMgmt(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
 // Сотрудники (ростер отдела рекламы) — управление (создание/редактирование/
-// удаление) — Curator AD, Dep. Director, Лидер, Администратор (ростер
+// удаление) — Старший состав AD, Dep. Director, Лидер, Администратор (ростер
 // сотрудников — часть повседневной работы отдела рекламы, поэтому Curator
 // AD также имеет сюда полный доступ).
 async function requireEmployeeMgmt(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
-// Пользователи: просмотр списка — Curator AD, Dep. Director, Лидер,
-// Администратор. Назначение ролей — тоже им всем, но у Curator AD доступ
+// Пользователи: просмотр списка — Старший состав AD, Dep. Director, Лидер,
+// Администратор. Назначение ролей — тоже им всем, но у Старший состав AD доступ
 // ограничен: она может выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль Advertising
 // Department (см. проверку внутри PUT /api/users/:id/role в src/routes/users.js).
 async function requireUserMgmt(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
 // Одобрение заявок на добавление контракта (см. /api/contracts/pending* в
-// src/routes/contracts.js) — «Curator AD и выше»: Curator AD, Dep. Director,
+// src/routes/contracts.js) — «Старший состав AD и выше»: Старший состав AD, Dep. Director,
 // Лидер, Администратор. Advertising Dept. только подаёт заявки (см.
 // requireAdvertising на POST /api/contracts/bulk), но не видит и не одобряет очередь.
 async function requireContractApproval(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }

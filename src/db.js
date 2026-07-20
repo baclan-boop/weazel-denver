@@ -91,7 +91,7 @@ async function initDB() {
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS title_color TEXT DEFAULT ''`);
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
 
-  // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Curator AD)
+  // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Старший состав AD)
   // + 'leader' (Лидер — доступ как у Администратора, кроме статистики
   // посещений и журнала редактирования, см. requireAdmin ниже)
   // + 'dep_director' (Dep. Director — см. requireNewsEdit/requireServices/
@@ -134,7 +134,7 @@ async function initDB() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_bonuses_week ON bonuses(week_start);
-    -- Заявки на добавление контракта, ожидающие одобрения Curator AD и выше
+    -- Заявки на добавление контракта, ожидающие одобрения Старший состав AD и выше
     -- (см. requireContractApproval и /api/contracts/pending* в
     -- src/routes/contracts.js). Contract Bulk-форма «Добавить контракт»
     -- теперь не пишет сразу в contract_slots, а создаёт здесь запись со

@@ -10,11 +10,11 @@ const { requireUserMgmt, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Просмотр списка пользователей — Curator AD, Dep. Director, Лидер,
+// Просмотр списка пользователей — Старший состав AD, Dep. Director, Лидер,
 // Администратор (Редактору доступа сюда больше нет, см. requireUserMgmt).
 // Кто какую РОЛЬ может НАЗНАЧАТЬ — см. подробную проверку внутри
 // PUT /api/users/:id/role ниже: у Администратора полная свобода, у
-// Лидера/Dep. Director и у Curator AD — разный ограниченный набор.
+// Лидера/Dep. Director и у Старший состав AD — разный ограниченный набор.
 router.get('/users', requireUserMgmt, async (req, res) => { const r = await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at'); res.json(r.rows.map(u => ({ ...u, email: maskEmail(u.email) }))); });
 
 // «Средние» роли, доступные для назначения Лидеру (см. ниже).
@@ -33,7 +33,7 @@ router.put('/users/:id/role', requireUserMgmt, async (req, res) => {
   if (!beforeR.rows.length) return res.status(404).json({ error: 'Пользователь не найден' });
   // Администратор — может назначить ЛЮБУЮ роль любому пользователю (без ограничений ниже).
   // Лидер и Dep. Director — могут назначать только «средние» роли (см. MID_ROLES
-  // выше: Гость/Advertising Department/Curator AD/Редактор/Dep. Director), и
+  // выше: Гость/Advertising Department/Старший состав AD/Редактор/Dep. Director), и
   // только пользователям, которые СЕЙЧАС находятся в одной из этих же ролей.
   // Не могут ни назначить, ни отобрать роль Leader/Admin — то есть не могут
   // трогать пользователей, которые сейчас Leader или Admin, и не могут
@@ -44,12 +44,12 @@ router.put('/users/:id/role', requireUserMgmt, async (req, res) => {
     if (!assignable.includes(role)) return res.status(403).json({ error: 'Эта роль вам недоступна для назначения' });
     if (!MID_ROLES.includes(beforeR.rows[0].role)) return res.status(403).json({ error: 'Недостаточно прав для изменения этой роли' });
   }
-  // Curator AD может выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль Advertising Department:
+  // Старший состав AD может выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль Advertising Department:
   // и назначаемая роль, и текущая роль пользователя должны быть guest либо advertising
-  // (более высокие роли — Редактор/Dep. Director/Лидер/Администратор/сам Curator AD —
+  // (более высокие роли — Редактор/Dep. Director/Лидер/Администратор/сам Старший состав AD —
   // ей недоступны ни как источник, ни как цель).
   if (req.user.role === 'curator_ad') {
-    if (!['guest', 'advertising'].includes(role)) return res.status(403).json({ error: 'Curator AD может назначать только роль Advertising Department' });
+    if (!['guest', 'advertising'].includes(role)) return res.status(403).json({ error: 'Старший состав AD может назначать только роль Advertising Department' });
     if (!['guest', 'advertising'].includes(beforeR.rows[0].role)) return res.status(403).json({ error: 'Недостаточно прав для изменения этой роли' });
   }
   await query('UPDATE users SET role=$1 WHERE id=$2', [role, req.params.id]);

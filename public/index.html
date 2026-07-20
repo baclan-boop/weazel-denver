@@ -564,14 +564,14 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .stats-range{font-size:12px;color:var(--gray)}
 .stats-archive-box{display:flex;align-items:center;gap:8px;margin-left:auto}
 .stats-archive-box input{width:150px}
-.kpi-row-bad td{background:rgba(232,25,44,.12)!important}
-.kpi-row-bad .stats-payout{color:#ff6b6b;font-weight:700}
-.stats-payout{font-family:var(--font-d);font-size:14px;letter-spacing:1px}
-.stats-payout-btn{background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.kpi-row-bad td{background:rgba(232,25,44,.16)!important}
+.kpi-row-bad .stats-payout{color:#FFF;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.stats-payout{font-family:var(--font-d);font-size:16px;letter-spacing:.5px;color:rgba(var(--ovl),.92);font-variant-numeric:tabular-nums}
+.stats-payout-btn{background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;opacity:1}
 .stats-payout-btn:hover{text-decoration:underline}
-.stats-payout-btn:disabled{cursor:default}
+.stats-payout-btn:disabled{cursor:default;opacity:1}
 .stats-payout-btn:disabled:hover{text-decoration:none}
-.stats-payout-ic{opacity:.55;font-size:11px}
+.stats-payout-ic{opacity:.7;font-size:12px}
 .stats-payout-btn:hover .stats-payout-ic{opacity:1}
 .bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:8px}
 .bonus-card{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:12px 14px}
@@ -941,7 +941,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec" id="admin-users">
         <div class="asec-title">Пользователи</div>
-        <div class="fhint" style="margin-bottom:12px">Администратор может назначить любую роль. Лидер — Dep. Director/Редактора/Curator AD/Advertising Department (роль Leader/Admin ему недоступна, как и пользователи с этими ролями). Dep. Director — то же самое, но БЕЗ роли Dep. Director. Curator AD — только Advertising Department.</div>
+        <div class="fhint" style="margin-bottom:12px">Администратор может назначить любую роль. Лидер — Dep. Director/Редактора/Старший состав AD/Advertising Department (роль Leader/Admin ему недоступна, как и пользователи с этими ролями). Dep. Director — то же самое, но БЕЗ роли Dep. Director. Старший состав AD — только Advertising Department.</div>
         <div class="tw"><table class="dt">
           <thead><tr><th>Никнейм</th><th>Почта (маска)</th><th>Роль</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
           <tbody id="users-tbody"></tbody>
@@ -1215,7 +1215,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
             <div class="ctadd-layout">
               <div class="acard" style="max-width:640px;padding:22px">
                 <div class="acard-title" style="margin-bottom:4px">➕ Добавить контракт</div>
-                <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — заявка не отправится, будет показано, что именно занято. После отправки контракт попадёт в таблицу только после одобрения Curator AD (и выше).</div>
+                <div class="acard-sub" style="margin-bottom:16px">Укажите дату начала и срок. Если хотя бы один нужный слот занят — заявка не отправится, будет показано, что именно занято. После отправки контракт попадёт в таблицу только после одобрения Старший состав AD (и выше).</div>
 
                 <div class="fg">
                   <label class="fl">Тип объявлений</label>
@@ -1626,7 +1626,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <select class="fsel" id="role-select">
           <option value="guest">Гость</option>
           <option value="advertising">Advertising Department</option>
-          <option value="curator_ad">Curator AD</option>
+          <option value="curator_ad">Старший состав AD</option>
           <option value="editor">Редактор</option>
           <option value="dep_director">Dep. Director</option>
           <option value="leader">Лидер</option>
@@ -1803,14 +1803,14 @@ let SETTINGS = {};
 
 // ─── Права по ролям (см. подробное описание ролей в server.js) ───
 // canOpenPanel()      — доступ к Панели управления хоть с чем-то (у Редактора — только «Новости»,
-//                        у Curator AD — только «Пользователи»/«Сотрудники»).
+//                        у Старший состав AD — только «Пользователи»/«Сотрудники»).
 // canEdit()           — права на новости (добавление/редактирование).
 // canDeleteNews()     — удаление новостей (Редактору недоступно, только добавление/редактирование).
 // canEditServices()   — управление Услугами (Редактору недоступно).
 // canEditTeam()       — управление Составом (Dep. Director и Редактору недоступно).
 // canEditTexts()      — «Все тексты» и «Фоны страниц» (только Лидер/Администратор).
 // canManageUsers()    — полное управление ролями любого пользователя (см. canChangeUserRole
-//                        для более тонкого правила Curator AD — она выдаёт только роль AD).
+//                        для более тонкого правила Старший состав AD — она выдаёт только роль AD).
 // canAds()            — доступ к разделу «Реклама» вообще (просмотр).
 // canManageAdsFull()  — полное редактирование раздела «Реклама» (все поля контракта, премии) — все, кроме роли Advertising Dept.
 const canOpenPanel = () => CU && ['editor','curator_ad','dep_director','admin','leader'].includes(CU.role);
@@ -1824,7 +1824,7 @@ const canAds = () => CU && ['advertising','curator_ad','dep_director','admin','l
 const canManageAdsFull = () => CU && ['curator_ad','dep_director','admin','leader'].includes(CU.role);
 const isAdvertisingOnly = () => CU && CU.role==='advertising';
 const isAdmin = () => CU && CU.role==='admin';
-const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='dep_director'?'Dep. Director':r==='editor'?'Редактор':r==='curator_ad'?'Curator AD':r==='advertising'?'Advertising Dept.':'Гость';
+const rlbl = r => r==='admin'?'Администратор':r==='leader'?'Лидер':r==='dep_director'?'Dep. Director':r==='editor'?'Редактор':r==='curator_ad'?'Старший состав AD':r==='advertising'?'Advertising Dept.':'Гость';
 // «Средние» роли, доступные для назначения Лидеру (см. ниже) —
 // должно точно совпадать с MID_ROLES на сервере (server.js).
 const MID_ROLES=['guest','advertising','curator_ad','editor','dep_director'];
@@ -1833,7 +1833,7 @@ const DEP_DIRECTOR_ASSIGNABLE_ROLES=MID_ROLES.filter(r=>r!=='dep_director');
 // Кто какие роли может назначать другим пользователям:
 //  • admin — любую роль любому пользователю.
 //  • leader/dep_director — только «средние» роли (MID_ROLES): Dep. Director,
-//    Редактор, Curator AD, Advertising Department, Гость. Не могут ни
+//    Редактор, Старший состав AD, Advertising Department, Гость. Не могут ни
 //    назначить, ни отобрать роль Leader/Admin — не трогают пользователей,
 //    которые сейчас Leader/Admin, и не назначают эти роли никому.
 //  • curator_ad — ИСКЛЮЧИТЕЛЬНО роль Advertising Department, и только если
@@ -2377,10 +2377,10 @@ async function openContractsTab(color){
   document.getElementById('ct-tab-green')?.classList.toggle('active',CT_STATE.color==='green');
   document.getElementById('ct-tab-red')?.classList.toggle('active',CT_STATE.color==='red');
   // «Добавить контракт» — доступно всем сотрудникам с доступом к «Рекламе»
-  // (Advertising Dept. и выше), не только Curator AD и выше.
+  // (Advertising Dept. и выше), не только Старший состав AD и выше.
   const addTabBtn=document.getElementById('ct-tab-add');
   if(addTabBtn)addTabBtn.style.display=canAds()?'':'none';
-  // «На одобрении» — только Curator AD и выше (кто может одобрять заявки).
+  // «На одобрении» — только Старший состав AD и выше (кто может одобрять заявки).
   const pendingTabBtn=document.getElementById('ct-tab-pending');
   if(pendingTabBtn)pendingTabBtn.style.display=canManageAdsFull()?'':'none';
   ctShowView('table');
@@ -3120,7 +3120,7 @@ async function submitCTAdd(){
   btn.disabled=true; btn.textContent='Проверяю...';
   try{
     await API.post('/contracts/bulk',{ color:CTADD_STATE.color, times, dates, text, accepted_id:employeeId, discount });
-    toast('Заявка отправлена на одобрение Curator AD','s');
+    toast('Заявка отправлена на одобрение Старший состав AD','s');
     CT_STATE.color=CTADD_STATE.color;
     CT_STATE.date=dates[0];
     await switchCTColor(CT_STATE.color);
@@ -3139,9 +3139,9 @@ async function submitCTAdd(){
 }
 
 // ══════════════════════════════════════════════
-// ЗАЯВКИ НА ДОБАВЛЕНИЕ КОНТРАКТА, ОЖИДАЮЩИЕ ОДОБРЕНИЯ (Curator AD и выше)
+// ЗАЯВКИ НА ДОБАВЛЕНИЕ КОНТРАКТА, ОЖИДАЮЩИЕ ОДОБРЕНИЯ (Старший состав AD и выше)
 // Заявка создаётся отправкой формы «Добавить контракт» (см. submitCTAdd
-// выше) — любым сотрудником с доступом к «Рекламе». Здесь Curator AD,
+// выше) — любым сотрудником с доступом к «Рекламе». Здесь Старший состав AD,
 // Dep. Director, Лидер и Администратор могут поправить ЛЮБОЕ поле заявки
 // перед одобрением; после одобрения контракт записывается в саму таблицу.
 // ══════════════════════════════════════════════
@@ -3324,7 +3324,7 @@ function applyStatsResponse(r){
   STATS_STATE.range=r.range; STATS_STATE.employees=r.employees||[]; STATS_STATE.bonuses=r.bonuses||[];
   document.getElementById('stats-range').textContent=`Период с ${fmtPlainDate(r.range.start)} по ${fmtPlainDate(r.range.end)}`;
   document.getElementById('stats-archive-box').style.display='flex';
-  // Управление премиями (выписка/ручное добавление/выплата) — Curator AD,
+  // Управление премиями (выписка/ручное добавление/выплата) — Старший состав AD,
   // Dep. Director, Лидер, Администратор. Advertising Department видит
   // статистику и уже назначенные премии, но без действий.
   const mgmt=canManageAdsFull();
@@ -4665,17 +4665,17 @@ function openRoleModal(uid,currentRole){
   const sel=document.getElementById('role-select');
   const hint=document.getElementById('role-hint');
   if(CU.role==='curator_ad'){
-    // Curator AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
+    // Старший состав AD выдаёт исключительно роль Advertising Department (и может её же снять обратно до Гостя)
     Array.from(sel.options).forEach(o=>o.disabled=!['guest','advertising'].includes(o.value));
-    hint.textContent='Curator AD может назначать только роль Advertising Department.';
+    hint.textContent='Старший состав AD может назначать только роль Advertising Department.';
   } else if(['leader','dep_director'].includes(CU.role)){
     // Лидер/Dep. Director не могут назначить (или отобрать) роль Leader/Admin.
     // Dep. Director дополнительно не может назначить саму роль Dep. Director.
     const assignable=CU.role==='dep_director'?DEP_DIRECTOR_ASSIGNABLE_ROLES:MID_ROLES;
     Array.from(sel.options).forEach(o=>o.disabled=!assignable.includes(o.value));
     hint.textContent=CU.role==='dep_director'
-      ?'Вам доступны роли: Редактор, Curator AD, Advertising Department, Гость (роль Dep. Director вы назначить не можете).'
-      :'Вам доступны только роли: Dep. Director, Редактор, Curator AD, Advertising Department, Гость.';
+      ?'Вам доступны роли: Редактор, Старший состав AD, Advertising Department, Гость (роль Dep. Director вы назначить не можете).'
+      :'Вам доступны только роли: Dep. Director, Редактор, Старший состав AD, Advertising Department, Гость.';
   } else {
     Array.from(sel.options).forEach(o=>o.disabled=false);
     hint.textContent='';

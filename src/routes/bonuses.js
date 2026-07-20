@@ -9,7 +9,7 @@ const { requireBonusMgmt } = require('../middleware/auth');
 const router = express.Router();
 
 // ─── Премирование (часть вкладки «Реклама» → «Статистика») ───
-// Curator AD, Dep. Director, Лидер, Администратор — полное управление.
+// Старший состав AD, Dep. Director, Лидер, Администратор — полное управление.
 // Advertising Dept. премиями не управляет (только просматривает, см.
 // requireAdvertising на GET /api/stats/week в src/routes/contracts.js).
 router.post('/bonuses', requireBonusMgmt, async (req, res) => {
