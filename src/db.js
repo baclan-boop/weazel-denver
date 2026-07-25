@@ -6,6 +6,7 @@ const { Pool }     = require('pg');
 const bcrypt       = require('bcrypt');
 const { v4: uuid } = require('uuid');
 const config       = require('./config');
+const editorialSeed = require('./utils/editorialSeed');
 
 const pool = new Pool({
   connectionString: config.DATABASE_URL,
@@ -157,6 +158,25 @@ async function initDB() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_pending_contracts_status ON pending_contracts(status);
+    -- Справочные материалы раздела «Реклама» → «Шаблоны объявлений» /
+    -- «Редактура» (см. src/routes/editorial.js). tab различает 2 вкладки,
+    -- group_key — раздел внутри вкладки (main | examples | locations | codes |
+    -- glossary, см. ALLOWED_GROUPS в editorial.js). items — JSON-массив:
+    -- при columns=1 массив строк, при columns=2 массив {a,b} (код/причина
+    -- или термин/значение). Изначально наполняется один раз из
+    -- src/utils/editorialSeed.js при пустой таблице (см. ниже) — дальше
+    -- редактируется только через UI Старшим составом AD и выше.
+    CREATE TABLE IF NOT EXISTS editorial_categories (
+      id TEXT PRIMARY KEY,
+      tab TEXT NOT NULL CHECK(tab IN ('templates','editorial')),
+      group_key TEXT NOT NULL,
+      title TEXT NOT NULL,
+      columns INTEGER NOT NULL DEFAULT 1 CHECK(columns IN (1,2)),
+      items TEXT NOT NULL DEFAULT '[]',
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_editorial_categories_grp ON editorial_categories(tab, group_key, sort_order);
   `);
 
   // Миграция: шрифт для описания (должности) участника состава
@@ -180,6 +200,20 @@ async function initDB() {
     FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY ctid) AS rn FROM team_cats) sub
     WHERE c.id = sub.id AND c.sort_order = 0
   `);
+
+  // Первое наполнение справочников «Реклама» → «Шаблоны объявлений» /
+  // «Редактура» — только если таблица ещё пуста (свежая БД или БД до этой
+  // версии). После этого содержимое живёт целиком в БД и правится через UI.
+  const edCount = await query('SELECT COUNT(*)::int AS n FROM editorial_categories');
+  if (!edCount.rows[0].n) {
+    for (const cat of editorialSeed) {
+      await query(
+        'INSERT INTO editorial_categories (id,tab,group_key,title,columns,items,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [uuid(), cat.tab, cat.group_key, cat.title, cat.columns, JSON.stringify(cat.items), cat.sort_order]
+      );
+    }
+    console.log('editorial_categories: загружены исходные данные (' + editorialSeed.length + ' категорий)');
+  }
 
   const ex = await query('SELECT id FROM users WHERE email=$1', [config.ADMIN_EMAIL.toLowerCase()]);
   if (!ex.rows.length) {

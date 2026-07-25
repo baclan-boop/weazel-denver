@@ -16,6 +16,7 @@ const EDIT_LOG_FIELD_LABELS = {
   bonus: { amount: 'Сумма', comment: 'Комментарий', paid: 'Выплачено' },
   user_role: { role: 'Роль' },
   user_password: { password: 'Пароль' },
+  editorial_cat: { title: 'Название', items: 'Пункты' },
 };
 
 // Сравнивает before (строка из БД ДО изменения) с after (строка из БД

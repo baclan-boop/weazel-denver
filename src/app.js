@@ -64,6 +64,7 @@ app.use('/api', require('./routes/team'));
 app.use('/api', require('./routes/settings'));
 app.use('/api', require('./routes/visitors'));
 app.use('/api', require('./routes/editLogs'));
+app.use('/api', require('./routes/editorial'));
 
 // FRONTEND
 app.use(express.static(path.join(__dirname, '..', 'public')));

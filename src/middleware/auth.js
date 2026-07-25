@@ -83,9 +83,16 @@ async function requireUserMgmt(req, res, next) { await requireAuth(req, res, () 
 // Лидер, Администратор. Advertising Dept. только подаёт заявки (см.
 // requireAdvertising на POST /api/contracts/bulk), но не видит и не одобряет очередь.
 async function requireContractApproval(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
+// Редактирование/создание категорий и пунктов в справочниках раздела
+// «Реклама» — «Шаблоны объявлений» и «Редактура» (см. src/routes/editorial.js
+// и editorial_categories в src/db.js). Просмотр этих двух вкладок доступен
+// всем через requireAdvertising (Advertising Dept. и выше), а вот правка —
+// «Старший состав AD и выше»: Старший состав AD, Dep. Director, Лидер,
+// Администратор. Обычный Advertising Dept. читает, но не редактирует.
+async function requireEditorialMgmt(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
 
 module.exports = {
   requireAuth, requireNewsEdit, requireNewsDelete, requireServices, requireTeam,
   requireSiteSettings, requireAdmin, requireAdvertising, requireBonusMgmt,
-  requireEmployeeMgmt, requireUserMgmt, requireContractApproval,
+  requireEmployeeMgmt, requireUserMgmt, requireContractApproval, requireEditorialMgmt,
 };
