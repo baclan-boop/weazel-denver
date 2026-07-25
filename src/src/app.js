@@ -61,7 +61,13 @@ app.use('/api/', apiLimiter);
 
 // Загруженные картинки, если Cloudinary не настроен (см. src/cloudinary.js
 // и src/routes/upload.js) — раздаём напрямую с диска.
-app.use('/uploads', express.static(config.UPLOADS_DIR));
+// maxAge/immutable: имя файла — случайный UUID, под одним и тем же именем
+// содержимое НИКОГДА не меняется (при редактировании грузится новый файл
+// с новым именем) — поэтому браузер может закэшировать картинку надолго и
+// вообще не перезапрашивать её повторно у сервера. Раньше кэш не был
+// настроен вовсе (0 по умолчанию у express.static) — каждый повторный
+// визит на страницу с такой картинкой заново качал её целиком.
+app.use('/uploads', express.static(config.UPLOADS_DIR, { maxAge: '30d', immutable: true }));
 
 app.use('/api', require('./routes/auth'));
 app.use('/api', require('./routes/users'));
@@ -79,8 +85,19 @@ app.use('/api', require('./routes/editLogs'));
 app.use('/api', require('./routes/editorial'));
 
 // FRONTEND
-app.use(express.static(path.join(__dirname, '..', 'public')));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
+// maxAge: 1 день — для картинок/favicon в public/img (меняются редко).
+// index.html — ИСКЛЮЧЕНИЕ: в нём весь JS/CSS сайта одним файлом, и после
+// каждого редеплоя он обязан дойти до пользователя сразу, а не через
+// сутки из кэша — поэтому для него явно ставим no-cache (браузер каждый
+// раз спросит сервер "не изменилось ли", и получит мгновенный 304, если
+// нет — это дёшево, в отличие от отдачи файла заново из кэша с задержкой).
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (path.basename(filePath) === 'index.html') res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html'), { maxAge: 0, cacheControl: false }));
 
 app.use((err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Файл слишком большой (макс. 15MB)' });

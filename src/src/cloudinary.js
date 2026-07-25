@@ -46,6 +46,36 @@ function uploadBufferToCloudinary(buffer) {
   });
 }
 
+// ─── Базовая веб-оптимизация (используется ВСЕГДА — и для Cloudinary, и
+// для локального фолбэка на диск, см. src/routes/upload.js) ───
+// Раньше сжатие (shrinkImageIfNeeded ниже) запускалось ТОЛЬКО когда файл
+// уходил в Cloudinary, и то лишь если превышал лимит 9.5 МБ. Если
+// Cloudinary не настроен (см. предупреждение выше — частый случай) —
+// загруженные фото (с телефона это часто 5–15 МБ) писались на диск сайта
+// БЕЗ какого-либо сжатия и раздавались всем посетителям как есть. Это
+// одна из причин, почему конкретные страницы (с такими картинками:
+// фоны/новости/аватарки состава) грузятся заметно дольше остальных —
+// особенно на мобильном интернете.
+const WEB_MAX_WIDTH = 2400; // шире реально не нужно даже для полноэкранных фонов
+const WEB_QUALITY = 82;
+async function optimizeForWeb(buffer, mimetype) {
+  if (!sharp || mimetype === 'image/gif') return buffer; // gif не трогаем — сломает анимацию
+  try {
+    const meta = await sharp(buffer).metadata();
+    if (!meta.width) return buffer;
+    const format = meta.format === 'png' ? 'png' : meta.format === 'webp' ? 'webp' : 'jpeg';
+    let pipeline = sharp(buffer, { failOn: 'none' }).rotate(); // учитывает EXIF-ориентацию
+    if (meta.width > WEB_MAX_WIDTH) pipeline = pipeline.resize({ width: WEB_MAX_WIDTH, withoutEnlargement: true });
+    const out = format === 'png' ? await pipeline.png({ quality: WEB_QUALITY, compressionLevel: 9, palette: true }).toBuffer()
+      : format === 'webp' ? await pipeline.webp({ quality: WEB_QUALITY }).toBuffer()
+      : await pipeline.jpeg({ quality: WEB_QUALITY, mozjpeg: true }).toBuffer();
+    return out.length < buffer.length ? out : buffer; // подстраховка: если вдруг стало тяжелее — оставляем оригинал
+  } catch (e) {
+    console.error('Не удалось оптимизировать изображение (используется оригинал):', e.message);
+    return buffer;
+  }
+}
+
 // Бесплатный план Cloudinary принимает картинку не тяжелее 10 МБ
 // (10 485 760 байт) — а фото с телефона/скриншоты часто крупнее. Чтобы
 // загрузка не падала с «File size too large», перед отправкой в Cloudinary
@@ -79,4 +109,4 @@ async function shrinkImageIfNeeded(buffer, mimetype) {
   }
 }
 
-module.exports = { uploadBufferToCloudinary, shrinkImageIfNeeded };
+module.exports = { uploadBufferToCloudinary, shrinkImageIfNeeded, optimizeForWeb };
