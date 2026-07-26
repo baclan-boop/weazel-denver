@@ -8,12 +8,31 @@ const { v4: uuid } = require('uuid');
 const config       = require('./config');
 const editorialSeed = require('./utils/editorialSeed');
 
+// max: количество соединений в пуле. Раньше было жёстко 5 — при
+// одновременных запросах от нескольких посетителей (особенно сразу
+// после "пробуждения" бесплатного Render/Neon из спячки, когда браузер
+// параллельно бьёт в /auth/me, /settings, /news, /team, /services и
+// т.д.) это быстро упиралось в лимит и часть запросов падала по
+// connectionTimeoutMillis. Вынесено в переменную окружения DB_POOL_MAX,
+// чтобы можно было подстроить под тариф Neon без правки кода.
 const pool = new Pool({
   connectionString: config.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 5,
+  max: parseInt(process.env.DB_POOL_MAX) || 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+});
+
+// ВАЖНО: у pg.Pool это EventEmitter. Если простаивающее в пуле соединение
+// обрывается СО СТОРОНЫ БАЗЫ (обычная вещь для Neon — serverless Postgres
+// сам закрывает неактивные соединения при "усыплении" вычислительного
+// узла), pool эмитит событие 'error'. Без обработчика ниже это событие
+// НЕКОМУ ловить — и по правилам EventEmitter в Node.js это приводит к
+// необработанному исключению, которое роняет ВЕСЬ процесс целиком (а не
+// только один запрос). Именно так одно случайное "усыпление" базы могло
+// положить сайт полностью для всех, кто заходит в этот момент.
+pool.on('error', (err) => {
+  console.error('Ошибка простаивающего соединения в пуле PG (обработано, процесс не падает):', err.message);
 });
 
 async function query(sql, params = []) {

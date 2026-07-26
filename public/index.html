@@ -307,8 +307,8 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .dt td{padding:11px 12px;border-bottom:1px solid rgba(var(--ovl),.04);font-size:12px;color:rgba(var(--ovl),.8);vertical-align:middle}
 .dt tr:hover td{background:rgba(var(--ovl),.015)}
 .tw{overflow-x:auto}
-.editorial-grid{display:flex;gap:12px;align-items:flex-start}
-.ed-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.editorial-grid{column-width:280px;column-gap:12px;column-fill:auto}
+.editorial-grid .acard{margin:0 0 12px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;display:inline-block;width:100%;vertical-align:top}
 .ed-editor-row textarea.fi{min-height:44px}
 
 /* BADGES */
@@ -3673,16 +3673,27 @@ function ncHTML(n,featured=false){
   </div>`;
 }
 
-async function renderHomeNews(){
+// Забирает последние новости с сервера (только сетевой запрос, без
+// рендера) — вынесено отдельно от рендера, чтобы на старте страницы этот
+// запрос можно было запустить ПАРАЛЛЕЛЬНО с /auth/me и /settings (см.
+// DOMContentLoaded в самом низу файла), а не ждать их по очереди.
+async function fetchHomeNews(){
+  // Достаточно 5 последних новостей: 4 — в сетку на главной, 5-я нужна
+  // только buildTicker() для бегущей строки. Полный список качать незачем.
+  return API.get('/news?limit=5');
+}
+// Отрисовывает блок новостей на главной по уже полученным данным (data)
+// или по null, если запрос не удался, — сама сеть здесь больше не участвует.
+function renderHomeNewsFromData(data){
   const el=document.getElementById('home-news-grid');if(!el)return;
-  try{
-    // Достаточно 5 последних новостей: 4 — в сетку на главной, 5-я нужна
-    // только buildTicker() для бегущей строки. Полный список качать незачем.
-    NEWS=await API.get('/news?limit=5');
+  if(data){
+    NEWS=data;
     const recent=NEWS.slice(0,4);
     el.innerHTML=recent.length?recent.map((n,i)=>ncHTML(n,i===0)).join('')
       :`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Новостей пока нет.</div></div>`;
-  }catch{el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Ошибка загрузки</div></div>`;}
+  }else{
+    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-ic">📡</div><div class="empty-tx">Ошибка загрузки</div></div>`;
+  }
   buildTicker();
   // ИСПРАВЛЕНИЕ БАГА: карточки новостей рождаются с классом reveal (opacity:0)
   // и становятся видимыми только когда IntersectionObserver из initReveal()
@@ -3694,6 +3705,11 @@ async function renderHomeNews(){
   // следующего обычного перехода на вкладку. Теперь каждая такая функция
   // сама запускает проверку заново.
   setTimeout(initReveal,50);
+}
+async function renderHomeNews(){
+  let data=null;
+  try{ data=await fetchHomeNews(); }catch{ data=null; }
+  renderHomeNewsFromData(data);
 }
 
 // ══════════════════════════════════════════════
@@ -4254,45 +4270,6 @@ function edAddCatBtn(tab,group){
   return canManageEditorial()?`<button class="btn btn-o btn-sm" onclick="openEditorialCatModal(null,'${tab}','${group}')">+ Добавить категорию</button>`:'';
 }
 
-// Раскладываем карточки категорий по N колонкам вручную (JS masonry), а не
-// через CSS column-count/balance — у CSS-колонок с break-inside:avoid на
-// карточках сильно разной высоты и авто-высотой контейнера встречаются
-// баги балансировки в браузерах (последняя карточка в колонке может
-// оказаться неоправданно растянутой). Здесь каждая карточка кладётся в ту
-// колонку, где сейчас меньше суммарная высота — высота карточки при этом
-// измеряется по-настоящему (offsetHeight), а не оценивается.
-function layoutMasonryGrid(container){
-  if(!container)return;
-  const cards=Array.from(container.children).filter(el=>el.classList.contains('acard'));
-  if(!cards.length)return;
-  const w=window.innerWidth;
-  const cols=w<=600?1:(w<=900?2:3);
-  const colEls=[];
-  for(let i=0;i<cols;i++){const d=document.createElement('div');d.className='ed-col';colEls.push(d);}
-  container.innerHTML='';
-  colEls.forEach(c=>container.appendChild(c));
-  cards.forEach(c=>colEls[0].appendChild(c)); // все колонки одной ширины — высоту можно мерить в любой
-  const heights=new Array(cols).fill(0);
-  cards.forEach(card=>{
-    const h=card.offsetHeight;
-    let min=0;
-    for(let i=1;i<cols;i++)if(heights[i]<heights[min])min=i;
-    colEls[min].appendChild(card);
-    heights[min]+=h+12;
-  });
-}
-function layoutAllMasonryGrids(root){
-  (root||document).querySelectorAll('.editorial-grid').forEach(layoutMasonryGrid);
-}
-let ED_RESIZE_T=null;
-window.addEventListener('resize',()=>{
-  clearTimeout(ED_RESIZE_T);
-  ED_RESIZE_T=setTimeout(()=>{
-    if(document.getElementById('adhub-templates')?.classList.contains('active'))renderTemplatesTab();
-    if(document.getElementById('adhub-editorial')?.classList.contains('active'))renderEditorialTab();
-  },200);
-});
-
 function renderTemplatesTab(){
   const el=document.getElementById('ed-templates-body');if(!el)return;
   const cats=(EDITORIAL_TEMPLATES_DATA||[]).filter(c=>c.group_key==='main');
@@ -4302,7 +4279,6 @@ function renderTemplatesTab(){
       ${edAddCatBtn('templates','main')}
     </div>
     <div class="editorial-grid">${cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>'}</div>`;
-  layoutAllMasonryGrids(el);
 }
 
 function renderEditorialTab(){
@@ -4322,7 +4298,6 @@ function renderEditorialTab(){
     ${section('Отклонено / Расшифровка','codes',byGroup('codes'),true)}
     ${section('Замены ООС и т.д.','glossary',byGroup('glossary'),true)}
   `;
-  layoutAllMasonryGrids(el);
 }
 
 async function loadEdTemplates(){ EDITORIAL_TEMPLATES_DATA=await API.get('/editorial?tab=templates'); renderTemplatesTab(); }
@@ -5025,21 +5000,33 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   initTheme();
   initITEDrag();
 
-  // Check session
-  try{
-    const {user}=await API.get('/auth/me');
-    CU=user;
-    if(CU&&canEditTexts())document.body.classList.add('is-admin');
-  }catch{}
+  // /auth/me, /settings и новости для главной — три НЕЗАВИСИМЫХ запроса
+  // (ни один не использует результат другого). Раньше их ждали строго по
+  // очереди (await -> await -> await renderHomeNews()) — первая отрисовка
+  // страницы ждала СУММУ трёх сетевых "кругов" вместо одного, самого
+  // медленного. На быстром соединении разница незаметна, а вот с высокой
+  // задержкой сети (мобильный интернет, посетитель далеко от сервера) —
+  // это лишние сотни миллисекунд-секунды до появления контента. Отсюда
+  // ощущение "у некоторых сайт грузится долго", хотя у большинства всё
+  // быстро. Сами запросы и обработка ошибок по каждому — без изменений,
+  // просто выполняются одновременно, а не по очереди.
+  const [meRes, settingsRes, newsRes] = await Promise.allSettled([
+    API.get('/auth/me'),
+    API.get('/settings'),
+    fetchHomeNews(),
+  ]);
 
-  // Load settings
-  try{SETTINGS=await API.get('/settings');}catch{SETTINGS={};}
+  if(meRes.status==='fulfilled'){
+    CU=meRes.value.user;
+    if(CU&&canEditTexts())document.body.classList.add('is-admin');
+  }
+  SETTINGS = settingsRes.status==='fulfilled' ? settingsRes.value : {};
 
   renderHeader();
   switchBG('home');
   applyTexts();
   applyITEStyles();
-  await renderHomeNews();
+  renderHomeNewsFromData(newsRes.status==='fulfilled' ? newsRes.value : null);
   logVisit('home');
   logSiteVisit();
   setTimeout(initReveal,150);

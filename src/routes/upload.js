@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuid } = require('uuid');
 const config = require('../config');
-const { uploadBufferToCloudinary, shrinkImageIfNeeded } = require('../cloudinary');
+const { uploadBufferToCloudinary, shrinkImageIfNeeded, optimizeForWeb } = require('../cloudinary');
 const { requireNewsEdit } = require('../middleware/auth');
 
 const router = express.Router();
@@ -35,7 +35,10 @@ router.post('/upload', requireNewsEdit, upload.single('image'), async (req, res)
     }
     const ext = path.extname(req.file.originalname || '').toLowerCase().replace(/[^.a-z0-9]/g, '') || '.jpg';
     const filename = uuid() + ext;
-    fs.writeFileSync(path.join(config.UPLOADS_DIR, filename), req.file.buffer);
+    // Раньше сюда писался req.file.buffer как есть — без сжатия, если
+    // Cloudinary не настроен (см. комментарий у optimizeForWeb).
+    const optimized = await optimizeForWeb(req.file.buffer, req.file.mimetype);
+    fs.writeFileSync(path.join(config.UPLOADS_DIR, filename), optimized);
     return res.json({ url: `/uploads/${filename}` });
   } catch (e) {
     console.error('Ошибка загрузки файла:', e.message);
