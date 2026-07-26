@@ -307,10 +307,9 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .dt td{padding:11px 12px;border-bottom:1px solid rgba(var(--ovl),.04);font-size:12px;color:rgba(var(--ovl),.8);vertical-align:middle}
 .dt tr:hover td{background:rgba(var(--ovl),.015)}
 .tw{overflow-x:auto}
-.editorial-grid{column-count:3;column-gap:16px}
-.editorial-grid .acard{margin:0 0 16px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;display:inline-block;width:100%;vertical-align:top}
-@media(max-width:900px){.editorial-grid{column-count:2}}
-@media(max-width:600px){.editorial-grid{column-count:1}}
+.editorial-grid .acard{margin:0 0 16px}
+.editorial-grid.ed-flex{display:flex;align-items:flex-start;gap:16px}
+.editorial-grid.ed-flex>.ed-col{flex:1;min-width:0}
 .ed-editor-row textarea.fi{min-height:44px}
 
 /* BADGES */
@@ -4272,6 +4271,51 @@ function edAddCatBtn(tab,group){
   return canManageEditorial()?`<button class="btn btn-o btn-sm" onclick="openEditorialCatModal(null,'${tab}','${group}')">+ Добавить категорию</button>`:'';
 }
 
+// Настоящий masonry для editorial-grid: раскладывает карточки не по
+// CSS column-count (который при разных по высоте карточках оставляет
+// пустые «дыры» внизу колонок — break-inside:avoid не даёт их
+// разрезать), а жадным алгоритмом по РЕАЛЬНО измеренной высоте —
+// каждая следующая карточка уходит в колонку с наименьшей текущей
+// высотой, как в Pinterest. Ширина зонда = ширина будущей колонки,
+// чтобы высота (перенос строк, таблица) измерялась верно.
+function edColumnsForWidth(w){ return w<=650?1:w<=950?2:3; }
+function renderEdGrid(container,htmls){
+  if(!container)return;
+  if(!htmls.length){container.className='editorial-grid';container.removeAttribute('style');container.innerHTML='<div class="fhint">Пока нет категорий</div>';return;}
+  const totalW=container.clientWidth||window.innerWidth;
+  const cols=edColumnsForWidth(totalW);
+  if(cols<=1){
+    container.className='editorial-grid';container.removeAttribute('style');
+    container.innerHTML=htmls.join('');
+    return;
+  }
+  const gap=16;
+  const colW=Math.max(200,(totalW-gap*(cols-1))/cols);
+  const probe=document.createElement('div');
+  probe.style.cssText=`position:absolute;visibility:hidden;left:-99999px;top:0;width:${colW}px`;
+  document.body.appendChild(probe);
+  const heights=htmls.map(h=>{probe.innerHTML=h;return probe.firstElementChild?probe.firstElementChild.offsetHeight:probe.offsetHeight;});
+  probe.remove();
+  const colHeights=new Array(cols).fill(0),colHtml=new Array(cols).fill('');
+  htmls.forEach((h,i)=>{
+    let idx=0;for(let c=1;c<cols;c++)if(colHeights[c]<colHeights[idx])idx=c;
+    colHtml[idx]+=h;colHeights[idx]+=heights[i]+gap;
+  });
+  container.className='editorial-grid ed-flex';
+  container.innerHTML=colHtml.map(h=>`<div class="ed-col">${h}</div>`).join('');
+}
+// Пересчёт при ресайзе окна (меняется число колонок/их ширина) — только
+// если сейчас реально открыта вкладка Шаблоны/Редактура.
+let edResizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(edResizeTimer);
+  edResizeTimer=setTimeout(()=>{
+    if(typeof ADHUB_TAB==='undefined')return;
+    if(ADHUB_TAB==='templates')renderTemplatesTab();
+    else if(ADHUB_TAB==='editorial')renderEditorialTab();
+  },200);
+});
+
 function renderTemplatesTab(){
   const el=document.getElementById('ed-templates-body');if(!el)return;
   const cats=(EDITORIAL_TEMPLATES_DATA||[]).filter(c=>c.group_key==='main');
@@ -4280,7 +4324,8 @@ function renderTemplatesTab(){
       <div class="acard-sub" style="margin:0">Готовые формулировки по категориям — используйте как основу при приёме/составлении объявления.</div>
       ${edAddCatBtn('templates','main')}
     </div>
-    <div class="editorial-grid">${cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>'}</div>`;
+    <div class="editorial-grid" id="ed-grid-templates-main"></div>`;
+  renderEdGrid(document.getElementById('ed-grid-templates-main'),cats.map(edCatCard));
 }
 
 function renderEditorialTab(){
@@ -4292,7 +4337,7 @@ function renderEditorialTab(){
       ${edAddCatBtn('editorial',group)}
     </div>
     ${wide?(cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>')
-          :`<div class="editorial-grid">${cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>'}</div>`}`;
+          :`<div class="editorial-grid" id="ed-grid-editorial-${group}"></div>`}`;
   el.innerHTML=`
     <div class="fhint" style="margin-bottom:14px">Справочные материалы для проверки и редактирования объявлений: примеры по категориям, локации/предприятия штата, коды и расшифровка причин отклонения, глоссарий сокращений.</div>
     ${section('Примеры объявлений по категориям','examples',byGroup('examples'),false)}
@@ -4300,6 +4345,8 @@ function renderEditorialTab(){
     ${section('Отклонено / Расшифровка','codes',byGroup('codes'),true)}
     ${section('Замены ООС и т.д.','glossary',byGroup('glossary'),true)}
   `;
+  renderEdGrid(document.getElementById('ed-grid-editorial-examples'),byGroup('examples').map(edCatCard));
+  renderEdGrid(document.getElementById('ed-grid-editorial-locations'),byGroup('locations').map(edCatCard));
 }
 
 async function loadEdTemplates(){ EDITORIAL_TEMPLATES_DATA=await API.get('/editorial?tab=templates'); renderTemplatesTab(); }
