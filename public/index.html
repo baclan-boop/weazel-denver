@@ -307,9 +307,8 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .dt td{padding:11px 12px;border-bottom:1px solid rgba(var(--ovl),.04);font-size:12px;color:rgba(var(--ovl),.8);vertical-align:middle}
 .dt tr:hover td{background:rgba(var(--ovl),.015)}
 .tw{overflow-x:auto}
-.editorial-grid .acard{margin:0 0 16px}
-.editorial-grid.ed-flex{display:flex;align-items:flex-start;gap:16px}
-.editorial-grid.ed-flex>.ed-col{flex:1;min-width:0}
+.editorial-grid{column-width:280px;column-gap:12px;column-fill:auto}
+.editorial-grid .acard{margin:0 0 12px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;display:inline-block;width:100%;vertical-align:top}
 .ed-editor-row textarea.fi{min-height:44px}
 
 /* BADGES */
@@ -1092,10 +1091,17 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
               <div class="fg">
+                <label class="fl">Начать с</label>
+                <input type="date" class="fi" id="ads-start-date-input">
+                <div class="fhint">По умолчанию — завтра</div>
+              </div>
+              <div class="fg">
                 <label class="fl">Срок (дней)</label>
                 <input type="number" class="fi" id="ads-days-input" min="2" max="7" value="2">
                 <div class="fhint">От 2 до 7 дней</div>
               </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
               <div class="fg">
                 <label class="fl">Объявлений в день</label>
                 <input type="number" class="fi" id="ads-per-day-input" min="2" max="10" value="2">
@@ -2169,13 +2175,18 @@ async function switchAdHubTab(tab){
   if(tab==='editorial')await loadEdReference();
 }
 async function initAdHub(){
+  const dateInput=document.getElementById('ads-start-date-input');
+  if(dateInput&&!dateInput.value){
+    const t=new Date(); t.setDate(t.getDate()+1);
+    dateInput.value=t.toISOString().slice(0,10);
+  }
   const allowed=adHubAllowedTabs();
   const tab=allowed.includes(ADHUB_TAB)?ADHUB_TAB:(allowed[0]||'ads');
   await switchAdHubTab(tab);
 }
 
 // ══════════════════════════════════════════════
-// ОБЪЯВЛЕНИЯ — поиск свободных слотов в Google Таблице
+// ОБЪЯВЛЕНИЯ — поиск свободных слотов в таблице контрактов (contract_slots)
 // ══════════════════════════════════════════════
 function setAdsColor(color){
   document.getElementById('ads-color-input').value=color;
@@ -2198,6 +2209,7 @@ async function searchAdSlots(){
   adsPerDay=Math.max(2,Math.min(10,isNaN(adsPerDay)?2:adsPerDay));
   document.getElementById('ads-days-input').value=days;
   document.getElementById('ads-per-day-input').value=adsPerDay;
+  const startDate=document.getElementById('ads-start-date-input').value||undefined;
 
   const btn=document.getElementById('ads-search-btn');
   const resEl=document.getElementById('ads-results');
@@ -2205,7 +2217,7 @@ async function searchAdSlots(){
   resEl.innerHTML='';
 
   try{
-    const r=await API.post('/booking/search',{color,days,adsPerDay});
+    const r=await API.post('/booking/search',{color,days,adsPerDay,startDate});
     renderAdsResults(r);
   }catch(e){
     resEl.innerHTML=`<div class="acard" style="border-color:rgba(232,25,44,.4)">
@@ -2221,20 +2233,13 @@ let lastFoundSlots=[]; // хранится для кнопки "Скопиров
 function renderAdsResults(r){
   const resEl=document.getElementById('ads-results');
   const colorLabel=r.color==='red'?'🔴 Красные (ADV)':'🟢 Зелёные (Weazel News)';
+  const fromLabel=r.startDate?` · с ${xe(r.startDate)}`:'';
   lastFoundSlots=r.foundSlots||[];
-
-  let missingHtml='';
-  if(r.missingDates&&r.missingDates.length){
-    missingHtml=`<div style="font-size:12px;color:var(--gray);margin-top:10px">
-      Листы ещё не созданы на: ${r.missingDates.map(d=>xe(d)).join(', ')}
-    </div>`;
-  }
 
   if(!r.foundSlots||!r.foundSlots.length){
     resEl.innerHTML=`<div class="acard">
-      <div style="font-size:14px;color:var(--ink);margin-bottom:6px">${colorLabel} · ${r.days} дн. · ${r.adsPerDay} объявл/день</div>
+      <div style="font-size:14px;color:var(--ink);margin-bottom:6px">${colorLabel} · ${r.days} дн.${fromLabel} · ${r.adsPerDay} объявл/день</div>
       <div style="color:var(--gray);font-size:13px">Свободных слотов, подходящих на все ${r.days} дня подряд, не найдено.</div>
-      ${missingHtml}
     </div>`;
     return;
   }
@@ -2250,12 +2255,11 @@ function renderAdsResults(r){
 
   resEl.innerHTML=`<div class="acard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px">
-      <div style="font-size:14px;color:var(--ink)">${colorLabel} · ${r.days} дн. · запрошено ${r.adsPerDay} объявл/день</div>
+      <div style="font-size:14px;color:var(--ink)">${colorLabel} · ${r.days} дн.${fromLabel} · запрошено ${r.adsPerDay} объявл/день</div>
       ${badge}
     </div>
     <div style="max-height:400px;overflow-y:auto;margin-top:8px">${rows}</div>
     <button class="btn btn-o btn-sm" style="width:100%;justify-content:center;margin-top:14px" onclick="copyAllAdTimes()">📋 Скопировать все времена</button>
-    ${missingHtml}
   </div>`;
 }
 
@@ -4271,51 +4275,6 @@ function edAddCatBtn(tab,group){
   return canManageEditorial()?`<button class="btn btn-o btn-sm" onclick="openEditorialCatModal(null,'${tab}','${group}')">+ Добавить категорию</button>`:'';
 }
 
-// Настоящий masonry для editorial-grid: раскладывает карточки не по
-// CSS column-count (который при разных по высоте карточках оставляет
-// пустые «дыры» внизу колонок — break-inside:avoid не даёт их
-// разрезать), а жадным алгоритмом по РЕАЛЬНО измеренной высоте —
-// каждая следующая карточка уходит в колонку с наименьшей текущей
-// высотой, как в Pinterest. Ширина зонда = ширина будущей колонки,
-// чтобы высота (перенос строк, таблица) измерялась верно.
-function edColumnsForWidth(w){ return w<=650?1:w<=950?2:3; }
-function renderEdGrid(container,htmls){
-  if(!container)return;
-  if(!htmls.length){container.className='editorial-grid';container.removeAttribute('style');container.innerHTML='<div class="fhint">Пока нет категорий</div>';return;}
-  const totalW=container.clientWidth||window.innerWidth;
-  const cols=edColumnsForWidth(totalW);
-  if(cols<=1){
-    container.className='editorial-grid';container.removeAttribute('style');
-    container.innerHTML=htmls.join('');
-    return;
-  }
-  const gap=16;
-  const colW=Math.max(200,(totalW-gap*(cols-1))/cols);
-  const probe=document.createElement('div');
-  probe.style.cssText=`position:absolute;visibility:hidden;left:-99999px;top:0;width:${colW}px`;
-  document.body.appendChild(probe);
-  const heights=htmls.map(h=>{probe.innerHTML=h;return probe.firstElementChild?probe.firstElementChild.offsetHeight:probe.offsetHeight;});
-  probe.remove();
-  const colHeights=new Array(cols).fill(0),colHtml=new Array(cols).fill('');
-  htmls.forEach((h,i)=>{
-    let idx=0;for(let c=1;c<cols;c++)if(colHeights[c]<colHeights[idx])idx=c;
-    colHtml[idx]+=h;colHeights[idx]+=heights[i]+gap;
-  });
-  container.className='editorial-grid ed-flex';
-  container.innerHTML=colHtml.map(h=>`<div class="ed-col">${h}</div>`).join('');
-}
-// Пересчёт при ресайзе окна (меняется число колонок/их ширина) — только
-// если сейчас реально открыта вкладка Шаблоны/Редактура.
-let edResizeTimer=null;
-window.addEventListener('resize',()=>{
-  clearTimeout(edResizeTimer);
-  edResizeTimer=setTimeout(()=>{
-    if(typeof ADHUB_TAB==='undefined')return;
-    if(ADHUB_TAB==='templates')renderTemplatesTab();
-    else if(ADHUB_TAB==='editorial')renderEditorialTab();
-  },200);
-});
-
 function renderTemplatesTab(){
   const el=document.getElementById('ed-templates-body');if(!el)return;
   const cats=(EDITORIAL_TEMPLATES_DATA||[]).filter(c=>c.group_key==='main');
@@ -4324,8 +4283,7 @@ function renderTemplatesTab(){
       <div class="acard-sub" style="margin:0">Готовые формулировки по категориям — используйте как основу при приёме/составлении объявления.</div>
       ${edAddCatBtn('templates','main')}
     </div>
-    <div class="editorial-grid" id="ed-grid-templates-main"></div>`;
-  renderEdGrid(document.getElementById('ed-grid-templates-main'),cats.map(edCatCard));
+    <div class="editorial-grid">${cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>'}</div>`;
 }
 
 function renderEditorialTab(){
@@ -4337,7 +4295,7 @@ function renderEditorialTab(){
       ${edAddCatBtn('editorial',group)}
     </div>
     ${wide?(cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>')
-          :`<div class="editorial-grid" id="ed-grid-editorial-${group}"></div>`}`;
+          :`<div class="editorial-grid">${cats.map(edCatCard).join('')||'<div class="fhint">Пока нет категорий</div>'}</div>`}`;
   el.innerHTML=`
     <div class="fhint" style="margin-bottom:14px">Справочные материалы для проверки и редактирования объявлений: примеры по категориям, локации/предприятия штата, коды и расшифровка причин отклонения, глоссарий сокращений.</div>
     ${section('Примеры объявлений по категориям','examples',byGroup('examples'),false)}
@@ -4345,8 +4303,6 @@ function renderEditorialTab(){
     ${section('Отклонено / Расшифровка','codes',byGroup('codes'),true)}
     ${section('Замены ООС и т.д.','glossary',byGroup('glossary'),true)}
   `;
-  renderEdGrid(document.getElementById('ed-grid-editorial-examples'),byGroup('examples').map(edCatCard));
-  renderEdGrid(document.getElementById('ed-grid-editorial-locations'),byGroup('locations').map(edCatCard));
 }
 
 async function loadEdTemplates(){ EDITORIAL_TEMPLATES_DATA=await API.get('/editorial?tab=templates'); renderTemplatesTab(); }
