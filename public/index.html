@@ -307,8 +307,10 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .dt td{padding:11px 12px;border-bottom:1px solid rgba(var(--ovl),.04);font-size:12px;color:rgba(var(--ovl),.8);vertical-align:middle}
 .dt tr:hover td{background:rgba(var(--ovl),.015)}
 .tw{overflow-x:auto}
-.editorial-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:start}
-.editorial-grid .acard{margin:0;align-self:start}
+.editorial-grid{column-count:3;column-gap:12px}
+@media(max-width:900px){.editorial-grid{column-count:2}}
+@media(max-width:600px){.editorial-grid{column-count:1}}
+.editorial-grid .acard{margin:0 0 12px;break-inside:avoid}
 .ed-editor-row textarea.fi{min-height:44px}
 
 /* BADGES */
