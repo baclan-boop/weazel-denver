@@ -12,13 +12,14 @@ async function requireAuth(req, res, next) {
 // РОЛИ И ПРАВА ДОСТУПА
 // ─────────────────────────────────────────────────────────────────────
 //  • admin (Администратор)   — абсолютно все права без исключений.
-//  • leader (Лидер)          — как Администратор, КРОМЕ статистики посещений
-//                              (/api/visitors, /api/site-visits/stats) и
-//                              журнала редактирования (/api/edit-logs) —
-//                              это зона видимости исключительно Администратора
-//                              (см. requireAdmin).
+//  • leader (Лидер/Director)  — как Администратор, КРОМЕ статистики посещений
+//                              (/api/visitors, /api/site-visits/stats) — это
+//                              зона видимости исключительно Администратора
+//                              (см. requireAdmin). Журнал редактирования
+//                              (/api/edit-logs) Лидеру, как и Старшему составу
+//                              AD и Dep. Director, ДОСТУПЕН (см. requireEditLogs).
 //  • dep_director (Dep. Director) — как Лидер, НО дополнительно не видит:
-//                              посещаемость и логи (как и Лидер), не может
+//                              посещаемость (как и Лидер), не может
 //                              управлять Составом (requireTeam) и не может
 //                              менять тексты сайта/фоны страниц
 //                              (requireSiteSettings). Во всём остальном,
@@ -35,8 +36,10 @@ async function requireAuth(req, res, next) {
 //                              «Пользователи», но ТАМ ограниченно: может
 //                              выдавать/снимать ИСКЛЮЧИТЕЛЬНО роль
 //                              Advertising Department (см. проверку внутри
-//                              PUT /api/users/:id/role). Остального в
-//                              Панели (Новости/Услуги/Состав/Тексты) не видит.
+//                              PUT /api/users/:id/role) + вкладка «Логи»
+//                              (журнал редактирования, только просмотр —
+//                              см. requireEditLogs). Остального в Панели
+//                              (Новости/Услуги/Состав/Тексты) не видит.
 //  • advertising (AD)        — только раздел «Реклама», и то не полностью:
 //                              может добавлять контракты (bulk-добавление) и
 //                              в самой таблице контрактов — только галочку
@@ -90,9 +93,16 @@ async function requireContractApproval(req, res, next) { await requireAuth(req, 
 // «Старший состав AD и выше»: Старший состав AD, Dep. Director, Лидер,
 // Администратор. Обычный Advertising Dept. читает, но не редактирует.
 async function requireEditorialMgmt(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
+// Журнал редактирования полей (вкладка «Логи») — просмотр. Раньше был
+// доступен только Администратору; теперь также видят Старший состав AD,
+// Dep. Director и Лидер (Director) — см. /api/edit-logs в src/routes/editLogs.js.
+// Статистика посещений (/api/visitors, /api/site-visits/stats) сюда НЕ входит —
+// та зона видимости по-прежнему исключительно Администратора (requireAdmin).
+async function requireEditLogs(req, res, next) { await requireAuth(req, res, () => { if (!['curator_ad', 'dep_director', 'admin', 'leader'].includes(req.user.role)) return res.status(403).json({ error: 'Нет доступа' }); next(); }); }
 
 module.exports = {
   requireAuth, requireNewsEdit, requireNewsDelete, requireServices, requireTeam,
   requireSiteSettings, requireAdmin, requireAdvertising, requireBonusMgmt,
   requireEmployeeMgmt, requireUserMgmt, requireContractApproval, requireEditorialMgmt,
+  requireEditLogs,
 };
