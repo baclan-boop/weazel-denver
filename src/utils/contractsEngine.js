@@ -55,8 +55,8 @@ async function commitContractToSlots({ color, dates, times, text, accepted_id, d
   const totalAds = times.length * dates.length;
   const baseSum = totalAds * chars * rate;
   const orderSum = baseSum * (1 - discount / 100);
-  const treasury = orderSum * 0.9;
-  const toEmployee = orderSum * 0.1;
+  const treasury = orderSum * 0.8;
+  const toEmployee = orderSum * 0.2;
   const perAd = totalAds > 0 ? toEmployee / totalAds : 0;
 
   const wnewsText = `${color === 'red' ? '/adv' : '/wnews'} ${text}`;

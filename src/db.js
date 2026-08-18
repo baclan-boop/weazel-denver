@@ -87,9 +87,10 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visit_date);
     -- Журнал редактирования полей: 1 запись = 1 сохранение с массивом
-    -- изменённых полей {field, before, after}. Видно только Администратору
-    -- (см. requireAdmin на роуте /api/edit-logs) — роль Leader сюда доступа
-    -- не имеет, как и к /api/site-visits/stats.
+    -- изменённых полей {field, before, after}. Видно «Старший состав AD и
+    -- выше»: Старший состав AD, Dep. Director, Лидер (Director), Администратор
+    -- (см. requireEditLogs на роуте /api/edit-logs). Доступ к
+    -- /api/site-visits/stats (посещаемость) по-прежнему только у Администратора.
     CREATE TABLE IF NOT EXISTS edit_logs (
       id TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
       user_name TEXT DEFAULT 'Система', entity TEXT NOT NULL, entity_id TEXT DEFAULT '',
@@ -112,8 +113,8 @@ async function initDB() {
   await query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS text_color TEXT DEFAULT ''`);
 
   // Миграция: добавить роли 'advertising' (Advertising Department) и 'curator_ad' (Старший состав AD)
-  // + 'leader' (Лидер — доступ как у Администратора, кроме статистики
-  // посещений и журнала редактирования, см. requireAdmin ниже)
+  // + 'leader' (Лидер/Director — доступ как у Администратора, кроме статистики
+  // посещений, см. requireAdmin ниже; журнал редактирования видит — см. requireEditLogs)
   // + 'dep_director' (Dep. Director — см. requireNewsEdit/requireServices/
   // requireTeam/requireSiteSettings/requireAdvertising/requireUserMgmt/
   // requireEmployeeMgmt в src/middleware/auth.js за подробным разбором прав этой роли).

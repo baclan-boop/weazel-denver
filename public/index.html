@@ -604,7 +604,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .visits-daily-bar-fill{height:100%;background:var(--red);border-radius:3px}
 .visits-sub-title{font-size:14px;color:var(--ink);margin:22px 0 10px;font-family:var(--font-d);letter-spacing:1px}
 
-/* ЛОГИ РЕДАКТИРОВАНИЯ ПОЛЕЙ (вкладка «Логи» в Панели, только Администратор) */
+/* ЛОГИ РЕДАКТИРОВАНИЯ ПОЛЕЙ (вкладка «Логи» в Панели — Старший состав AD, Dep. Director, Лидер/Director, Администратор) */
 .elog-item{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.08);border-radius:var(--r);padding:12px 14px;margin-bottom:10px}
 .elog-hdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:9px;font-size:12px}
 .elog-who{color:var(--ink);font-weight:600}
@@ -940,7 +940,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 
       <div class="asec" id="admin-edit-logs">
         <div class="asec-title">Логи редактирования</div>
-        <div class="fhint" style="margin-bottom:14px">Кто и когда изменил какое-либо поле на сайте — со значением до и после. Только для Администратора.</div>
+        <div class="fhint" style="margin-bottom:14px">Кто и когда изменил какое-либо поле на сайте — со значением до и после. Видно роли Старший состав AD, Dep. Director, Лидеру (Director) и Администратору.</div>
         <div id="edit-logs-list"><div style="text-align:center;color:var(--gray);padding:1.5rem">Загрузка...</div></div>
       </div>
 
@@ -1136,8 +1136,8 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-green-discount" value="0" min="0" max="100" oninput="calcRun('green')"></div>
               <div class="calc-results">
                 <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-green-sum">0$</div></div>
-                <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-green-treasury">0$</div></div>
-                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-green-toemp">0$</div></div>
+                <div class="calc-res-box"><div class="calc-res-lbl">На казну (80%)</div><div class="calc-res-val" id="calc-green-treasury">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (20%)</div><div class="calc-res-val" id="calc-green-toemp">0$</div></div>
                 <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-green-perad">0$</div></div>
               </div>
             </div>
@@ -1157,8 +1157,8 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
               <div class="fg"><label class="fl">Скидка (%)</label><input type="number" class="fi" id="calc-red-discount" value="0" min="0" max="100" oninput="calcRun('red')"></div>
               <div class="calc-results">
                 <div class="calc-res-box"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-val" id="calc-red-sum">0$</div></div>
-                <div class="calc-res-box"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-val" id="calc-red-treasury">0$</div></div>
-                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-val" id="calc-red-toemp">0$</div></div>
+                <div class="calc-res-box"><div class="calc-res-lbl">На казну (80%)</div><div class="calc-res-val" id="calc-red-treasury">0$</div></div>
+                <div class="calc-res-box hi"><div class="calc-res-lbl">На руки сотруднику (20%)</div><div class="calc-res-val" id="calc-red-toemp">0$</div></div>
                 <div class="calc-res-box hi"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-val" id="calc-red-perad">0$</div></div>
               </div>
             </div>
@@ -1277,8 +1277,8 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
                 <div class="calc-results">
                   <div class="calc-res-box"><div class="calc-res-lbl">Всего объявлений</div><div class="calc-res-val" id="ctadd-total">0</div></div>
                   <div class="calc-res-box" id="ctadd-sum-box" data-raw="0"><div class="calc-res-lbl">Сумма заказа</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-sum">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-sum-box',this)">⧉</button></div></div>
-                  <div class="calc-res-box" id="ctadd-treasury-box" data-raw="0"><div class="calc-res-lbl">На казну (90%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-treasury">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-treasury-box',this)">⧉</button></div></div>
-                  <div class="calc-res-box hi" id="ctadd-toemp-box" data-raw="0"><div class="calc-res-lbl">На руки сотруднику (10%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-toemp">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-toemp-box',this)">⧉</button></div></div>
+                  <div class="calc-res-box" id="ctadd-treasury-box" data-raw="0"><div class="calc-res-lbl">На казну (80%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-treasury">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-treasury-box',this)">⧉</button></div></div>
+                  <div class="calc-res-box hi" id="ctadd-toemp-box" data-raw="0"><div class="calc-res-lbl">На руки сотруднику (20%)</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-toemp">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-toemp-box',this)">⧉</button></div></div>
                   <div class="calc-res-box hi" id="ctadd-perad-box" data-raw="0"><div class="calc-res-lbl">Выплата за 1 объявление</div><div class="calc-res-row"><div class="calc-res-val" id="ctadd-perad">0$</div><button type="button" class="ct-copy-btn" title="Копировать число без пробелов" onclick="copyCalcVal('ctadd-perad-box',this)">⧉</button></div></div>
                 </div>
 
@@ -2290,7 +2290,7 @@ function fallbackCopyText(text){
 // ══════════════════════════════════════════════
 // КАЛЬКУЛЯТОР КОНТРАКТОВ
 // Зелёные: символ × 300 ; Красные (СМС): символ × 150
-// На казну = 90%, на руки сотруднику = 10%, выплата за 1 объявление = (сумма*0.1)/(объявл_в_день*дни)
+// На казну = 80%, на руки сотруднику = 20%, выплата за 1 объявление = (сумма*0.2)/(объявл_в_день*дни)
 // ══════════════════════════════════════════════
 function fmtMoney(n){ if(!isFinite(n))n=0; return Math.round(n).toLocaleString('ru-RU')+'$'; }
 
@@ -2304,9 +2304,9 @@ function calcRun(color){
   const rate=color==='red'?150:300;
   const baseSum=perDay*days*chars*rate;
   const orderSum=baseSum*(1-discount/100);
-  const treasury=orderSum*0.9;
-  const toEmployee=orderSum*0.1;
-  const perAd=(perDay*days)>0 ? (orderSum*0.1)/(perDay*days) : 0;
+  const treasury=orderSum*0.8;
+  const toEmployee=orderSum*0.2;
+  const perAd=(perDay*days)>0 ? (orderSum*0.2)/(perDay*days) : 0;
 
   document.getElementById(`calc-${color}-chars`).textContent=chars;
   document.getElementById(`calc-${color}-sum`).textContent=fmtMoney(orderSum);
@@ -3085,8 +3085,8 @@ function ctAddRun(){
   const rate=CTADD_STATE.color==='red'?150:300;
   const baseSum=totalAds*chars*rate;
   const orderSum=baseSum*(1-discount/100);
-  const treasury=orderSum*0.9;
-  const toEmployee=orderSum*0.1;
+  const treasury=orderSum*0.8;
+  const toEmployee=orderSum*0.2;
   const perAd=totalAds>0?toEmployee/totalAds:0;
 
   document.getElementById('ctadd-chars').textContent=chars;
@@ -4714,24 +4714,26 @@ async function renderAdmin(){
 
 // Какие вкладки Панели управления видит каждая роль:
 //  • admin        — все вкладки без исключений.
-//  • leader       — все, КРОМЕ «Посетители» и «Логи» — эти два раздела
-//                   (статистика посещений и журнал редактирования) — зона
-//                   видимости исключительно Администратора (requireAdmin).
+//  • leader (Director) — все, КРОМЕ «Посетители» — этот раздел (статистика
+//                   посещений) — зона видимости исключительно Администратора
+//                   (requireAdmin). «Логи» (журнал редактирования) — видит.
 //  • dep_director — как leader, но дополнительно без «Состав» (requireTeam)
 //                   и без «Все тексты»/«Настройки сайта» (requireSiteSettings).
+//                   «Логи» — видит.
 //  • curator_ad   — «Пользователи» (ограниченно: только роль Advertising
-//                   Department, см. canChangeUserRole/openRoleModal ниже)
-//                   и «Сотрудники» (полное управление ростером). Остальное
-//                   в Панели не видит — плюс полный доступ к «Рекламе».
+//                   Department, см. canChangeUserRole/openRoleModal ниже),
+//                   «Сотрудники» (полное управление ростером) и «Логи»
+//                   (журнал редактирования). Остальное в Панели не видит —
+//                   плюс полный доступ к «Рекламе».
 //  • editor       — только «Новости» (добавление/редактирование, без
 //                   удаления — см. requireNewsDelete в server.js).
 //  • advertising, guest — ни одной вкладки Панели: их зона — исключительно
 //                   страница «Реклама» (см. canAds()), да и там не у guest.
 const ADMIN_TABS_BY_ROLE={
   admin:['visitors','edit-logs','users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
-  leader:['users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
-  dep_director:['users','employees','news-mgmt','services-mgmt'],
-  curator_ad:['users','employees'],
+  leader:['edit-logs','users','employees','news-mgmt','services-mgmt','team-mgmt','texts-mgmt','site-settings'],
+  dep_director:['edit-logs','users','employees','news-mgmt','services-mgmt'],
+  curator_ad:['edit-logs','users','employees'],
   editor:['news-mgmt'],
 };
 function allowedAdminTabs(){
@@ -4765,7 +4767,7 @@ async function renderVisitors(){
   }catch{el.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--gray)">Нет доступа</td></tr>`;}
 }
 
-// Журнал редактирования полей — см. /api/edit-logs (только Администратор).
+// Журнал редактирования полей — см. /api/edit-logs (Старший состав AD, Dep. Director, Лидер/Director, Администратор).
 const ELOG_ENTITY_LBL={news:'Новость',service:'Услуга',team_cat:'Категория состава',team_member:'Участник состава',employee:'Сотрудник',contract_slot:'Контракт',bonus:'Премия',user_role:'Роль пользователя',settings:'Настройки сайта',editorial_cat:'Категория справочника'};
 async function renderEditLogs(){
   const el=document.getElementById('edit-logs-list');if(!el)return;
