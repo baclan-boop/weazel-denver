@@ -79,6 +79,19 @@ if (!DISCORD_ENABLED) {
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+// Self-ping — бесплатный инстанс на Render засыпает примерно после 15
+// минут без единого входящего запроса, а после сна первый посетитель
+// ждёт долгий "холодный старт". Чтобы сайт не засыпал, он сам себе
+// раз в 14 минут делает обычный GET-запрос (см. запуск в server.js).
+// Работает ТОЛЬКО в проде (NODE_ENV=production) — иначе локальная
+// разработка или локальные тесты долбили бы боевой адрес почём зря.
+// Задать другой адрес — SELF_PING_URL; выключить совсем — SELF_PING_ENABLED=false;
+// включить принудительно вне прода — SELF_PING_ENABLED=true.
+const SELF_PING_URL = process.env.SELF_PING_URL || 'https://wn-dn.onrender.com/';
+const SELF_PING_ENABLED = process.env.SELF_PING_ENABLED
+  ? process.env.SELF_PING_ENABLED === 'true'
+  : IS_PROD;
+
 module.exports = {
   PORT, IS_PROD, DATABASE_URL, SESSION_SECRET,
   ADMIN_EMAIL, ADMIN_NAME,
@@ -86,4 +99,5 @@ module.exports = {
   GOOGLE_APPS_SCRIPT_URL,
   UPLOADS_DIR,
   DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_ENABLED,
+  SELF_PING_URL, SELF_PING_ENABLED,
 };

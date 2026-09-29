@@ -70,7 +70,15 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(session({
   store: new pgSession({ pool, tableName: 'session', createTableIfMissing: false }),
   secret: config.SESSION_SECRET, resave: false, saveUninitialized: false, name: '__wn_sid',
-  cookie: { httpOnly: true, secure: config.IS_PROD, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 },
+  // sameSite:'strict' ломает вход через Discord: когда Discord после
+  // подтверждения переводит браузер обратно на /api/auth/discord/callback,
+  // это межсайтовый переход (инициирован с discord.com) — со strict
+  // браузер НЕ отправит cookie сессии, сервер не найдёт сохранённый state
+  // и всегда покажет «Сессия входа истекла». lax — стандартный выбор
+  // именно для OAuth-редиректов: верхнеуровневые GET-переходы (наш случай)
+  // cookie передают, а межсайтовые POST/картинки/iframe — всё ещё нет,
+  // то есть защита от CSRF никуда не девается.
+  cookie: { httpOnly: true, secure: config.IS_PROD, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 },
 }));
 
 app.use('/api/', apiLimiter);

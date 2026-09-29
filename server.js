@@ -33,5 +33,25 @@ process.on('uncaughtException', (err) => {
 });
 
 initDB()
-  .then(() => { app.listen(config.PORT, '0.0.0.0', () => console.log(`Weazel News: http://localhost:${config.PORT}`)); })
+  .then(() => {
+    app.listen(config.PORT, '0.0.0.0', () => console.log(`Weazel News: http://localhost:${config.PORT}`));
+    startSelfPing();
+  })
   .catch(e => { console.error('Ошибка запуска:', e.message); process.exit(1); });
+
+// Self-ping (см. комментарий в src/config.js) — не даёт бесплатному
+// инстансу на Render уснуть от простоя. Каждые 14 минут сам себе делает
+// обычный GET-запрос; результат только логируется, ни на что не влияет —
+// сбой запроса (например, кратковременная сетевая ошибка) не должен
+// останавливать таймер и тем более ронять процесс.
+function startSelfPing() {
+  if (!config.SELF_PING_ENABLED) return;
+  const INTERVAL_MS = 14 * 60 * 1000;
+  const ping = () => {
+    fetch(config.SELF_PING_URL)
+      .then(r => console.log(`[self-ping] ${new Date().toISOString()} ${config.SELF_PING_URL} → ${r.status}`))
+      .catch(e => console.warn(`[self-ping] ${new Date().toISOString()} ошибка: ${e.message}`));
+  };
+  setInterval(ping, INTERVAL_MS);
+  console.log(`Self-ping включён: каждые 14 минут → ${config.SELF_PING_URL}`);
+}
