@@ -274,9 +274,6 @@ nav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center}
 .auth-card{background:rgba(17,17,17,.97);border:1px solid rgba(232,25,44,.3);border-radius:var(--rl);padding:36px;width:100%;max-width:400px;text-align:center}
 .auth-logo{font-family:var(--font-d);font-size:38px;letter-spacing:4px;color:var(--red);margin-bottom:6px}
 .auth-sub{font-size:10px;color:var(--gray);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px}
-.auth-tabs{display:flex;border:1px solid rgba(var(--ovl),.1);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
-.auth-tab{flex:1;padding:9px;background:none;border:none;color:var(--gray);font-size:13px;font-weight:500;cursor:pointer;transition:var(--tr)}
-.auth-tab.active{background:var(--red);color:var(--white)}
 
 /* FORMS */
 .fg{margin-bottom:14px}
@@ -589,6 +586,27 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .bonus-actions{display:flex;gap:6px;margin-top:8px}
 .emp-roster-row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;align-items:center;background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.07);border-radius:var(--r);padding:8px 10px;margin-bottom:6px}
 .emp-roster-row.inactive{opacity:.4}
+
+/* ДЕЖУРСТВА / СМЕНЫ — почасовая сетка бронирования (см. renderRosterTab) */
+.roster-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.roster-dot-free{background:#2ed573}
+.roster-dot-busy{background:var(--red)}
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.roster-slot{position:relative;border-radius:var(--r);padding:10px 12px;text-align:left;font-family:inherit;cursor:default;min-height:74px;display:flex;flex-direction:column;gap:4px;justify-content:center}
+.roster-slot-time{font-family:var(--font-d);font-size:13px;letter-spacing:.5px;color:var(--ink)}
+.roster-slot-free{background:rgba(46,213,115,.08);border:1px solid rgba(46,213,115,.3);cursor:pointer;transition:var(--tr)}
+.roster-slot-free:hover{background:rgba(46,213,115,.16);border-color:#2ed573}
+.roster-slot-free-lbl{font-size:11px;color:#2ed573;font-weight:600}
+.roster-slot-busy{background:rgba(232,25,44,.06);border:1px solid rgba(232,25,44,.25)}
+.roster-slot-busy .badge{width:fit-content}
+.roster-slot-name{font-size:12px;color:var(--ink)}
+.roster-slot-off{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.07);opacity:.55}
+.roster-slot-off-lbl{font-size:11px;color:var(--gray)}
+.roster-slot-cancel{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(var(--ovl),.08);color:var(--gray);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.roster-slot-cancel:hover{background:var(--red);color:#fff}
+@media(max-width:600px){
+  .roster-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+}
 @media(max-width:600px){
   .stats-hdr-row{flex-direction:column;align-items:flex-start}
   .stats-archive-box{margin-left:0}
@@ -857,38 +875,11 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
     <div class="auth-card">
       <div class="auth-logo">WN</div>
       <div class="auth-sub">Weazel News · Majestic RP</div>
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Вход</button>
-        <button class="auth-tab" id="tab-reg" onclick="switchAuthTab('reg')">Регистрация</button>
-      </div>
-      <div id="auth-login-form">
-        <div class="fg">
-          <label class="fl">Электронная почта</label>
-          <input type="email" class="fi" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="fg">
-          <label class="fl">Пароль</label>
-          <input type="password" class="fi" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="ferr" id="login-error"></div>
-        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doLogin()">Войти</button>
-      </div>
-      <div id="auth-reg-form" style="display:none">
-        <div class="fg">
-          <label class="fl">Никнейм (публичный)</label>
-          <input type="text" class="fi" id="reg-name" placeholder="James_Smith">
-        </div>
-        <div class="fg">
-          <label class="fl">Электронная почта</label>
-          <input type="email" class="fi" id="reg-email" placeholder="your@email.com">
-        </div>
-        <div class="fg">
-          <label class="fl">Пароль (мин. 6 символов)</label>
-          <input type="password" class="fi" id="reg-password" placeholder="••••••••">
-        </div>
-        <div class="ferr" id="reg-error"></div>
-        <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:6px" onclick="doRegister()">Зарегистрироваться</button>
-      </div>
+      <p style="text-align:center;color:var(--gray);font-size:13px;margin:0 0 22px">Вход на сайт — только через Discord</p>
+      <button class="btn-discord" style="width:100%;justify-content:center" onclick="location.href='/api/auth/discord'">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.083.119 18.108.143 18.123a19.876 19.876 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 19.839 19.839 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        Войти через Discord
+      </button>
     </div>
   </div>
 </div>
@@ -1076,6 +1067,8 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <button class="subtab plain" id="adhub-tab-stats" onclick="switchAdHubTab('stats')">Статистика</button>
         <button class="subtab plain" id="adhub-tab-templates" onclick="switchAdHubTab('templates')">Шаблоны объявлений</button>
         <button class="subtab plain" id="adhub-tab-editorial" onclick="switchAdHubTab('editorial')">Редактура</button>
+        <button class="subtab plain" id="adhub-tab-duty" onclick="switchAdHubTab('duty')">Дежурства</button>
+        <button class="subtab plain" id="adhub-tab-shift" onclick="switchAdHubTab('shift')">Смены</button>
       </div>
 
       <!-- ОБЪЯВЛЕНИЯ -->
@@ -1360,6 +1353,16 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <div id="ed-ref-body"><div class="fhint">Загрузка...</div></div>
       </div>
 
+      <!-- ДЕЖУРСТВА -->
+      <div class="adhub-tab" id="adhub-duty">
+        <div id="roster-duty-body"><div class="fhint">Загрузка...</div></div>
+      </div>
+
+      <!-- СМЕНЫ -->
+      <div class="adhub-tab" id="adhub-shift">
+        <div id="roster-shift-body"><div class="fhint">Загрузка...</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1549,52 +1552,6 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-nickname')">Отмена</button>
         <button class="btn btn-p btn-sm" onclick="saveNickname()">Сохранить</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ADMIN RESET PASSWORD RESULT MODAL -->
-<div class="mo" id="modal-admin-reset-result">
-  <div class="modal">
-    <div class="mhdr"><div class="mttl">Новый пароль выдан</div><button class="mclose" onclick="closeModal('modal-admin-reset-result')">✕</button></div>
-    <div class="mbody">
-      <p style="font-size:13px;color:var(--gray);margin:0 0 10px">Для <b id="arr-username" style="color:var(--white)"></b> сгенерирован новый пароль. Передай его пользователю сам (Discord и т.п.) — он сможет сменить его на свой после входа.</p>
-      <div class="fg">
-        <label class="fl">Новый пароль</label>
-        <div style="display:flex;gap:8px">
-          <input type="text" class="fi" id="arr-password" readonly style="font-family:monospace;font-size:15px;letter-spacing:.5px">
-          <button class="btn btn-o btn-sm" onclick="copyResetPassword()">Копировать</button>
-        </div>
-      </div>
-      <div class="mfoot">
-        <button class="btn btn-p btn-sm" onclick="closeModal('modal-admin-reset-result')">Готово</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- CHANGE PASSWORD MODAL (самостоятельная смена пароля залогиненным пользователем) -->
-<div class="mo" id="modal-change-password">
-  <div class="modal">
-    <div class="mhdr"><div class="mttl">Смена пароля</div><button class="mclose" onclick="closeModal('modal-change-password')">✕</button></div>
-    <div class="mbody">
-      <div class="fg">
-        <label class="fl">Текущий пароль</label>
-        <input type="password" class="fi" id="cp-current" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
-      </div>
-      <div class="fg">
-        <label class="fl">Новый пароль (мин. 6 символов)</label>
-        <input type="password" class="fi" id="cp-new1" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
-      </div>
-      <div class="fg">
-        <label class="fl">Повторите новый пароль</label>
-        <input type="password" class="fi" id="cp-new2" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitChangePassword()">
-      </div>
-      <div class="ferr" id="cp-error" style="display:none"></div>
-      <div class="mfoot">
-        <button class="btn btn-o btn-sm" onclick="closeModal('modal-change-password')">Отмена</button>
-        <button class="btn btn-p btn-sm" onclick="submitChangePassword()">Сохранить</button>
       </div>
     </div>
   </div>
@@ -1918,79 +1875,11 @@ function openLink(url){window.open(url,'_blank','noopener,noreferrer')}
 function safeImg(u){if(!u)return'';const s=String(u).trim();if(s.startsWith('http')||s.startsWith('data:image')||s.startsWith('/uploads/'))return s;return'';}
 
 // ══════════════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════════════
-async function doLogin(){
-  const email=document.getElementById('login-email').value.trim();
-  const pass=document.getElementById('login-password').value;
-  const err=document.getElementById('login-error');
-  const btn=document.querySelector('#auth-login-form .btn-p');
-  err.style.display='none';
-  if(!email||!pass){err.textContent='Заполните все поля';err.style.display='block';return}
-  if(btn){btn.textContent='Вход...';btn.disabled=true;}
-  try{
-    const {user} = await API.post('/auth/login',{email,password:pass});
-    CU=user;
-    if(btn){btn.textContent='Войти';btn.disabled=false;}
-    if(canEditTexts())document.body.classList.add('is-admin');
-    renderHeader();showPage('home');
-    toast(`Добро пожаловать, ${xe(user.name)}!`,'s');
-  }catch(e){
-    if(btn){btn.textContent='Войти';btn.disabled=false;}
-    err.textContent=e.error||'Ошибка входа';err.style.display='block';
-  }
-}
-
-async function doRegister(){
-  const name=document.getElementById('reg-name').value.trim();
-  const email=document.getElementById('reg-email').value.trim();
-  const pass=document.getElementById('reg-password').value;
-  const err=document.getElementById('reg-error');
-  const btn=document.querySelector('#auth-reg-form .btn-p');
-  err.style.display='none';
-  if(!name||!email||!pass){err.textContent='Заполните все поля';err.style.display='block';return}
-  if(pass.length<6){err.textContent='Пароль минимум 6 символов';err.style.display='block';return}
-  if(btn){btn.textContent='Создание...';btn.disabled=true;}
-  try{
-    const {user} = await API.post('/auth/register',{name,email,password:pass});
-    CU=user;
-    if(btn){btn.textContent='Зарегистрироваться';btn.disabled=false;}
-    renderHeader();showPage('home');
-    toast(`Добро пожаловать, ${xe(user.name)}!`,'s');
-  }catch(e){
-    if(btn){btn.textContent='Зарегистрироваться';btn.disabled=false;}
-    err.textContent=e.error||'Ошибка регистрации';err.style.display='block';
-  }
-}
-
-// Самостоятельная смена пароля залогиненным пользователем — этим же путём
-// меняют временный пароль, который выдал администратор (см. кнопку
-// «Сбросить пароль» в Панели → Пользователи и openAdminResetPassword()).
-function openChangePasswordModal(){
-  document.getElementById('cp-current').value='';
-  document.getElementById('cp-new1').value='';
-  document.getElementById('cp-new2').value='';
-  const err=document.getElementById('cp-error');err.style.display='none';err.textContent='';
-  openModal('modal-change-password');
-}
-async function submitChangePassword(){
-  const currentPassword=document.getElementById('cp-current').value;
-  const p1=document.getElementById('cp-new1').value;
-  const p2=document.getElementById('cp-new2').value;
-  const err=document.getElementById('cp-error');
-  err.style.display='none';
-  if(!currentPassword){err.textContent='Введите текущий пароль';err.style.display='block';return}
-  if(!p1||p1.length<6){err.textContent='Новый пароль минимум 6 символов';err.style.display='block';return}
-  if(p1!==p2){err.textContent='Пароли не совпадают';err.style.display='block';return}
-  try{
-    await API.put('/auth/password',{currentPassword,newPassword:p1});
-    closeModal('modal-change-password');
-    toast('Пароль изменён','s');
-  }catch(e){
-    err.textContent=e.error||'Ошибка сохранения';err.style.display='block';
-  }
-}
-
+// AUTH — вход только через Discord (полный редирект на /api/auth/discord,
+// см. кнопку на странице #page-auth и src/routes/auth.js). Отдельной
+// функции для входа тут нет: после Discord OAuth сервер редиректит
+// обратно на сайт, и обычная загрузка страницы (см. BOOT ниже) сама
+// подхватывает уже открытую сессию через GET /api/auth/me.
 async function logout(){
   await API.post('/auth/logout',{});
   CU=null;document.body.classList.remove('is-admin');
@@ -2018,13 +1907,6 @@ async function saveNickname(){
   }catch(e){ errEl.textContent=e.error||'Ошибка'; errEl.style.display='block'; }
 }
 
-function switchAuthTab(t){
-  document.getElementById('auth-login-form').style.display=t==='login'?'block':'none';
-  document.getElementById('auth-reg-form').style.display=t==='reg'?'block':'none';
-  document.getElementById('tab-login').classList.toggle('active',t==='login');
-  document.getElementById('tab-reg').classList.toggle('active',t==='reg');
-}
-
 // ══════════════════════════════════════════════
 // HEADER
 // ══════════════════════════════════════════════
@@ -2038,8 +1920,8 @@ function renderHeader(){
   if(bas)bas.style.display=canEditServices()?'block':'none';
   if(CU){
     ac.innerHTML=`<div style="display:flex;align-items:center;gap:7px">
+      ${CU.discord_avatar?`<img src="${xe(CU.discord_avatar)}" alt="" class="mob-hide-btn" style="width:20px;height:20px;border-radius:50%">`:''}
       <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
-      <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Сменить пароль" onclick="openChangePasswordModal()">🔑</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
       ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
       ${canOpenPanel()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
@@ -2048,7 +1930,6 @@ function renderHeader(){
     if(mob)mob.innerHTML=`
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
-      <button class="mnl" onclick="openChangePasswordModal();closeMobMenu()">🔑 Сменить пароль</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
       ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
       ${canOpenPanel()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
@@ -2146,9 +2027,12 @@ function adHubAllowedTabs(){
   // там частично read-only, см. renderContractsTable/renderBonusGrid и
   // canManageAdsFull()). «Шаблоны объявлений» и «Редактура» — статичные
   // справочные таблицы, видны Advertising Dept. и выше (см. canAds()).
-  if(canAds())t.push('ads','calc','contracts','stats','templates','editorial');
+  // «Дежурства»/«Смены» — бронирование почасовых слотов, тот же уровень
+  // доступа, что у остальных подвкладок «Реклама» (см. src/routes/roster.js).
+  if(canAds())t.push('ads','calc','contracts','stats','templates','editorial','duty','shift');
   return t;
 }
+const ADHUB_ALL_TABS=['ads','calc','contracts','stats','templates','editorial','duty','shift'];
 let ADHUB_TAB='ads';
 async function switchAdHubTab(tab){
   const allowed=adHubAllowedTabs();
@@ -2160,7 +2044,7 @@ async function switchAdHubTab(tab){
   ADHUB_TAB=tab;
   document.querySelectorAll('.adhub-tab').forEach(el=>el.classList.remove('active'));
   const cur=document.getElementById('adhub-'+tab); if(cur)cur.classList.add('active');
-  ['ads','calc','contracts','stats','templates','editorial'].forEach(t=>{
+  ADHUB_ALL_TABS.forEach(t=>{
     const b=document.getElementById('adhub-tab-'+t);
     if(!b)return;
     b.style.display=allowed.includes(t)?'':'none';
@@ -2175,6 +2059,8 @@ async function switchAdHubTab(tab){
   if(tab==='stats')await loadStatsTab(STATS_STATE.offset);
   if(tab==='templates')await loadEdTemplates();
   if(tab==='editorial')await loadEdReference();
+  if(tab==='duty')await loadRosterTab('duty');
+  if(tab==='shift')await loadRosterTab('shift');
 }
 async function initAdHub(){
   const dateInput=document.getElementById('ads-start-date-input');
@@ -2621,6 +2507,7 @@ function empComboOnChange(comboId,id){
   if(comboId.indexOf('ct-acc-')===0) ctSave(comboId.slice('ct-acc-'.length),{accepted_id:id||null});
   else if(comboId.indexOf('ct-dec-')===0) ctSave(comboId.slice('ct-dec-'.length),{declined_id:id||null});
   else if(comboId.indexOf('pending-emp-')===0) pendingFieldChanged(comboId.slice('pending-emp-'.length),'accepted_id',id||null);
+  else if(comboId==='roster-link-emp') linkMyEmployee(id||null);
 }
 
 // ══════════════════════════════════════════════
@@ -4309,6 +4196,152 @@ function renderEditorialTab(){
 
 async function loadEdTemplates(){ EDITORIAL_TEMPLATES_DATA=await API.get('/editorial?tab=templates'); renderTemplatesTab(); }
 async function loadEdReference(){ EDITORIAL_REF_DATA=await API.get('/editorial?tab=editorial'); renderEditorialTab(); }
+
+// ══════════════════════════════════════════════
+// ДЕЖУРСТВА / СМЕНЫ — бронирование почасовых слотов отдела рекламы
+// (см. src/routes/roster.js). kind: 'duty' (Дежурства) | 'shift' (Смены,
+// круглосуточно). У каждого часа — статус «свободно» (можно забронировать
+// себя одним кликом) / «занято» (кто именно — видно всем, с ролью и Static
+// ID) / «недоступно» (час на сегодняшнюю дату уже прошёл). Лимит — не
+// больше ROSTER_MAX_PER_DAY на человека в день, ОТДЕЛЬНО по каждой из
+// двух вкладок. Кнопки «Передать» из бота Discord сознательно нет — только
+// бронь и отмена (своей брони — любым, чужой — Старший состав AD и выше).
+// ══════════════════════════════════════════════
+const ROSTER_STATE={
+  duty:{date:new Date().toISOString().slice(0,10),data:null,busy:false},
+  shift:{date:new Date().toISOString().slice(0,10),data:null,busy:false},
+};
+
+function rosterRangeLabel(r){
+  const s=String(r.startHour).padStart(2,'0')+':00';
+  const e=r.endHour>=24?'23:59':String(r.endHour).padStart(2,'0')+':00';
+  return `${s}–${e}`;
+}
+function rosterMyEmployee(){
+  if(!CU||!CU.employee_id)return null;
+  return (EMPLOYEES||[]).find(e=>e.id===CU.employee_id)||null;
+}
+
+async function loadRosterTab(kind){
+  const st=ROSTER_STATE[kind];
+  const el=document.getElementById('roster-'+kind+'-body');
+  if(!el)return;
+  await ensureEmployeesLoaded();
+  try{
+    st.data=await API.get(`/roster/${kind}?date=${st.date}`);
+  }catch(e){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--red)">⚠ ${xe(e.error||'Не удалось загрузить данные')}</div>`;
+    return;
+  }
+  renderRosterTab(kind);
+}
+function rosterShiftDate(kind,days){ ROSTER_STATE[kind].date=shiftISO(ROSTER_STATE[kind].date,days); loadRosterTab(kind); }
+function rosterToday(kind){ ROSTER_STATE[kind].date=new Date().toISOString().slice(0,10); loadRosterTab(kind); }
+function toggleRosterRelink(kind){ const box=document.getElementById('roster-relink-'+kind); if(box)box.style.display=box.style.display==='none'?'':'none'; }
+
+function renderRosterTab(kind){
+  const el=document.getElementById('roster-'+kind+'-body');
+  const st=ROSTER_STATE[kind];
+  const d=st.data;
+  if(!el||!d)return;
+
+  const today=new Date().toISOString().slice(0,10);
+  const isToday=st.date===today;
+  const me=rosterMyEmployee();
+
+  const linkPicker=`<div style="max-width:320px">${empComboMarkup('roster-link-emp',CU.employee_id||'',{formStyle:true})}</div>`;
+
+  const linkBanner=d.needsEmployee?`
+    <div class="acard" style="border-color:rgba(232,25,44,.35);margin-bottom:14px">
+      <div class="acard-title" style="font-size:14px">Сначала свяжите аккаунт с собой в ростере</div>
+      <div class="acard-sub" style="margin-bottom:10px">Чтобы бронировать ${kind==='duty'?'дежурства':'смены'}, укажите, кто вы в списке сотрудников — оттуда будут браться имя персонажа и Static ID при брони.</div>
+      ${linkPicker}
+    </div>` : `
+    <div class="acard-sub" style="margin-bottom:6px">Бронируете как <b style="color:var(--ink)">${xe(me?me.name:CU.name)}</b>${me&&me.static_id?` <span style="color:var(--gray)">#${xe(me.static_id)}</span>`:''} · использовано ${d.myCount}/${d.maxPerDay} на этот день · <a href="#" onclick="event.preventDefault();toggleRosterRelink('${kind}')" style="color:var(--gray);text-decoration:underline">изменить привязку</a></div>
+    <div id="roster-relink-${kind}" style="display:none;margin:6px 0 14px">${linkPicker}</div>`;
+
+  const legend=`<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0 14px;font-size:12px;color:var(--gray)">
+    <div>Итого слотов: <b style="color:var(--ink)">${d.total}</b></div>
+    <div><span class="roster-dot roster-dot-free"></span>Свободно: <b style="color:var(--ink)">${d.free}</b></div>
+    <div><span class="roster-dot roster-dot-busy"></span>Занято: <b style="color:var(--ink)">${d.busy}</b></div>
+  </div>`;
+
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+      <div class="acard-sub" style="margin:0">${kind==='duty'?'Почасовая запись на дежурство':'Круглосуточная запись на смену'} (${rosterRangeLabel(d.range)}). Не больше ${d.maxPerDay} ${kind==='duty'?'дежурств':'смен'} на человека в день.</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="ct-datebtn" onclick="rosterShiftDate('${kind}',-1)">‹</button>
+        <div class="ct-date-lbl">${fmtCTDate(st.date)}</div>
+        <button class="ct-datebtn" onclick="rosterShiftDate('${kind}',1)">›</button>
+        ${!isToday?`<button class="btn btn-o btn-sm" onclick="rosterToday('${kind}')">Сегодня</button>`:''}
+      </div>
+    </div>
+    ${linkBanner}
+    ${legend}
+    <div class="roster-grid">${d.slots.map(s=>rosterSlotCard(kind,s)).join('')}</div>
+  `;
+}
+
+function rosterSlotCard(kind,s){
+  const endLbl=String((s.hour+1)%24).padStart(2,'0')+':00';
+  if(s.status==='busy'){
+    const b=s.booking;
+    const canCancel=b.mine||['curator_ad','dep_director','admin','leader'].includes(CU.role);
+    return `<div class="roster-slot roster-slot-busy">
+      ${canCancel?`<button class="roster-slot-cancel" title="Отменить бронь" onclick="cancelRosterSlot('${kind}','${b.id}')">✕</button>`:''}
+      <div class="roster-slot-time">${s.time}–${endLbl}</div>
+      <span class="badge b-${b.role}">${xe(rlbl(b.role))}</span>
+      <div class="roster-slot-name">${xe(b.name)}${b.staticId?` <span style="color:var(--gray)">#${xe(b.staticId)}</span>`:''}</div>
+    </div>`;
+  }
+  if(s.status==='unavailable'){
+    return `<div class="roster-slot roster-slot-off">
+      <div class="roster-slot-time">${s.time}–${endLbl}</div>
+      <div class="roster-slot-off-lbl">недоступно</div>
+    </div>`;
+  }
+  return `<button class="roster-slot roster-slot-free" onclick="bookRosterSlot('${kind}',${s.hour})">
+    <div class="roster-slot-time">${s.time}–${endLbl}</div>
+    <div class="roster-slot-free-lbl">+ Забронировать</div>
+  </button>`;
+}
+
+async function bookRosterSlot(kind,hour){
+  const st=ROSTER_STATE[kind];
+  if(st.busy)return;
+  if(!CU.employee_id){ toast('Сначала свяжите аккаунт с сотрудником ростера','e'); return; }
+  st.busy=true;
+  try{
+    await API.post(`/roster/${kind}`,{date:st.date,hour});
+    toast('Забронировано ✓','s');
+    await loadRosterTab(kind);
+  }catch(e){
+    toast(e.error||'Не удалось забронировать','e');
+    await loadRosterTab(kind);
+  }finally{ st.busy=false; }
+}
+async function cancelRosterSlot(kind,id){
+  const st=ROSTER_STATE[kind];
+  if(st.busy)return;
+  st.busy=true;
+  try{
+    await API.del(`/roster/${kind}/${id}`);
+    toast('Бронь отменена','s');
+    await loadRosterTab(kind);
+  }catch(e){
+    toast(e.error||'Не удалось отменить','e');
+  }finally{ st.busy=false; }
+}
+async function linkMyEmployee(employeeId){
+  try{
+    const r=await API.put('/auth/me/employee',{employee_id:employeeId||null});
+    CU=r.user;
+    toast('Привязка обновлена ✓','s');
+  }catch(e){
+    toast(e.error||'Не удалось сохранить привязку','e');
+  }
+  if(ADHUB_TAB==='duty'||ADHUB_TAB==='shift')await loadRosterTab(ADHUB_TAB);
+}
 async function reloadEditorialData(tab){
   if(tab==='templates')await loadEdTemplates();
   else if(tab==='editorial')await loadEdReference();
@@ -4769,7 +4802,7 @@ async function renderVisitors(){
 }
 
 // Журнал редактирования полей — см. /api/edit-logs (Старший состав AD, Dep. Director, Лидер, Администратор).
-const ELOG_ENTITY_LBL={news:'Новость',service:'Услуга',team_cat:'Категория состава',team_member:'Участник состава',employee:'Сотрудник',contract_slot:'Контракт',bonus:'Премия',user_role:'Роль пользователя',settings:'Настройки сайта',editorial_cat:'Категория справочника'};
+const ELOG_ENTITY_LBL={news:'Новость',service:'Услуга',team_cat:'Категория состава',team_member:'Участник состава',employee:'Сотрудник',contract_slot:'Контракт',bonus:'Премия',user_role:'Роль пользователя',settings:'Настройки сайта',editorial_cat:'Категория справочника',roster_slot:'Дежурство/Смена'};
 async function renderEditLogs(){
   const el=document.getElementById('edit-logs-list');if(!el)return;
   try{
@@ -4820,11 +4853,9 @@ async function renderUsers(){
     const users=await API.get('/users');
     el.innerHTML=users.map(u=>{
       const canRole=u.id!==CU?.id&&canChangeUserRole(u.role);
-      const canReset=u.id!==CU?.id&&CU?.role==='admin';
-      const actions=(canRole?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'')
-                   +(canReset?`<button class="btn btn-o btn-sm" onclick="openAdminResetPassword('${u.id}')">Сбросить пароль</button>`:'');
+      const actions=(canRole?`<button class="btn btn-o btn-sm" onclick="openRoleModal('${u.id}','${u.role}')">Роль</button>`:'');
       return`<tr>
-      <td>${xe(u.name)}</td>
+      <td>${xe(u.name)}${u.discord_username?`<div style="font-size:10px;color:#5865F2">@${xe(u.discord_username)}</div>`:''}</td>
       <td><span style="font-family:monospace;font-size:11px;color:var(--gray)">${xe(u.email)}</span></td>
       <td><span class="badge b-${u.role}">${rlbl(u.role)}</span></td>
       <td>${fd(u.created_at)}</td>
@@ -4938,29 +4969,6 @@ async function saveRole(){
   catch(e){toast(e.error||'Ошибка','e');}
 }
 
-// Сброс пароля пользователя на случайный (только Администратор). Имя берём
-// из уже отрисованной строки таблицы — тем же приёмом, что и в openRoleModal
-// выше, чтобы не тащить имя через onclick (риск сломать атрибут кавычками).
-function openAdminResetPassword(uid){
-  const rows=document.querySelectorAll('#users-tbody tr');
-  let name='пользователя';
-  rows.forEach(tr=>{const btn=tr.querySelector(`[onclick*="${uid}"]`);if(btn)name=tr.cells[0]?.textContent||name;});
-  if(!confirm(`Сбросить пароль для «${name}» на случайный? Со старым паролем войти будет нельзя.`))return;
-  doAdminResetPassword(uid,name);
-}
-async function doAdminResetPassword(uid,name){
-  try{
-    const {password}=await API.post('/users/'+uid+'/reset-password',{});
-    document.getElementById('arr-username').textContent=name;
-    document.getElementById('arr-password').value=password;
-    openModal('modal-admin-reset-result');
-  }catch(e){toast(e.error||'Ошибка','e');}
-}
-function copyResetPassword(){
-  const inp=document.getElementById('arr-password');
-  inp.select();inp.setSelectionRange(0,9999);
-  if(navigator.clipboard)navigator.clipboard.writeText(inp.value).then(()=>toast('Скопировано','s')).catch(()=>{});
-}
 
 function loadTextFields(){
   const tx=SETTINGS.texts||{};
@@ -5040,6 +5048,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   logVisit('home');
   logSiteVisit();
   setTimeout(initReveal,150);
+
+  // После редиректа с /api/auth/discord/callback (см. src/routes/auth.js) —
+  // если что-то пошло не так, сервер возвращает на главную с ?discordError=.
+  // Показываем тост и убираем параметр из адресной строки.
+  const qp=new URLSearchParams(location.search);
+  if(qp.has('discordError')){
+    toast(qp.get('discordError')||'Ошибка входа через Discord','e');
+    qp.delete('discordError');
+    const rest=qp.toString();
+    history.replaceState(null,'',location.pathname+(rest?'?'+rest:''));
+  }
 });
 
 document.addEventListener('keydown',e=>{

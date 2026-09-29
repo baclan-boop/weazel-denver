@@ -91,6 +91,7 @@ app.use('/api', require('./routes/employees'));
 app.use('/api', require('./routes/contracts'));
 app.use('/api', require('./routes/bonuses'));
 app.use('/api', require('./routes/booking'));
+app.use('/api', require('./routes/roster'));
 app.use('/api', require('./routes/upload'));
 app.use('/api', require('./routes/news'));
 app.use('/api', require('./routes/services'));

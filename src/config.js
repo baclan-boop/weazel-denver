@@ -30,33 +30,18 @@ if (!process.env.SESSION_SECRET) {
   console.warn('ВНИМАНИЕ: SESSION_SECRET не задан — используется случайный ключ, сгенерированный при старте. Все пользователи будут разлогинены при следующем перезапуске/редеплое. Задайте SESSION_SECRET в переменных окружения, чтобы это исправить.');
 }
 
-const BCRYPT_ROUNDS = 12;
-
 // Учётка администратора, создаваемая при первом запуске (см. initDB в db.js).
-// ВАЖНО: раньше здесь стоял ФИКСИРОВАННЫЙ пароль прямо в коде. Это серьёзная
-// дыра — такой пароль виден каждому, у кого есть исходники (архив, репозиторий
-// на GitHub и т.п.), то есть потенциально кому угодно, а не только владельцу
-// сайта. Теперь, если ADMIN_EMAIL/ADMIN_PASSWORD не заданы явно в переменных
-// окружения, вместо фиксированного значения генерируется СЛУЧАЙНЫЙ пароль при
-// каждом старте процесса (тот же приём, что и для SESSION_SECRET выше) и
-// печатается в лог — заберите его оттуда при первом запуске.
-// ЕСЛИ САЙТ УЖЕ РАБОТАЕТ И АДМИН-АККАУНТ УЖЕ СОЗДАН СТАРЫМ КОДОМ: этот фикс
-// не меняет пароль у уже существующей учётки в базе (initDB создаёт админа,
-// только если его ещё нет) — обязательно смените пароль вручную через
-// профиль на самом сайте (см. PUT /api/auth/password), это не заменяет
-// правку кода, а дополняет её.
+// Входа по паролю на сайте больше нет — единственный способ войти
+// (в том числе в этот самый начальный аккаунт) — через Discord OAuth
+// ниже. Поэтому пароль этой учётке больше не нужен: initDB заводит её
+// сразу с ADMIN_EMAIL и БЕЗ пароля (pwd_hash = NULL), а войти в неё
+// получится, когда кто-то авторизуется через Discord-аккаунт с ТЕМ ЖЕ
+// подтверждённым (verified) email — см. подробности в src/routes/auth.js
+// (там аккаунт по email автоматически привяжется к Discord при первом входе).
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@localhost';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomBytes(9).toString('base64url');
 const ADMIN_NAME = process.env.ADMIN_NAME || 'degrees';
-if (!process.env.ADMIN_PASSWORD) {
-  console.warn('═══════════════════════════════════════════════════════════════');
-  console.warn('ВНИМАНИЕ: ADMIN_PASSWORD не задан — сгенерирован случайный пароль');
-  console.warn('для НОВОГО администратора (если он ещё не создан в базе):');
-  console.warn('  Email:  ' + ADMIN_EMAIL);
-  console.warn('  Пароль: ' + ADMIN_PASSWORD);
-  console.warn('Задайте ADMIN_EMAIL и ADMIN_PASSWORD в переменных окружения,');
-  console.warn('иначе при каждом перезапуске будет новый случайный пароль.');
-  console.warn('═══════════════════════════════════════════════════════════════');
+if (!process.env.ADMIN_EMAIL) {
+  console.warn('ВНИМАНИЕ: ADMIN_EMAIL не задан — начальный администратор будет создан с email admin@localhost, войти в него будет некому (Discord-аккаунтов с таким email не бывает). Задайте ADMIN_EMAIL в переменных окружения — тот email, который подтверждён (verified) на ВАШЕМ Discord-аккаунте, чтобы именно вы получили роль Администратора при первом входе через Discord.');
 }
 
 // Cloudinary — постоянное хранилище для загруженных картинок (см.
@@ -70,13 +55,35 @@ const CLOUDINARY_ENABLED    = !!(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && 
 // Google Apps Script (поиск свободных слотов для объявлений) — см. src/routes/booking.js.
 const GOOGLE_APPS_SCRIPT_URL = process.env.GOOGLE_APPS_SCRIPT_URL;
 
+// Авторизация через Discord (OAuth2) — см. src/routes/auth.js
+// (GET /api/auth/discord, /api/auth/discord/callback). ЕДИНСТВЕННЫЙ способ
+// входа на сайт — обычного входа по почте/паролю больше нет.
+// Как получить эти 3 переменные — см. ШАГ «DISCORD OAUTH» в README.md.
+// DISCORD_REDIRECT_URI должен быть ПОЛНЫМ адресом (со схемой https:// и
+// доменом сайта), например https://weazel-news.onrender.com/api/auth/discord/callback,
+// и должен быть добавлен в Discord Developer Portal → OAuth2 → Redirects
+// СИМВОЛ В СИМВОЛ (включая /api/auth/discord/callback в конце).
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
+const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || '';
+const DISCORD_ENABLED = !!(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET && DISCORD_REDIRECT_URI);
+if (!DISCORD_ENABLED) {
+  console.warn('═══════════════════════════════════════════════════════════════');
+  console.warn('ВНИМАНИЕ: вход через Discord НЕ настроен (не заданы');
+  console.warn('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET / DISCORD_REDIRECT_URI).');
+  console.warn('Входа по почте/паролю на сайте больше нет — пока эти переменные');
+  console.warn('не заданы, войти на сайт НИКТО НЕ СМОЖЕТ. См. ШАГ «DISCORD OAUTH» в README.md.');
+  console.warn('═══════════════════════════════════════════════════════════════');
+}
+
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 module.exports = {
-  PORT, IS_PROD, DATABASE_URL, SESSION_SECRET, BCRYPT_ROUNDS,
-  ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME,
+  PORT, IS_PROD, DATABASE_URL, SESSION_SECRET,
+  ADMIN_EMAIL, ADMIN_NAME,
   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, CLOUDINARY_ENABLED,
   GOOGLE_APPS_SCRIPT_URL,
   UPLOADS_DIR,
+  DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_ENABLED,
 };

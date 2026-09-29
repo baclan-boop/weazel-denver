@@ -3,7 +3,6 @@
  */
 'use strict';
 const { Pool }     = require('pg');
-const bcrypt       = require('bcrypt');
 const { v4: uuid } = require('uuid');
 const config       = require('./config');
 const editorialSeed = require('./utils/editorialSeed');
@@ -198,6 +197,48 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_editorial_categories_grp ON editorial_categories(tab, group_key, sort_order);
   `);
 
+  // ─── Модуль «Дежурства» / «Смены» (бронирование почасовых слотов отдела
+  // рекламы, см. src/routes/roster.js) + авторизация через Discord ───
+  // users.employee_id — привязка аккаунта к строке ростера employees
+  // (имя персонажа + Static ID) — при бронировании слота эти данные
+  // берутся именно отсюда, а не вводятся вручную. UNIQUE — один сотрудник
+  // ростера не может быть привязан к двум разным аккаунтам одновременно
+  // (Postgres допускает сколько угодно NULL в UNIQUE-колонке, так что не
+  // у всех пользователей привязка обязательна).
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_id TEXT UNIQUE REFERENCES employees(id) ON DELETE SET NULL`);
+  // discord_id/discord_username/discord_avatar — авторизация через Discord
+  // (см. GET /api/auth/discord и /api/auth/discord/callback в
+  // src/routes/auth.js). Не заменяет вход по почте/паролю — оба способа
+  // работают одновременно, у аккаунта, заведённого через Discord, просто
+  // не будет pwd_hash/email, поэтому эти два столбца ниже освобождены от NOT NULL.
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_id TEXT UNIQUE`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_username TEXT DEFAULT ''`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS discord_avatar TEXT DEFAULT ''`);
+  await query(`ALTER TABLE users ALTER COLUMN pwd_hash DROP NOT NULL`);
+  await query(`ALTER TABLE users ALTER COLUMN email DROP NOT NULL`);
+
+  // roster_slots — сами бронирования: 1 строка = 1 занятый почасовой слот
+  // (kind различает «Дежурства»/«Смены» — это два независимых расписания).
+  // emp_name/emp_static_id/role_snap — снимок на момент бронирования (как
+  // и в contract_slots/pending_contracts выше), чтобы запись оставалась
+  // читаемой, даже если потом сотрудника переименуют или сменят роль.
+  await query(`
+    CREATE TABLE IF NOT EXISTS roster_slots (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL CHECK(kind IN ('duty','shift')),
+      slot_date DATE NOT NULL,
+      slot_hour INTEGER NOT NULL CHECK(slot_hour BETWEEN 0 AND 23),
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+      emp_name TEXT NOT NULL DEFAULT '',
+      emp_static_id TEXT DEFAULT '',
+      role_snap TEXT DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(kind, slot_date, slot_hour)
+    );
+    CREATE INDEX IF NOT EXISTS idx_roster_slots_date ON roster_slots(kind, slot_date);
+    CREATE INDEX IF NOT EXISTS idx_roster_slots_user ON roster_slots(user_id, kind, slot_date);
+  `);
+
   // Миграция: шрифт для описания (должности) участника состава
   await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_font TEXT DEFAULT ''`);
 
@@ -234,12 +275,16 @@ async function initDB() {
     console.log('editorial_categories: загружены исходные данные (' + editorialSeed.length + ' категорий)');
   }
 
+  // Начальный администратор: создаётся сразу БЕЗ пароля (pwd_hash=NULL) —
+  // входа по паролю на сайте больше нет, попасть в этот аккаунт можно
+  // только через Discord OAuth (см. src/routes/auth.js), войдя Discord-
+  // аккаунтом с тем же подтверждённым (verified) email, что задан в
+  // ADMIN_EMAIL — тогда он автоматически привяжется именно к этой записи.
   const ex = await query('SELECT id FROM users WHERE email=$1', [config.ADMIN_EMAIL.toLowerCase()]);
   if (!ex.rows.length) {
-    const hash = await bcrypt.hash(config.ADMIN_PASSWORD, config.BCRYPT_ROUNDS);
     await query('INSERT INTO users (id,name,email,pwd_hash,role) VALUES ($1,$2,$3,$4,$5)',
-      [uuid(), config.ADMIN_NAME, config.ADMIN_EMAIL.toLowerCase(), hash, 'admin']);
-    console.log('Администратор создан:', config.ADMIN_EMAIL);
+      [uuid(), config.ADMIN_NAME, config.ADMIN_EMAIL.toLowerCase(), null, 'admin']);
+    console.log('Администратор создан:', config.ADMIN_EMAIL, '— войти можно через Discord-аккаунт с этим же email');
   }
   console.log('База данных готова');
 }

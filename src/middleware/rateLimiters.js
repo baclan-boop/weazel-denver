@@ -2,6 +2,10 @@
 const rateLimit = require('express-rate-limit');
 const { hashIP } = require('../utils/helpers');
 
+// Раньше защищал вход по почте/паролю от перебора; пароля на сайте
+// больше нет, но лимитер остался полезен — навешен на GET /api/auth/discord
+// (см. src/routes/auth.js), чтобы никто не мог задудосить редирект на
+// Discord/насоздавать кучу сессий подряд.
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Слишком много попыток. Подождите 15 минут.' }, keyGenerator: r => hashIP(r.ip) });
 // max поднят с 200 до 600: лимит считается по IP, а провайдеры (особенно
 // мобильные операторы в РФ) очень часто пускают тысячи РАЗНЫХ реальных

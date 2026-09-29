@@ -1,12 +1,9 @@
 'use strict';
 const express = require('express');
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
 const { query } = require('../db');
-const config = require('../config');
 const { maskEmail } = require('../utils/helpers');
 const { logFieldEdit, EDIT_LOG_FIELD_LABELS } = require('../utils/editLog');
-const { requireUserMgmt, requireAdmin } = require('../middleware/auth');
+const { requireUserMgmt } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -15,7 +12,7 @@ const router = express.Router();
 // Кто какую РОЛЬ может НАЗНАЧАТЬ — см. подробную проверку внутри
 // PUT /api/users/:id/role ниже: у Администратора полная свобода, у
 // Лидера/Dep. Director и у Старший состав AD — разный ограниченный набор.
-router.get('/users', requireUserMgmt, async (req, res) => { const r = await query('SELECT id,name,email,role,created_at,last_login FROM users ORDER BY created_at'); res.json(r.rows.map(u => ({ ...u, email: maskEmail(u.email) }))); });
+router.get('/users', requireUserMgmt, async (req, res) => { const r = await query('SELECT id,name,email,role,discord_username,created_at,last_login FROM users ORDER BY created_at'); res.json(r.rows.map(u => ({ ...u, email: maskEmail(u.email) }))); });
 
 // «Средние» роли, доступные для назначения Лидеру (см. ниже).
 const MID_ROLES = ['guest', 'advertising', 'curator_ad', 'editor', 'dep_director'];
@@ -56,35 +53,6 @@ router.put('/users/:id/role', requireUserMgmt, async (req, res) => {
 
   await logFieldEdit(req, 'user_role', req.params.id, beforeR.rows[0].name, beforeR.rows[0], { role }, EDIT_LOG_FIELD_LABELS.user_role);
   res.json({ ok: true });
-});
-
-// Случайный пароль без букв 0/O/1/l/I (чтобы админ не путал при передаче
-// голосом/в чат) — администратор видит его в ответе и передаёт пользователю
-// сам (Discord и т.п.), тот входит с ним и меняет на свой через «Сменить
-// пароль» в личном кабинете (см. PUT /api/auth/password в src/routes/auth.js).
-function generateRandomPassword(len = 10) {
-  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let out = '';
-  for (let i = 0; i < len; i++) out += chars[crypto.randomInt(chars.length)];
-  return out;
-}
-
-router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
-  try {
-    const r = await query('SELECT id,name FROM users WHERE id=$1', [req.params.id]);
-    const target = r.rows[0];
-    if (!target) return res.status(404).json({ error: 'Пользователь не найден' });
-
-    const newPassword = generateRandomPassword();
-    const hash = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
-    await query('UPDATE users SET pwd_hash=$1 WHERE id=$2', [hash, target.id]);
-    // Гасим все активные сессии этого пользователя — со старым паролем
-    // никто (в т.ч. если доступ был скомпрометирован) не остаётся залогинен.
-    await query(`DELETE FROM session WHERE sess->>'userId' = $1`, [target.id]);
-
-    await logFieldEdit(req, 'user_password', target.id, target.name, { password: '—' }, { password: 'сброшен администратором' }, EDIT_LOG_FIELD_LABELS.user_password);
-    res.json({ ok: true, password: newPassword });
-  } catch (e) { console.error(e.message); res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
 module.exports = router;
