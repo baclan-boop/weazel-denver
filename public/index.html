@@ -432,12 +432,13 @@ body.is-admin .ite-wrap:hover{outline:1px dashed rgba(232,25,44,.35);border-radi
   .mob-hide-name{display:none!important}
   /* mob-nav управляется JS, изначально скрыт */
 }
-#mob-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;flex-direction:column;gap:5px;flex-shrink:0}
+#mob-menu-btn{display:flex;background:none;border:none;cursor:pointer;padding:6px;flex-direction:column;gap:5px;flex-shrink:0}
 #mob-menu-btn span{display:block;width:22px;height:2px;background:var(--white);border-radius:1px;transition:.3s}
 #mob-menu-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 #mob-menu-btn.open span:nth-child(2){opacity:0}
 #mob-menu-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-#mob-nav{display:none;position:fixed;top:92px;left:0;right:0;z-index:998;background:rgba(10,10,10,0.98);backdrop-filter:blur(16px);border-bottom:1px solid var(--red-dark);padding:12px 0}
+#main-nav{display:none!important}
+#mob-nav{display:none;position:fixed;top:64px;right:0;width:min(320px,100%);max-height:calc(100vh - 64px);overflow-y:auto;z-index:998;border-left:1px solid var(--red-dark);background:rgba(10,10,10,0.98);backdrop-filter:blur(16px);border-bottom:1px solid var(--red-dark);padding:12px 0}
 #mob-nav .mnl{display:block;width:100%;background:none;border:none;color:rgba(var(--ovl),.8);font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:12px 1.5rem;text-align:left;cursor:pointer;transition:.2s;border-left:2px solid transparent}
 #mob-nav .mnl:hover,#mob-nav .mnl.active{color:var(--red);border-left-color:var(--red);background:rgba(232,25,44,.06)}
 #mob-nav .mnl-admin{background:var(--red)!important;color:var(--white)!important;margin:10px 1.5rem;border-radius:var(--r);border-left:none!important;width:calc(100% - 3rem)!important;text-align:center!important;font-weight:700}
@@ -1943,7 +1944,6 @@ function renderHeader(){
       ${CU.discord_avatar?`<img src="${xe(CU.discord_avatar)}" alt="" class="mob-hide-btn" style="width:20px;height:20px;border-radius:50%">`:''}
       <span style="font-size:11px;color:var(--gray);cursor:pointer" class="mob-hide-name" title="Изменить ник" onclick="openNicknameModal()">${xe(CU.name)} ✎</span>
       <span class="badge b-${CU.role} mob-hide-badge">${rlbl(CU.role)}</span>
-      ${canAds()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('adhub')">Реклама</button>`:''}
       ${canOpenPanel()?`<button class="btn btn-o btn-sm mob-hide-btn" onclick="showPage('admin')">Панель</button>`:''}
       <button class="btn btn-o btn-sm mob-hide-btn" onclick="logout()">Выйти</button>
     </div>`;
@@ -1951,7 +1951,6 @@ function renderHeader(){
       <div style="font-size:12px;color:var(--gray);margin-bottom:10px;padding-top:4px;padding-left:1.5rem">${xe(CU.name)} · <span class="badge b-${CU.role}">${rlbl(CU.role)}</span></div>
       <button class="mnl" onclick="openNicknameModal();closeMobMenu()">✎ Изменить ник</button>
       ${canEdit()?`<button class="mnl" onclick="openNewsModal();closeMobMenu()" style="color:var(--red);font-weight:700">+ Добавить новость</button>`:''}
-      ${canAds()?`<button class="mnl" onclick="showPage('adhub');closeMobMenu()">📢 Реклама</button>`:''}
       ${canOpenPanel()?`<button class="mnl mnl-admin" onclick="showPage('admin');closeMobMenu()">⚙ Панель управления</button>`:''}
       <div class="mob-divider"></div>
       <button class="mnl" onclick="logout();closeMobMenu()" style="color:rgba(var(--ovl),.4);font-size:11px;padding:8px 1.5rem">Выйти из аккаунта</button>`;
@@ -1959,7 +1958,7 @@ function renderHeader(){
     ac.innerHTML=`<button class="btn btn-o btn-sm" onclick="showPage('auth')">Войти</button>`;
     if(mob)mob.innerHTML=`<button class="mnl" onclick="showPage('auth');closeMobMenu()">Войти</button>`;
   }
-  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===curPage));
+  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===(curPage==='adhub'?'home':curPage)));
 }
 
 function toggleMobMenu(){
@@ -1979,6 +1978,8 @@ function closeMobMenu(){
 // ══════════════════════════════════════════════
 let curPage='home';
 async function showPage(page){
+  // У тех, кому доступна «Реклама», главная страница — это панель «Реклама»
+  if(page==='home'&&canAds())page='adhub';
   if(page==='admin'&&!canOpenPanel()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   if(page==='adhub'&&!canAds()){toast('Нет доступа','e');showPage(CU?'home':'auth');return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1996,7 +1997,7 @@ async function showPage(page){
   if(page==='about')loadAbout();
   if(page==='admin')await renderAdmin();
   if(page==='adhub')await initAdHub();
-  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===page));
+  document.querySelectorAll('#mob-nav [data-mob-page]').forEach(b=>b.classList.toggle('active',b.dataset.mobPage===(page==='adhub'?'home':page)));
   setTimeout(initReveal,80);
 }
 
@@ -5115,6 +5116,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   logVisit('home');
   logSiteVisit();
   setTimeout(initReveal,150);
+  if(canAds())showPage('home'); // главная = «Реклама»
 
   // После редиректа с /api/auth/discord/callback (см. src/routes/auth.js) —
   // если что-то пошло не так, сервер возвращает на главную с ?discordError=.
