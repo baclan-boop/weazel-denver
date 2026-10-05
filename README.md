@@ -926,7 +926,7 @@ Render при старте будет предупреждение "Вход ч�
   credentials:'include',body:JSON.stringify({dutySchedule:{startHour:13,endHour:24}})})
 
   fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},
-  credentials:'include',body:JSON.stringify({shiftSchedule:{startHour:0,endHour:24}})})
+  credentials:'include',body:JSON.stringify({shiftSchedule:{startHour:13,endHour:24}})})
 
 endHour не входит в диапазон (13..24 значит часы 13,14,...,23).
 

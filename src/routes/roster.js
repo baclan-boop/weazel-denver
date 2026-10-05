@@ -23,7 +23,11 @@ const router = express.Router();
 // и отдельно для «Смен» за один день (т.е. до 2 «Дежурств» + до 2 «Смен»
 // в один и тот же день) — так как это две разные роли/расписания.
 //
-// Бронь всегда идёт от лица ТЕКУЩЕГО аккаунта: имя персонажа и Static ID
+// Старший состав AD и выше (MANAGER_ROLES) дополнительно может НАЗНАЧАТЬ
+// любого активного сотрудника ростера на свободный час (POST с employee_id).
+// Назначение пишется в журнал «Логи», лимит MAX_PER_DAY на него не действует.
+//
+// Обычная бронь идёт от лица ТЕКУЩЕГО аккаунта: имя персонажа и Static ID
 // берутся из привязанной записи ростера (users.employee_id — см.
 // PUT /api/auth/me/employee в src/routes/auth.js), а не вводятся вручную,
 // поэтому сначала нужно один раз связать аккаунт с собой в ростере.
@@ -71,6 +75,7 @@ router.get('/roster/:kind', requireAdvertising, async (req, res) => {
         staticId: b.emp_static_id,
         role: b.role_snap,
         mine: b.user_id === req.user.id,
+        assigned: !!b.assigned_by,
       } : null,
     };
   });
@@ -87,6 +92,7 @@ router.get('/roster/:kind', requireAdvertising, async (req, res) => {
     myCount,
     maxPerDay: MAX_PER_DAY,
     needsEmployee: !req.user.employee_id,
+    canAssign: MANAGER_ROLES.includes(req.user.role),
   });
 });
 
@@ -100,7 +106,15 @@ router.post('/roster/:kind', requireAdvertising, async (req, res) => {
     return res.status(400).json({ error: 'Некорректные дата или час' });
   }
 
-  if (!req.user.employee_id) {
+  const isManager = MANAGER_ROLES.includes(req.user.role);
+  const assignId = req.body.employee_id ? String(req.body.employee_id) : null;
+  if (assignId && !isManager) {
+    return res.status(403).json({ error: 'Назначать на смены и дежурства может только Старший состав AD и выше' });
+  }
+
+  // Кого ставим в слот: выбранного сотрудника (назначение) или себя (обычная бронь)
+  const targetEmpId = assignId || req.user.employee_id;
+  if (!targetEmpId) {
     return res.status(400).json({ error: 'Сначала свяжите аккаунт с собой в ростере сотрудников', needsEmployee: true });
   }
 
@@ -113,24 +127,51 @@ router.post('/roster/:kind', requireAdvertising, async (req, res) => {
     return res.status(400).json({ error: 'Это время уже недоступно' });
   }
 
-  const emp = await query('SELECT * FROM employees WHERE id=$1', [req.user.employee_id]);
-  if (!emp.rows.length) return res.status(400).json({ error: 'Привязанный сотрудник не найден, обратитесь к руководству отдела' });
+  const emp = await query('SELECT * FROM employees WHERE id=$1', [targetEmpId]);
+  if (!emp.rows.length) {
+    return res.status(400).json({ error: assignId ? 'Сотрудник не найден' : 'Привязанный сотрудник не найден, обратитесь к руководству отдела' });
+  }
+  if (assignId && !emp.rows[0].active) return res.status(400).json({ error: 'Этот сотрудник неактивен' });
 
-  const cnt = await query(
-    'SELECT COUNT(*)::int AS n FROM roster_slots WHERE kind=$1 AND slot_date=$2 AND user_id=$3',
-    [kind, date, req.user.id]
-  );
-  if (cnt.rows[0].n >= MAX_PER_DAY) {
-    return res.status(400).json({ error: `Не больше ${MAX_PER_DAY} ${kind === 'duty' ? 'дежурств' : 'смен'} на человека в день` });
+  // Аккаунт назначаемого сотрудника (если он привязан к ростеру) — чтобы слот
+  // считался его «моим» и он мог сам отменить бронь. Если аккаунта нет — NULL.
+  let slotUserId = req.user.id;
+  let roleSnap = req.user.role;
+  if (assignId) {
+    const u = await query('SELECT id, role FROM users WHERE employee_id=$1 LIMIT 1', [assignId]);
+    slotUserId = u.rows.length ? u.rows[0].id : null;
+    roleSnap = u.rows.length ? u.rows[0].role : 'advertising';
+  }
+
+  // Лимит «не больше 2 в день» — только для самостоятельной записи
+  if (!assignId) {
+    const cnt = await query(
+      `SELECT COUNT(*)::int AS n FROM roster_slots
+       WHERE kind=$1 AND slot_date=$2 AND (employee_id=$3 OR (employee_id IS NULL AND user_id=$4))`,
+      [kind, date, targetEmpId, req.user.id]
+    );
+    if (cnt.rows[0].n >= MAX_PER_DAY) {
+      return res.status(400).json({ error: `Не больше ${MAX_PER_DAY} ${kind === 'duty' ? 'дежурств' : 'смен'} на человека в день` });
+    }
   }
 
   try {
     const id = uuid();
     await query(
-      `INSERT INTO roster_slots (id,kind,slot_date,slot_hour,user_id,emp_name,emp_static_id,role_snap)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [id, kind, date, hour, req.user.id, emp.rows[0].name, emp.rows[0].static_id || '', req.user.role]
+      `INSERT INTO roster_slots (id,kind,slot_date,slot_hour,user_id,emp_name,emp_static_id,role_snap,employee_id,assigned_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [id, kind, date, hour, slotUserId, emp.rows[0].name, emp.rows[0].static_id || '', roleSnap, targetEmpId, assignId ? req.user.id : null]
     );
+
+    if (assignId) {
+      try {
+        const label = `${kind === 'duty' ? 'Дежурство' : 'Смена'} ${fmtHour(hour)} ${date} — ${emp.rows[0].name}`;
+        await query(
+          `INSERT INTO edit_logs (id,user_id,user_name,entity,entity_id,entity_label,changes) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [uuid(), req.user.id, req.user.name, 'roster_slot', id, label, JSON.stringify([{ field: 'Бронь', before: '—', after: 'назначен: ' + emp.rows[0].name }])]
+        );
+      } catch (e) { console.error('roster assign log error:', e.message); }
+    }
     res.json({ ok: true, id });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Это время уже занято — обновите страницу' });

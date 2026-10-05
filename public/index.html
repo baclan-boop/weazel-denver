@@ -591,21 +591,25 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
 .roster-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .roster-dot-free{background:#2ed573}
 .roster-dot-busy{background:var(--red)}
-.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.roster-slot{position:relative;border-radius:var(--r);padding:10px 12px;text-align:left;font-family:inherit;cursor:default;min-height:74px;display:flex;flex-direction:column;gap:4px;justify-content:center}
+.roster-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.roster-col{min-width:0}
+.roster-col-hdr{font-family:var(--font-d);font-size:18px;letter-spacing:1px;color:var(--ink);margin-bottom:2px}
+.roster-grid{display:flex;flex-direction:column;gap:8px}
+.roster-slot{position:relative;border-radius:var(--r);padding:8px 12px;text-align:left;font-family:inherit;cursor:default;min-height:48px;display:flex;flex-direction:row;flex-wrap:wrap;gap:4px 10px;justify-content:flex-start;align-items:center;width:100%}
+.roster-slot .roster-slot-time{min-width:92px}
 .roster-slot-time{font-family:var(--font-d);font-size:13px;letter-spacing:.5px;color:var(--ink)}
 .roster-slot-free{background:rgba(46,213,115,.08);border:1px solid rgba(46,213,115,.3);cursor:pointer;transition:var(--tr)}
 .roster-slot-free:hover{background:rgba(46,213,115,.16);border-color:#2ed573}
 .roster-slot-free-lbl{font-size:11px;color:#2ed573;font-weight:600}
-.roster-slot-busy{background:rgba(232,25,44,.06);border:1px solid rgba(232,25,44,.25)}
+.roster-slot-busy{background:rgba(232,25,44,.06);border:1px solid rgba(232,25,44,.25);padding-right:38px}
 .roster-slot-busy .badge{width:fit-content}
 .roster-slot-name{font-size:12px;color:var(--ink)}
 .roster-slot-off{background:rgba(var(--ovl),.03);border:1px solid rgba(var(--ovl),.07);opacity:.55}
 .roster-slot-off-lbl{font-size:11px;color:var(--gray)}
-.roster-slot-cancel{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(var(--ovl),.08);color:var(--gray);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
+.roster-slot-cancel{position:absolute;top:50%;transform:translateY(-50%);right:8px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(var(--ovl),.08);color:var(--gray);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr)}
 .roster-slot-cancel:hover{background:var(--red);color:#fff}
-@media(max-width:600px){
-  .roster-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+@media(max-width:820px){
+  .roster-cols{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   .stats-hdr-row{flex-direction:column;align-items:flex-start}
@@ -1067,8 +1071,7 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <button class="subtab plain" id="adhub-tab-stats" onclick="switchAdHubTab('stats')">Статистика</button>
         <button class="subtab plain" id="adhub-tab-templates" onclick="switchAdHubTab('templates')">Шаблоны объявлений</button>
         <button class="subtab plain" id="adhub-tab-editorial" onclick="switchAdHubTab('editorial')">Редактура</button>
-        <button class="subtab plain" id="adhub-tab-duty" onclick="switchAdHubTab('duty')">Дежурства</button>
-        <button class="subtab plain" id="adhub-tab-shift" onclick="switchAdHubTab('shift')">Смены</button>
+        <button class="subtab plain" id="adhub-tab-duty" onclick="switchAdHubTab('duty')">Дежурства и смены</button>
       </div>
 
       <!-- ОБЪЯВЛЕНИЯ -->
@@ -1353,14 +1356,13 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
         <div id="ed-ref-body"><div class="fhint">Загрузка...</div></div>
       </div>
 
-      <!-- ДЕЖУРСТВА -->
+      <!-- ДЕЖУРСТВА И СМЕНЫ — два столбика -->
       <div class="adhub-tab" id="adhub-duty">
-        <div id="roster-duty-body"><div class="fhint">Загрузка...</div></div>
-      </div>
-
-      <!-- СМЕНЫ -->
-      <div class="adhub-tab" id="adhub-shift">
-        <div id="roster-shift-body"><div class="fhint">Загрузка...</div></div>
+        <div id="roster-top"></div>
+        <div class="roster-cols">
+          <div class="roster-col" id="roster-duty-body"><div class="fhint">Загрузка...</div></div>
+          <div class="roster-col" id="roster-shift-body"><div class="fhint">Загрузка...</div></div>
+        </div>
       </div>
 
     </div>
@@ -1552,6 +1554,24 @@ table.ct-table{width:100%;border-collapse:collapse;min-width:920px}
       <div class="mfoot">
         <button class="btn btn-o btn-sm" onclick="closeModal('modal-nickname')">Отмена</button>
         <button class="btn btn-p btn-sm" onclick="saveNickname()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROSTER ASSIGN MODAL (назначение на смену/дежурство) -->
+<div class="mo" id="modal-roster-assign">
+  <div class="modal">
+    <div class="mhdr"><div class="mttl" id="roster-assign-title">Назначить на смену</div><button class="mclose" onclick="closeModal('modal-roster-assign')">✕</button></div>
+    <div class="mbody">
+      <div class="acard-sub" id="roster-assign-sub" style="margin-bottom:12px"></div>
+      <div class="fg">
+        <label class="fl">Сотрудник *</label>
+        <div id="roster-assign-combo-wrap"></div>
+      </div>
+      <div class="mfoot">
+        <button class="btn btn-o btn-sm" onclick="closeModal('modal-roster-assign')">Отмена</button>
+        <button class="btn btn-p btn-sm" onclick="submitRosterAssign()">Назначить</button>
       </div>
     </div>
   </div>
@@ -2029,10 +2049,10 @@ function adHubAllowedTabs(){
   // справочные таблицы, видны Advertising Dept. и выше (см. canAds()).
   // «Дежурства»/«Смены» — бронирование почасовых слотов, тот же уровень
   // доступа, что у остальных подвкладок «Реклама» (см. src/routes/roster.js).
-  if(canAds())t.push('ads','calc','contracts','stats','templates','editorial','duty','shift');
+  if(canAds())t.push('ads','calc','contracts','stats','templates','editorial','duty');
   return t;
 }
-const ADHUB_ALL_TABS=['ads','calc','contracts','stats','templates','editorial','duty','shift'];
+const ADHUB_ALL_TABS=['ads','calc','contracts','stats','templates','editorial','duty'];
 let ADHUB_TAB='ads';
 async function switchAdHubTab(tab){
   const allowed=adHubAllowedTabs();
@@ -2059,8 +2079,7 @@ async function switchAdHubTab(tab){
   if(tab==='stats')await loadStatsTab(STATS_STATE.offset);
   if(tab==='templates')await loadEdTemplates();
   if(tab==='editorial')await loadEdReference();
-  if(tab==='duty')await loadRosterTab('duty');
-  if(tab==='shift')await loadRosterTab('shift');
+  if(tab==='duty')await loadRosterAll();
 }
 async function initAdHub(){
   const dateInput=document.getElementById('ads-start-date-input');
@@ -4200,7 +4219,7 @@ async function loadEdReference(){ EDITORIAL_REF_DATA=await API.get('/editorial?t
 // ══════════════════════════════════════════════
 // ДЕЖУРСТВА / СМЕНЫ — бронирование почасовых слотов отдела рекламы
 // (см. src/routes/roster.js). kind: 'duty' (Дежурства) | 'shift' (Смены,
-// круглосуточно). У каждого часа — статус «свободно» (можно забронировать
+// 13:00–23:59, как и дежурства). У каждого часа — статус «свободно» (можно забронировать
 // себя одним кликом) / «занято» (кто именно — видно всем, с ролью и Static
 // ID) / «недоступно» (час на сегодняшнюю дату уже прошёл). Лимит — не
 // больше ROSTER_MAX_PER_DAY на человека в день, ОТДЕЛЬНО по каждой из
@@ -4235,50 +4254,59 @@ async function loadRosterTab(kind){
   }
   renderRosterTab(kind);
 }
-function rosterShiftDate(kind,days){ ROSTER_STATE[kind].date=shiftISO(ROSTER_STATE[kind].date,days); loadRosterTab(kind); }
-function rosterToday(kind){ ROSTER_STATE[kind].date=new Date().toISOString().slice(0,10); loadRosterTab(kind); }
-function toggleRosterRelink(kind){ const box=document.getElementById('roster-relink-'+kind); if(box)box.style.display=box.style.display==='none'?'':'none'; }
+// Дата общая для обоих столбиков (Дежурства и Смены всегда показывают один и тот же день)
+function rosterShiftDate(kind,days){ const d=shiftISO(ROSTER_STATE.duty.date,days); ROSTER_STATE.duty.date=d; ROSTER_STATE.shift.date=d; loadRosterAll(); }
+function rosterToday(kind){ const d=new Date().toISOString().slice(0,10); ROSTER_STATE.duty.date=d; ROSTER_STATE.shift.date=d; loadRosterAll(); }
+function toggleRosterRelink(){ const box=document.getElementById('roster-relink'); if(box)box.style.display=box.style.display==='none'?'':'none'; }
+async function loadRosterAll(){
+  await ensureEmployeesLoaded();
+  await Promise.all([loadRosterTab('duty'),loadRosterTab('shift')]);
+}
+function renderRosterTop(){
+  const el=document.getElementById('roster-top');
+  const d=(ROSTER_STATE.duty.data||ROSTER_STATE.shift.data);
+  if(!el||!d)return;
+  const date=ROSTER_STATE.duty.date;
+  const isToday=date===new Date().toISOString().slice(0,10);
+  const me=rosterMyEmployee();
+  const linkPicker=`<div style="max-width:320px">${empComboMarkup('roster-link-emp',CU.employee_id||'',{formStyle:true})}</div>`;
+  const linkBlock=d.needsEmployee?`
+    <div class="acard" style="border-color:rgba(232,25,44,.35);margin-bottom:14px">
+      <div class="acard-title" style="font-size:14px">Сначала свяжите аккаунт с собой в ростере</div>
+      <div class="acard-sub" style="margin-bottom:10px">Чтобы бронировать дежурства и смены, укажите, кто вы в списке сотрудников — оттуда будут браться имя персонажа и Static ID при брони.</div>
+      ${linkPicker}
+    </div>`:`
+    <div class="acard-sub" style="margin-bottom:6px">Бронируете как <b style="color:var(--ink)">${xe(me?me.name:CU.name)}</b>${me&&me.static_id?` <span style="color:var(--gray)">#${xe(me.static_id)}</span>`:''} · <a href="#" onclick="event.preventDefault();toggleRosterRelink()" style="color:var(--gray);text-decoration:underline">изменить привязку</a></div>
+    <div id="roster-relink" style="display:none;margin:6px 0 14px">${linkPicker}</div>`;
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="acard-sub" style="margin:0">Не больше ${d.maxPerDay} дежурств и ${d.maxPerDay} смен на человека в день.${d.canAssign?' Старший состав AD и выше может назначать сотрудников кнопкой «Назначить» (лимит на назначение не действует).':''}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="ct-datebtn" onclick="rosterShiftDate('duty',-1)">‹</button>
+        <div class="ct-date-lbl">${fmtCTDate(date)}</div>
+        <button class="ct-datebtn" onclick="rosterShiftDate('duty',1)">›</button>
+        ${!isToday?`<button class="btn btn-o btn-sm" onclick="rosterToday('duty')">Сегодня</button>`:''}
+      </div>
+    </div>
+    ${linkBlock}`;
+}
 
 function renderRosterTab(kind){
   const el=document.getElementById('roster-'+kind+'-body');
   const st=ROSTER_STATE[kind];
   const d=st.data;
   if(!el||!d)return;
+  renderRosterTop();
 
-  const today=new Date().toISOString().slice(0,10);
-  const isToday=st.date===today;
-  const me=rosterMyEmployee();
-
-  const linkPicker=`<div style="max-width:320px">${empComboMarkup('roster-link-emp',CU.employee_id||'',{formStyle:true})}</div>`;
-
-  const linkBanner=d.needsEmployee?`
-    <div class="acard" style="border-color:rgba(232,25,44,.35);margin-bottom:14px">
-      <div class="acard-title" style="font-size:14px">Сначала свяжите аккаунт с собой в ростере</div>
-      <div class="acard-sub" style="margin-bottom:10px">Чтобы бронировать ${kind==='duty'?'дежурства':'смены'}, укажите, кто вы в списке сотрудников — оттуда будут браться имя персонажа и Static ID при брони.</div>
-      ${linkPicker}
-    </div>` : `
-    <div class="acard-sub" style="margin-bottom:6px">Бронируете как <b style="color:var(--ink)">${xe(me?me.name:CU.name)}</b>${me&&me.static_id?` <span style="color:var(--gray)">#${xe(me.static_id)}</span>`:''} · использовано ${d.myCount}/${d.maxPerDay} на этот день · <a href="#" onclick="event.preventDefault();toggleRosterRelink('${kind}')" style="color:var(--gray);text-decoration:underline">изменить привязку</a></div>
-    <div id="roster-relink-${kind}" style="display:none;margin:6px 0 14px">${linkPicker}</div>`;
-
-  const legend=`<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0 14px;font-size:12px;color:var(--gray)">
-    <div>Итого слотов: <b style="color:var(--ink)">${d.total}</b></div>
-    <div><span class="roster-dot roster-dot-free"></span>Свободно: <b style="color:var(--ink)">${d.free}</b></div>
-    <div><span class="roster-dot roster-dot-busy"></span>Занято: <b style="color:var(--ink)">${d.busy}</b></div>
-  </div>`;
-
+  const title=kind==='duty'?'Дежурства':'Смены';
   el.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
-      <div class="acard-sub" style="margin:0">${kind==='duty'?'Почасовая запись на дежурство':'Круглосуточная запись на смену'} (${rosterRangeLabel(d.range)}). Не больше ${d.maxPerDay} ${kind==='duty'?'дежурств':'смен'} на человека в день.</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="ct-datebtn" onclick="rosterShiftDate('${kind}',-1)">‹</button>
-        <div class="ct-date-lbl">${fmtCTDate(st.date)}</div>
-        <button class="ct-datebtn" onclick="rosterShiftDate('${kind}',1)">›</button>
-        ${!isToday?`<button class="btn btn-o btn-sm" onclick="rosterToday('${kind}')">Сегодня</button>`:''}
-      </div>
+    <div class="roster-col-hdr">${title}</div>
+    <div class="acard-sub" style="margin-bottom:6px">${rosterRangeLabel(d.range)} · ваших в этот день: ${d.myCount}/${d.maxPerDay}</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0 12px;font-size:12px;color:var(--gray)">
+      <div><span class="roster-dot roster-dot-free"></span>Свободно: <b style="color:var(--ink)">${d.free}</b></div>
+      <div><span class="roster-dot roster-dot-busy"></span>Занято: <b style="color:var(--ink)">${d.busy}</b></div>
     </div>
-    ${linkBanner}
-    ${legend}
-    <div class="roster-grid">${d.slots.map(s=>rosterSlotCard(kind,s)).join('')}</div>
+    <div class="roster-grid">${d.slots.map(x=>rosterSlotCard(kind,x)).join('')}</div>
   `;
 }
 
@@ -4291,7 +4319,7 @@ function rosterSlotCard(kind,s){
       ${canCancel?`<button class="roster-slot-cancel" title="Отменить бронь" onclick="cancelRosterSlot('${kind}','${b.id}')">✕</button>`:''}
       <div class="roster-slot-time">${s.time}–${endLbl}</div>
       <span class="badge b-${b.role}">${xe(rlbl(b.role))}</span>
-      <div class="roster-slot-name">${xe(b.name)}${b.staticId?` <span style="color:var(--gray)">#${xe(b.staticId)}</span>`:''}</div>
+      <div class="roster-slot-name">${xe(b.name)}${b.staticId?` <span style="color:var(--gray)">#${xe(b.staticId)}</span>`:''}${b.assigned?` <span style="color:var(--gray);font-size:10px" title="Назначен старшим составом">· назначен</span>`:''}</div>
     </div>`;
   }
   if(s.status==='unavailable'){
@@ -4300,9 +4328,18 @@ function rosterSlotCard(kind,s){
       <div class="roster-slot-off-lbl">недоступно</div>
     </div>`;
   }
+  if(ROSTER_STATE[kind].data&&ROSTER_STATE[kind].data.canAssign){
+    return `<div class="roster-slot roster-slot-free" style="cursor:default">
+      <div class="roster-slot-time">${s.time}–${endLbl}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto">
+        <button class="btn btn-o btn-sm" style="padding:3px 8px;font-size:11px" onclick="bookRosterSlot('${kind}',${s.hour})">+ Себя</button>
+        <button class="btn btn-p btn-sm" style="padding:3px 8px;font-size:11px" onclick="openRosterAssign('${kind}',${s.hour})">Назначить</button>
+      </div>
+    </div>`;
+  }
   return `<button class="roster-slot roster-slot-free" onclick="bookRosterSlot('${kind}',${s.hour})">
     <div class="roster-slot-time">${s.time}–${endLbl}</div>
-    <div class="roster-slot-free-lbl">+ Забронировать</div>
+    <div class="roster-slot-free-lbl" style="margin-left:auto">+ Забронировать</div>
   </button>`;
 }
 
@@ -4317,6 +4354,36 @@ async function bookRosterSlot(kind,hour){
     await loadRosterTab(kind);
   }catch(e){
     toast(e.error||'Не удалось забронировать','e');
+    await loadRosterTab(kind);
+  }finally{ st.busy=false; }
+}
+let ROSTER_ASSIGN={kind:null,hour:null};
+async function openRosterAssign(kind,hour){
+  await ensureEmployeesLoaded();
+  const st=ROSTER_STATE[kind];
+  ROSTER_ASSIGN={kind,hour};
+  const endLbl=String((hour+1)%24).padStart(2,'0')+':00';
+  document.getElementById('roster-assign-title').textContent=kind==='duty'?'Назначить на дежурство':'Назначить на смену';
+  document.getElementById('roster-assign-sub').textContent=`${fmtCTDate(st.date)} · ${String(hour).padStart(2,'0')}:00–${endLbl}`;
+  document.getElementById('roster-assign-combo-wrap').innerHTML=empComboMarkup('roster-assign-emp','',{formStyle:true});
+  openModal('modal-roster-assign');
+  setTimeout(()=>{ const i=document.getElementById('roster-assign-emp-inp'); if(i)i.focus(); },50);
+}
+async function submitRosterAssign(){
+  const {kind,hour}=ROSTER_ASSIGN;
+  const st=ROSTER_STATE[kind];
+  if(!kind||st.busy)return;
+  const inp=document.getElementById('roster-assign-emp-inp');
+  const empId=inp?(inp.dataset.sel||''):'';
+  if(!empId){ toast('Выберите сотрудника из списка','e'); return; }
+  st.busy=true;
+  try{
+    await API.post(`/roster/${kind}`,{date:st.date,hour,employee_id:empId});
+    closeModal('modal-roster-assign');
+    toast('Сотрудник назначен ✓','s');
+    await loadRosterTab(kind);
+  }catch(e){
+    toast(e.error||'Не удалось назначить','e');
     await loadRosterTab(kind);
   }finally{ st.busy=false; }
 }
@@ -4340,7 +4407,7 @@ async function linkMyEmployee(employeeId){
   }catch(e){
     toast(e.error||'Не удалось сохранить привязку','e');
   }
-  if(ADHUB_TAB==='duty'||ADHUB_TAB==='shift')await loadRosterTab(ADHUB_TAB);
+  if(ADHUB_TAB==='duty')await loadRosterAll();
 }
 async function reloadEditorialData(tab){
   if(tab==='templates')await loadEdTemplates();

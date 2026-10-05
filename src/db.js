@@ -239,6 +239,13 @@ async function initDB() {
     CREATE INDEX IF NOT EXISTS idx_roster_slots_user ON roster_slots(user_id, kind, slot_date);
   `);
 
+  // Миграция: назначение людей на дежурства/смены старшим составом.
+  // employee_id — кто стоит в слоте (запись ростера), assigned_by — кто назначил
+  // (NULL = человек записался сам).
+  await query(`ALTER TABLE roster_slots ADD COLUMN IF NOT EXISTS employee_id TEXT`);
+  await query(`ALTER TABLE roster_slots ADD COLUMN IF NOT EXISTS assigned_by TEXT`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_roster_slots_emp ON roster_slots(employee_id, kind, slot_date)`);
+
   // Миграция: шрифт для описания (должности) участника состава
   await query(`ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_font TEXT DEFAULT ''`);
 
