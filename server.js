@@ -44,14 +44,36 @@ initDB()
 // обычный GET-запрос; результат только логируется, ни на что не влияет —
 // сбой запроса (например, кратковременная сетевая ошибка) не должен
 // останавливать таймер и тем более ронять процесс.
+//
+// Тихие часы: с 01:00 до 12:00 по Москве пинг НЕ отправляется — в это
+// время сайт может спокойно засыпать (экономия часов Render). Границы
+// меняются константами QUIET_FROM_HOUR / QUIET_TO_HOUR ниже.
+const QUIET_FROM_HOUR = 1;   // включительно: с 01:00 МСК
+const QUIET_TO_HOUR = 12;    // не включительно: до 12:00 МСК
+
+function mskHour() {
+  // Москва — UTC+3 без перехода на летнее время; берём час через Intl,
+  // чтобы не зависеть от часового пояса сервера.
+  const h = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Moscow', hour: '2-digit', hour12: false,
+  }).format(new Date());
+  return parseInt(h, 10) % 24;
+}
+
+function isQuietHours() {
+  const h = mskHour();
+  return h >= QUIET_FROM_HOUR && h < QUIET_TO_HOUR;
+}
+
 function startSelfPing() {
   if (!config.SELF_PING_ENABLED) return;
   const INTERVAL_MS = 14 * 60 * 1000;
   const ping = () => {
+    if (isQuietHours()) return; // тихие часы — просто пропускаем тик
     fetch(config.SELF_PING_URL)
       .then(r => console.log(`[self-ping] ${new Date().toISOString()} ${config.SELF_PING_URL} → ${r.status}`))
       .catch(e => console.warn(`[self-ping] ${new Date().toISOString()} ошибка: ${e.message}`));
   };
   setInterval(ping, INTERVAL_MS);
-  console.log(`Self-ping включён: каждые 14 минут → ${config.SELF_PING_URL}`);
+  console.log(`Self-ping включён: каждые 14 минут → ${config.SELF_PING_URL} (пауза ${String(QUIET_FROM_HOUR).padStart(2,'0')}:00–${QUIET_TO_HOUR}:00 МСК)`);
 }
