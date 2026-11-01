@@ -16,6 +16,7 @@
 const config = require('./src/config');
 const { initDB } = require('./src/db');
 const app = require('./src/app');
+const { isQuietHours, QUIET_FROM_HOUR, QUIET_TO_HOUR } = require('./src/utils/quietHours');
 
 // ПОСЛЕДНЯЯ ЛИНИЯ ЗАЩИТЫ (не основной фикс — основные см. в src/db.js
 // pool.on('error') и src/app.js require('express-async-errors')).
@@ -45,25 +46,8 @@ initDB()
 // сбой запроса (например, кратковременная сетевая ошибка) не должен
 // останавливать таймер и тем более ронять процесс.
 //
-// Тихие часы: с 01:00 до 12:00 по Москве пинг НЕ отправляется — в это
-// время сайт может спокойно засыпать (экономия часов Render). Границы
-// меняются константами QUIET_FROM_HOUR / QUIET_TO_HOUR ниже.
-const QUIET_FROM_HOUR = 1;   // включительно: с 01:00 МСК
-const QUIET_TO_HOUR = 12;    // не включительно: до 12:00 МСК
-
-function mskHour() {
-  // Москва — UTC+3 без перехода на летнее время; берём час через Intl,
-  // чтобы не зависеть от часового пояса сервера.
-  const h = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Moscow', hour: '2-digit', hour12: false,
-  }).format(new Date());
-  return parseInt(h, 10) % 24;
-}
-
-function isQuietHours() {
-  const h = mskHour();
-  return h >= QUIET_FROM_HOUR && h < QUIET_TO_HOUR;
-}
+// Тихие часы (src/utils/quietHours.js): с 01:00 до 12:00 по Москве пинг
+// НЕ отправляется — в это время сайт может спокойно засыпать.
 
 function startSelfPing() {
   if (!config.SELF_PING_ENABLED) return;

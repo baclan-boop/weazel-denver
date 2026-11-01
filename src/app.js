@@ -67,8 +67,24 @@ app.use(helmet({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// pruneSessionInterval: false — по умолчанию connect-pg-simple раз в 15 минут
+// сам лезет в базу чистить просроченные сессии. Это будило Neon даже когда
+// на сайте никого нет, и он не мог уснуть (тратились compute-часы). Теперь
+// чистка запускается нашим таймером ниже и пропускается в тихие часы.
+const sessionStore = new pgSession({
+  pool, tableName: 'session', createTableIfMissing: false, pruneSessionInterval: false,
+});
+{
+  const { isQuietHours } = require('./utils/quietHours');
+  const pruneTimer = setInterval(() => {
+    if (isQuietHours()) return;
+    sessionStore.pruneSessions(err => { if (err) console.warn('Чистка сессий не удалась:', err.message); });
+  }, 15 * 60 * 1000);
+  pruneTimer.unref();
+}
+
 app.use(session({
-  store: new pgSession({ pool, tableName: 'session', createTableIfMissing: false }),
+  store: sessionStore,
   secret: config.SESSION_SECRET, resave: false, saveUninitialized: false, name: '__wn_sid',
   // sameSite:'strict' ломает вход через Discord: когда Discord после
   // подтверждения переводит браузер обратно на /api/auth/discord/callback,
